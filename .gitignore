@@ -1,0 +1,4 @@
+.*.sw*
+datfiles/*.dat
+*.hipo
+*.root

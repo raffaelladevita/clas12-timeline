@@ -3,13 +3,17 @@ import org.jlab.groot.data.GraphErrors
 import org.jlab.groot.data.H1F
 
 
-//TDirectory out = new TDirectory()
+int runnumTmp = -1
+boolean dwAppend = false
+def sectors = 0..<6
+def sector = { int i -> i+1 }
 
 for(arg in args) {
 
   // open hipo file
   TDirectory dir = new TDirectory()
   dir.readFile(arg)
+
 
   // get run and file numbers
   def fname = arg.split('/')[-1].tokenize('_.')
@@ -19,30 +23,25 @@ for(arg in args) {
   println "runnum="+runnum
   println "filenum="+filenum
 
+
   // define output datfile
-  def datfileN = arg.split('/')[-1].replace('hipo','dat')
-  def datfile = new File("datfiles/"+datfileN)
-  def dw = datfile.newWriter()
+  if(runnum!=runnumTmp || runnumTmp<0) {
+    dwAppend = false
+    runnumTmp = runnum
+  } else dwAppend = true
+  def datfile = new File("datfiles/mondata."+runnum+".dat")
+  def dw = datfile.newWriter(dwAppend)
   
 
   // read electron trigger histograms and number of entries
-  def sectors = 0..<6
-  def heth = sectors.collect{ dir.getObject('/electron/trigger/heth_'+(it+1)) }
-  def ent = sectors.collect{ heth[it].integral() }
-  sectors.each{ dw << (it+1) + " " + ent[it] + "\n" }
+  def heth = sectors.collect{ dir.getObject('/electron/trigger/heth_'+sector(it)) }
+  def entries = { int i -> heth[i].integral() }
+  sectors.each{ 
+    outputdat = [ runnum, filenum, sector(it), entries(it) ] // <-- COLUMNS
+    dw << outputdat.join(' ') << '\n'
+  }
   dw.close()
-  print datfile.text
-
-  
-  //out.mkdir('/'+run)
-  //out.cd('/'+run)
-  //out.addDataSet(h1)
-  // out.addDataSet(f1)
+  //print datfile.text
 }
 
 
-//out.mkdir('/timelines')
-//out.cd('/timelines')
-//grtl.each{ out.addDataSet(it) }
-
-//out.writeFile('rat_electron.hipo')

@@ -2,3 +2,4 @@
 datfiles/*.dat
 *.hipo
 *.root
+*.log

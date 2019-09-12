@@ -1,22 +1,31 @@
 // test code for reading fcdata.json
+
 import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
 
-def slurp = new JsonSlurper()
-def fcFile = new File("fcdata.json")
+def fcFileName = "fcdata.json"
 
-int runnum = 5032
-int filenum = 60
+def slurp = new JsonSlurper()
+def fcFile = new File(fcFileName)
+
+int runnum = 5129
+int filenum = 375
 
 def jprint = { map -> println JsonOutput.prettyPrint(JsonOutput.toJson(map)) }
 
-def mapRun = slurp.parse(fcFile).groupBy{ it.run }
-def mapRunFiles = mapRun.get(runnum).groupBy{ it.fnum }
-def fcVals = mapRunFiles.get(filenum).find()."data"."fc"
+def mapRun
+def mapRunFiles
+def fcVals
 
-//jprint(mapRun)
-//jprint(mapRunFiles)
-//jprint(fcVals)
+mapRun = slurp.parse(fcFile).groupBy{ it.run }.get(runnum)
+if(mapRun) mapRunFiles = mapRun.groupBy{ it.fnum }.get(filenum)
+if(mapRunFiles) fcVals = mapRunFiles.find()."data"."fc"
 
-println fcVals."fcmax"
-println fcVals."fcmin"
+if(fcVals) {
+  //jprint(mapRun)
+  //jprint(mapRunFiles)
+  //jprint(fcVals)
+  println fcVals."fcmin"
+  println fcVals."fcmax"
+} else throw new Exception("run ${runnum}_${filenum} not found in "+fcFileName)
+

@@ -2,4 +2,5 @@
 datfiles/*.dat
 *.hipo
 *.root
-*.log
+logfiles/*
+.nfs*

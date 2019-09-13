@@ -16,12 +16,19 @@ def sectors = 0..<6
 def sector = { int i -> i+1 }
 int runnumTmp = -1
 boolean dwAppend = false
-def jprint = { map -> println JsonOutput.prettyPrint(JsonOutput.toJson(map)) }
+boolean printOutput
 def mapRun
 def mapRunFiles
 def fcVals
 def fcMin
 def fcMax
+def runnum
+def filenum
+def jprint = { map -> println JsonOutput.prettyPrint(JsonOutput.toJson(map)) }
+def errprint = { str -> 
+  System.err << "ERROR in run ${runnum}_${filenum}: "+str+"\n" 
+  printOutput = false
+}
 
 
 // loop through input HIPO files
@@ -29,18 +36,18 @@ println "---- BEGIN READING FILES"
 for(fileN in args) {
   println "-- READ: "+fileN
 
+  printOutput = true
 
   // get run and file numbers
   def fileNtok = fileN.split('/')[-1].tokenize('_.')
-  def runnum = fileNtok[1].toInteger()
-  def filenum = fileNtok[2].toInteger()
+  runnum = fileNtok[1].toInteger()
+  filenum = fileNtok[2].toInteger()
   //println "fileNtok="+fileNtok+" runnum="+runnum+" filenum="+filenum
 
 
   // open hipo file
   TDirectory dir = new TDirectory()
   dir.readFile(fileN)
-
 
 
   // define output datfile and parse faraday cup json 
@@ -61,20 +68,22 @@ for(fileN in args) {
     fcMin = fcVals."fcmin"
     fcMax = fcVals."fcmax"
     //println "fcMin="+fcMin+" fcMax="+fcMax
-  } else throw new Exception("run ${runnum}_${filenum} not found in "+fcFileName)
+  } else errprint("run not found in "+fcFileName)
 
 
   // read electron trigger histograms and number of entries
-  //boolean dirExists = dir.cd("/electron/triggerI/") // catch empty files
-  //dir.cd() // TODO - it would be better to check histograms existence, rather than dirs
-  //if(dirExists) {
-    def heth = sectors.collect{ dir.getObject('/electron/trigger/heth_'+sector(it)) }
+  def heth = sectors.collect{ dir.getObject('/electron/trigger/heth_'+sector(it)) }
+  sectors.each{ if(heth[it]==null) errprint("missing histogram in sector "+sector(it)) }
+
+
+  // print output to datfile
+  if(printOutput) {
     def entries = { int i -> heth[i].integral() }
     sectors.each{ 
       outputdat = [ runnum, filenum, sector(it), entries(it), fcMin, fcMax ] // <-- COLUMNS
       dw << outputdat.join(' ') << '\n'
     }
-  //}
+  }
   dw.close()
   println "--- done"
   //print datfile.text

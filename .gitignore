@@ -1,6 +1,7 @@
 .*.sw*
-datfiles/*.dat
 *.hipo
 *.root
-logfiles/*
+datfiles/*.dat
+logfiles/*.out
+logfiles/*.err
 .nfs*

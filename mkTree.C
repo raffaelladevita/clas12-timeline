@@ -1,4 +1,4 @@
-void mkTree(Int_t runnum=5128) {
+void mkTree(Int_t runnum=5032) {
   TTree * tr = new TTree("tr","tr");
   gROOT->ProcessLine(".! cat datfiles/mon*.dat > datfiles/all.dat");
   TString bd = "run/I";

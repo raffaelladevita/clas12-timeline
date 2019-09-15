@@ -1,6 +1,7 @@
 .*.sw*
 *.hipo
 *.root
+*.png
 datfiles/*.dat
 logfiles/*.out
 logfiles/*.err

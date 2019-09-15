@@ -17,7 +17,7 @@ echo "will run a maximum of $njobs jobs in parallel"
 
 
 # clean output and log dirs
-rm -r datfiles/*.dat
+rm -r outdat/*.dat
 rm -r logfiles/*.{err,out}
 
 
@@ -40,10 +40,10 @@ while read fname; do
   fi
 done < tempo
 
-# compare number of input monsub files to number counted in datfiles
+# compare number of input monsub files to number counted in outdat datfiles
 wait
 nfiles=$(cat filelist | wc -l)
-noutput=$(cat datfiles/*.dat | awk '{print $1" "$2}' | sort | uniq | wc -l)
+noutput=$(cat outdat/*.dat | awk '{print $1" "$2}' | sort | uniq | wc -l)
 echo "$nfiles files found"
 echo "$noutput files analyzed"
 

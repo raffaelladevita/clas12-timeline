@@ -1,6 +1,9 @@
 import org.jlab.groot.data.TDirectory
 import org.jlab.groot.data.GraphErrors
 import org.jlab.groot.data.H1F
+import org.jlab.groot.data.DataLine
+import org.jlab.groot.ui.TCanvas
+import org.jlab.groot.graphics.EmbeddedCanvas
 import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
 import static groovy.io.FileType.FILES
@@ -29,6 +32,8 @@ def fcStop
 def fcCounts
 def nTrig
 def filenum
+def minFilenum = 1E6
+def maxFilenum = 0
 def jprint = { map -> println JsonOutput.prettyPrint(JsonOutput.toJson(map)) }
 def errPrint = { str -> 
   System.err << "ERROR in run ${runnum}_${filenum}: "+str+"\n" 
@@ -69,7 +74,7 @@ def ET
 
 
 // define output files
-def datfile = new File("datfiles/mondata."+runnum+".dat")
+def datfile = new File("outdat/mondata."+runnum+".dat")
 def datfileWriter = datfile.newWriter(false)
 def outHipo = new TDirectory()
 
@@ -120,8 +125,12 @@ fileList.each{ fileN ->
 
     // fill grET
     sectors.each{ grET[it].addPoint(filenum, ET[it], 0, 0) }
+
+    // set minima and maxima
     minET = sectors.collect { Math.min(minET[it],ET[it]) }
     maxET = sectors.collect { Math.max(maxET[it],ET[it]) }
+    minFilenum = filenum < minFilenum ? filenum : minFilenum
+    maxFilenum = filenum > maxFilenum ? filenum : maxFilenum
 
     // output to datfile
     sectors.each{
@@ -140,23 +149,98 @@ println "--- done reading hipo files"
 
 // define histograms
 def buf = 0.1
-minET*.multiply(1-buf)
-maxET*.multiply(1+buf)
+minET = minET*.multiply(1-buf)
+maxET = maxET*.multiply(1+buf)
 def histET = sectors.collect{ 
   new H1F("histET_"+sec(it), "N/F -- sector "+sec(it), 50, minET[it], maxET[it] )
 }
+histET.each { it.setOptStat("1111100") }
+
 
 // fill histograms
-grET.eachWithIndex{ gr, it ->
-  gr.getDataSize(0).times{ i -> histET[it].fill(gr.getDataY(i)) }
+grET.eachWithIndex { gr, it ->
+  gr.getDataSize(0).times { i -> 
+    //println "sec"+sec(it)+": "+gr.getDataX(i)+" "+gr.getDataY(i)
+    histET[it].fill(gr.getDataY(i))
+  }
 }
 
 
+// get mean and rms
+def meanET = histET.collect { it.getMean() }
+def cutLoET = histET.collect { it.getMean() - it.getRMS() }
+def cutHiET = histET.collect { it.getMean() + it.getRMS() }
+
+
+// calculate median
+def median = { GraphErrors gr ->
+  def d = []
+  gr.getDataSize(0).times { i -> d.add(gr.getDataY(i)) }
+  d.sort()
+  def m = d.size().intdiv(2)
+  d.size() % 2 ? d[m] : (d[m-1]+d[m]) / 2
+}
+def medianET = grET.collect { median(it) }
+println meanET
+println medianET
+
+
+// define lines
+minFilenum -= 10
+maxFilenum += 10
+def lineMeanET = meanET.collect { new DataLine(minFilenum, it, maxFilenum, it) }
+def lineMedianET = medianET.collect { new DataLine(minFilenum, it, maxFilenum, it) }
+def lineCutLoET = cutLoET.collect { new DataLine(minFilenum, it, maxFilenum, it) }
+def lineCutHiET = cutHiET.collect { new DataLine(minFilenum, it, maxFilenum, it) }
+lineMeanET.each { it.setLineColor(2) }
+lineMedianET.each { it.setLineColor(3) }
+lineCutLoET.each { it.setLineColor(4) }
+lineCutHiET.each { it.setLineColor(4) }
+
+
+// define canvases
+/*
+//def grCanv = sectors.collect { new TCanvas("grCanv_"+sec(it), 800, 800 ) }
+def grCanv = sectors.collect { new EmbeddedCanvas() }
+//grCanv.each { it.setName("grCanv_"+sec(it)) }
+sectors.each {
+  grCanv[it].cd(0)
+  grCanv[it].draw(grET[it])
+  grCanv[it].draw(lineMeanET[it])
+}
+*/
+def grCanv = new TCanvas("grCanv", 800, 800)
+//def grCanv = new EmbeddedCanvas()
+grCanv.divide(2,3)
+sectors.each { 
+  grCanv.cd(it)
+  grCanv.draw(grET[it])
+  grCanv.draw(lineMeanET[it])
+  grCanv.draw(lineMedianET[it])
+  grCanv.draw(lineCutLoET[it])
+  grCanv.draw(lineCutHiET[it])
+}
+
+
+
 // output plots and finish
-outHipo.mkdir("/plots")
-outHipo.cd("/plots")
+outHipo.mkdir("/graphs")
+outHipo.cd("/graphs")
 grET.each{ outHipo.addDataSet(it) }
+
+outHipo.mkdir("/hists")
+outHipo.cd("/hists")
 histET.each{ outHipo.addDataSet(it) }
-outHipo.writeFile("test.hipo")
+
+/*
+outHipo.mkdir("/canvs")
+outHipo.cd("/canvs")
+grCanv.eachWithIndex{ c,it -> outHipo.add("c"+sec(it), c) }
+*/
+
+def outHipoN = "outhipo/mondata."+runnum+".hipo"
+File outHipoFile = new File(outHipoN)
+if(outHipoFile.exists()) outHipoFile.delete()
+outHipo.writeFile(outHipoN)
 datfileWriter.close()
 //print datfile.text

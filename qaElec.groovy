@@ -10,6 +10,7 @@ import static groovy.io.FileType.FILES
 
 
 // ARGUMENTS
+//----------------------------------------------------------------------------------
 def runnum
 def monsubDir = "../monsub"
 if(args.length==0) {
@@ -19,6 +20,7 @@ if(args.length==0) {
 }
 else runnum = args[0].toInteger()
 if(args.length>=2) monsubDir = args[1]
+//----------------------------------------------------------------------------------
 
 
 // vars and subroutines
@@ -76,10 +78,13 @@ def ET
 // define output files
 def datfile = new File("outdat/mondata."+runnum+".dat")
 def datfileWriter = datfile.newWriter(false)
+def badfile = new File("outbad/outliers."+runnum+".dat")
+def badfileWriter = badfile.newWriter(false)
 def outHipo = new TDirectory()
 
 
 // loop through input hipo files
+//----------------------------------------------------------------------------------
 println "---- BEGIN READING FILES"
 fileList.each{ fileN ->
   println "-- READ: "+fileN
@@ -145,17 +150,17 @@ fileList.each{ fileN ->
 println "--- done reading hipo files"
 
 
-
+// HISTOGRAMS
+//----------------------------------------------------------------------------------
 
 // define histograms
 def buf = 0.1
-minET = minET*.multiply(1-buf)
-maxET = maxET*.multiply(1+buf)
+histLoET = minET*.multiply(1-buf)
+histHiET = maxET*.multiply(1+buf)
 def histET = sectors.collect{ 
-  new H1F("histET_"+sec(it), "N/F -- sector "+sec(it), 50, minET[it], maxET[it] )
+  new H1F("histET_"+sec(it), "N/F -- sector "+sec(it), 50, histLoET[it], histHiET[it] )
 }
 histET.each { it.setOptStat("1111100") }
-
 
 // fill histograms
 grET.eachWithIndex { gr, it ->
@@ -165,40 +170,118 @@ grET.eachWithIndex { gr, it ->
   }
 }
 
-
-// get mean and rms
+// get means
 def meanET = histET.collect { it.getMean() }
-def cutLoET = histET.collect { it.getMean() - it.getRMS() }
-def cutHiET = histET.collect { it.getMean() + it.getRMS() }
 
 
-// calculate median
-def median = { GraphErrors gr ->
-  def d = []
-  gr.getDataSize(0).times { i -> d.add(gr.getDataY(i)) }
+// QUARTILES
+//----------------------------------------------------------------------------------
+
+// subroutine for calculating median of a list
+def median = { d ->
   d.sort()
   def m = d.size().intdiv(2)
   d.size() % 2 ? d[m] : (d[m-1]+d[m]) / 2
 }
-def medianET = grET.collect { median(it) }
-println meanET
-println medianET
 
+// assemble N/F values into a data structure, called "dataET":
+// a list of 6 lists, one for each sector; each sector's list is of its N/F values
+def dataET = grET.collect { gr ->
+  def d = []
+  gr.getDataSize(0).times { i -> d.add(gr.getDataY(i)) }
+  return d
+}
+
+
+// determine quartiles
+def mqET = dataET.collect { median(it) } // mq = middle quartile (overall median)
+dataBelowET = dataET.withIndex().collect { d,s -> d.findAll{ it < mqET[s] } }
+dataAboveET = dataET.withIndex().collect { d,s -> d.findAll{ it > mqET[s] } }
+def lqET = dataBelowET.collect { median(it) } // lq = lower quartile
+def uqET = dataAboveET.collect { median(it) } // uq = upper quartile
+def iqrET = sectors.collect { uqET[it] - lqET[it] } // iqr = interquartile range
+
+// print data and quartiles
+/*
+sectors.each { 
+  print "data: "; println dataET[it]; println "MQ="+mqET[it]
+  print "dataBelow: "; println dataBelowET[it]; println "LQ="+lqET[it]
+  print "dataAbove: "; println dataAboveET[it]; println "UQ="+uqET[it]
+}
+*/
+
+
+
+// OUTLIER DETERMINATION
+//----------------------------------------------------------------------------------
+
+// determine outlier cuts via cutFactor*IQR method
+def cutFactor = 2.5
+def cutLoET = lqET.withIndex().collect { q,i -> q - cutFactor * iqrET[i] }
+def cutHiET = uqET.withIndex().collect { q,i -> q + cutFactor * iqrET[i] }
+sectors.each { println "SECTOR "+sec(it)+" CUTS: "+cutLoET[it]+" to "+cutHiET[it] }
+
+
+// define graph of outliers
+def grBadET = sectors.collect{
+  def gr = new GraphErrors('grBadET_'+sec(it))
+  gr.setTitle("Electron Trigger N/F -- sector "+sec(it))
+  gr.setTitleY("N/F")
+  gr.setTitleX("file number")
+  gr.setMarkerColor(2)
+  return gr
+}
+
+
+// loop through N/F values, determining which are outliers
+def badlist = [:] // filenum -> list of sectors in which N/F was an outlier
+grET.eachWithIndex { gr, it ->
+  gr.getDataSize(0).times { i -> 
+    def val = gr.getDataY(i) // N/F
+    def fn = gr.getDataX(i).toInteger() // filenum
+    if( val < cutLoET[it] || val > cutHiET[it] ) {
+      grBadET[it].addPoint( fn, val, 0, 0 )
+      if(badlist.containsKey(fn)) badlist[fn].add(sec(it))
+      else badlist[fn] = [sec(it)]
+      //badness = Math.abs( val - mqET[it] ) / iqrET[it]
+    }
+  }
+}
+println "badlist = "+badlist
+
+
+// print outliers to outbad file
+badlist.each { fn, seclist ->
+  badfileWriter << [ runnum, fn, seclist.join(' ') ].join(' ') << '\n'
+}
+
+
+
+// PLOTTING
+//----------------------------------------------------------------------------------
+
+// determine N/F axis plot ranges
+def plotLoET = cutLoET.withIndex().collect { c,i -> Math.min(c,minET[i]) - buf }
+def plotHiET = cutHiET.withIndex().collect { c,i -> Math.max(c,maxET[i]) + buf }
 
 // define lines
 minFilenum -= 10
 maxFilenum += 10
-def lineMeanET = meanET.collect { new DataLine(minFilenum, it, maxFilenum, it) }
-def lineMedianET = medianET.collect { new DataLine(minFilenum, it, maxFilenum, it) }
-def lineCutLoET = cutLoET.collect { new DataLine(minFilenum, it, maxFilenum, it) }
-def lineCutHiET = cutHiET.collect { new DataLine(minFilenum, it, maxFilenum, it) }
-lineMeanET.each { it.setLineColor(2) }
-lineMedianET.each { it.setLineColor(3) }
+def buildLine = { a -> a.collect { new DataLine(minFilenum, it, maxFilenum, it) } }
+def lineMeanET = buildLine(meanET)
+def lineMqET = buildLine(mqET)
+def lineLqET = buildLine(lqET)
+def lineUqET = buildLine(uqET)
+def lineCutLoET = buildLine(cutLoET)
+def lineCutHiET = buildLine(cutHiET)
+lineMeanET.each { it.setLineColor(1) }
+lineMqET.each { it.setLineColor(2) }
+lineLqET.each { it.setLineColor(3) }
+lineUqET.each { it.setLineColor(3) }
 lineCutLoET.each { it.setLineColor(4) }
 lineCutHiET.each { it.setLineColor(4) }
 
-
-// define canvases
+// define canvases and draw
 /*
 //def grCanv = sectors.collect { new TCanvas("grCanv_"+sec(it), 800, 800 ) }
 def grCanv = sectors.collect { new EmbeddedCanvas() }
@@ -213,17 +296,20 @@ def grCanv = new TCanvas("grCanv", 800, 800)
 //def grCanv = new EmbeddedCanvas()
 grCanv.divide(2,3)
 sectors.each { 
+  grCanv.getCanvas().getPad(it).getAxisY().setRange(plotLoET[it],plotHiET[it])
   grCanv.cd(it)
   grCanv.draw(grET[it])
-  grCanv.draw(lineMeanET[it])
-  grCanv.draw(lineMedianET[it])
+  if(grBadET[it].getDataSize(0)>0) grCanv.draw(grBadET[it],"same")
+  //grCanv.draw(lineMeanET[it])
+  grCanv.draw(lineMqET[it])
+  //grCanv.draw(lineUqET[it])
+  //grCanv.draw(lineLqET[it])
   grCanv.draw(lineCutLoET[it])
   grCanv.draw(lineCutHiET[it])
 }
 
 
-
-// output plots and finish
+// output plots to hipo file
 outHipo.mkdir("/graphs")
 outHipo.cd("/graphs")
 grET.each{ outHipo.addDataSet(it) }
@@ -242,5 +328,10 @@ def outHipoN = "outhipo/mondata."+runnum+".hipo"
 File outHipoFile = new File(outHipoN)
 if(outHipoFile.exists()) outHipoFile.delete()
 outHipo.writeFile(outHipoN)
+
+
+// close buffer writers
 datfileWriter.close()
-//print datfile.text
+badfileWriter.close()
+//println datfile.text
+println badfile.text

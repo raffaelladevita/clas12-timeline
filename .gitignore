@@ -2,7 +2,7 @@
 *.hipo
 *.root
 *.png
-outdat/*.dat
+*/*.dat
 logfiles/*.out
 logfiles/*.err
 .nfs*

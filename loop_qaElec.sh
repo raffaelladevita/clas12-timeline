@@ -18,6 +18,8 @@ echo "will run a maximum of $njobs jobs in parallel"
 
 # clean output and log dirs
 rm -r outdat/*.dat
+rm -r outhipo/*.hipo
+rm -r outbad/*.dat
 rm -r logfiles/*.{err,out}
 
 

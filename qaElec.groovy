@@ -3,7 +3,13 @@ import org.jlab.groot.data.GraphErrors
 import org.jlab.groot.data.H1F
 import org.jlab.groot.data.DataLine
 import org.jlab.groot.ui.TCanvas
+
 import org.jlab.groot.graphics.EmbeddedCanvas
+import javax.swing.JFrame
+import java.awt.image.BufferedImage
+import java.awt.Graphics2D
+import javax.imageio.ImageIO 
+
 import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
 import static groovy.io.FileType.FILES
@@ -13,13 +19,17 @@ import static groovy.io.FileType.FILES
 //----------------------------------------------------------------------------------
 def runnum
 def monsubDir = "../monsub"
+def background = false
 if(args.length==0) {
-  print "USAGE: groovy qaElec.groovy [run number] "
-  println "[monsubDir (default="+monsubDir+")]"
+  print "USAGE: groovy qaElec.groovy [run number]"
+  print " [monsubDir (default="+monsubDir+")]"
+  print " [baground (default=0)]"
+  print '\n'
   return
 }
 else runnum = args[0].toInteger()
 if(args.length>=2) monsubDir = args[1]
+if(args.length>=3) background = args[2].toInteger() == 1
 //----------------------------------------------------------------------------------
 
 
@@ -65,7 +75,7 @@ if(!fcMapRun) throw new Exception("run ${runnum} not found in "+fcFileName);
 // define plot of number of FC-normalized triggers vs. file number
 def grET = sectors.collect{
   def gr = new GraphErrors('grET_'+sec(it))
-  gr.setTitle("Electron Trigger N/F -- sector "+sec(it))
+  gr.setTitle("Run $runnum Electron Trigger N/F -- sector "+sec(it))
   gr.setTitleY("N/F")
   gr.setTitleX("file number")
   return gr
@@ -225,7 +235,7 @@ sectors.each { println "SECTOR "+sec(it)+" CUTS: "+cutLoET[it]+" to "+cutHiET[it
 // define graph of outliers
 def grBadET = sectors.collect{
   def gr = new GraphErrors('grBadET_'+sec(it))
-  gr.setTitle("Electron Trigger N/F -- sector "+sec(it))
+  gr.setTitle("Run $runnum Electron Trigger N/F -- sector "+sec(it))
   gr.setTitleY("N/F")
   gr.setTitleX("file number")
   gr.setMarkerColor(2)
@@ -281,9 +291,13 @@ lineUqET.each { it.setLineColor(3) }
 lineCutLoET.each { it.setLineColor(4) }
 lineCutHiET.each { it.setLineColor(4) }
 
+
 // define canvases and draw
+int canvX = 1200
+int canvY = 800
+
 /*
-//def grCanv = sectors.collect { new TCanvas("grCanv_"+sec(it), 800, 800 ) }
+//def grCanv = sectors.collect { new TCanvas("grCanv_"+sec(it), canvX, canvY) }
 def grCanv = sectors.collect { new EmbeddedCanvas() }
 //grCanv.each { it.setName("grCanv_"+sec(it)) }
 sectors.each {
@@ -292,11 +306,24 @@ sectors.each {
   grCanv[it].draw(lineMeanET[it])
 }
 */
-def grCanv = new TCanvas("grCanv", 800, 800)
-//def grCanv = new EmbeddedCanvas()
+
+///*
+def grCanv = new TCanvas("grCanv", canvX, canvY)
+grCanv.setVisible(!background)
+//*/
+/*
+def grFrame = new JFrame("grFrame")
+grFrame.setVisible(true)
+//grFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE)
+def grCanv = new EmbeddedCanvas()
+grFrame.setSize(canvX, canvY)
+grFrame.add(grCanv)
+*/
+
 grCanv.divide(2,3)
 sectors.each { 
   grCanv.getCanvas().getPad(it).getAxisY().setRange(plotLoET[it],plotHiET[it])
+  //grCanv.getPad(it).getAxisY().setRange(plotLoET[it],plotHiET[it])
   grCanv.cd(it)
   grCanv.draw(grET[it])
   if(grBadET[it].getDataSize(0)>0) grCanv.draw(grBadET[it],"same")
@@ -335,3 +362,18 @@ datfileWriter.close()
 badfileWriter.close()
 //println datfile.text
 println badfile.text
+
+
+// output canvas
+///*
+grCanv.save("outpng/qa.${runnum}.png")
+if(background) grCanv.dispose()
+//*/
+/*
+BufferedImage grFrameImg = new BufferedImage(
+  grFrame.getWidth(), grFrame.getHeight(), BufferedImage.TYPE_INT_RGB);
+Graphics2D grFrameGraphics = grFrameImg.createGraphics();
+grFrame.printAll(grFrameGraphics);
+//grFrameGraphics.dispose();
+ImageIO.write(grFrameImg, "png", new File("outpng/qa.${runnum}.png"));
+*/

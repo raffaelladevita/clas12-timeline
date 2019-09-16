@@ -17,37 +17,35 @@ echo "will run a maximum of $njobs jobs in parallel"
 
 
 # clean output and log dirs
-rm -r outdat/*.dat
-rm -r outhipo/*.hipo
-rm -r outbad/*.dat
-rm -r logfiles/*.{err,out}
+rm -rf outdat/*.dat
+rm -rf outbad/*.dat
+rm -rf outhipo/*.hipo
+rm -rf logfiles/*.{err,out}
 
 
 # build list of monsub files, stripping off file numbers
-ls ../monsub/monplots_*.hipo > filelist
-cat filelist | sed -r 's/([^_]*)$//g' | sort | uniq > tempo
+ls ../monsub/monplots_*.hipo | sed 's/^.*\///' | cut -d'_' -f2 | uniq > runlist.tmp
 
 
-# loop over monsub files, executing one job per run
+# loop over runs
 let cnt=1
-while read fname; do
+while read run; do
   if [ $cnt -le $njobs ]; then
-    logname="logfiles/$(echo $fname | sed 's/^.*\///g' | sed 's/_$//')"
-    echo "reading ${fname}*"
-    groovy qaElec.groovy ${fname}* > ${logname}.out 2> ${logname}.err &
+    log="logfiles/job.$run"
+    echo "analyzing run $run"
+    groovy qaElec.groovy $run $monsubdir 1 > ${log}.out 2> ${log}.err &
     let cnt++
   else
     wait
     let cnt=1
   fi
-done < tempo
+done < runlist.tmp
 
-# compare number of input monsub files to number counted in outdat datfiles
+
+# concatenate
 wait
-nfiles=$(cat filelist | wc -l)
-noutput=$(cat outdat/*.dat | awk '{print $1" "$2}' | sort | uniq | wc -l)
-echo "$nfiles files found"
-echo "$noutput files analyzed"
+cat outdat/mondata*.dat > outdat/all.dat
+cat outbad/outliers*.dat > outbad/all.dat
 
 # cleanup
-rm tempo filelist
+rm runlist.tmp

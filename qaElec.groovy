@@ -23,7 +23,7 @@ def background = false
 if(args.length==0) {
   print "USAGE: groovy qaElec.groovy [run number]"
   print " [monsubDir (default="+monsubDir+")]"
-  print " [baground (default=0)]"
+  print " [background (default=0)]"
   print '\n'
   return
 }

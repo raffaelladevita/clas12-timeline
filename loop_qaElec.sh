@@ -30,10 +30,10 @@ ls ../monsub/monplots_*.hipo | sed 's/^.*\///' | cut -d'_' -f2 | uniq > runlist.
 # loop over runs
 let cnt=1
 while read run; do
+  log="logfiles/job.$run"
+  echo "analyzing run $run"
+  groovy qaElec.groovy $run $monsubdir 1 > ${log}.out 2> ${log}.err &
   if [ $cnt -le $njobs ]; then
-    log="logfiles/job.$run"
-    echo "analyzing run $run"
-    groovy qaElec.groovy $run $monsubdir 1 > ${log}.out 2> ${log}.err &
     let cnt++
   else
     wait

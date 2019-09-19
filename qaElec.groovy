@@ -1,7 +1,7 @@
 import org.jlab.groot.data.TDirectory
 import org.jlab.groot.data.GraphErrors
 import org.jlab.groot.data.H1F
-import org.jlab.groot.data.DataLine
+import org.jlab.groot.math.F1D
 import org.jlab.groot.ui.TCanvas
 
 import org.jlab.groot.graphics.EmbeddedCanvas
@@ -19,17 +19,17 @@ import static groovy.io.FileType.FILES
 //----------------------------------------------------------------------------------
 def runnum
 def monsubDir = "../monsub"
-def background = false
+//def background = false
 if(args.length==0) {
   print "USAGE: groovy qaElec.groovy [run number]"
   print " [monsubDir (default="+monsubDir+")]"
-  print " [background (default=0)]"
+  //print " [background (default=0)]"
   print '\n'
   return
 }
 else runnum = args[0].toInteger()
 if(args.length>=2) monsubDir = args[1]
-if(args.length>=3) background = args[2].toInteger() == 1
+//if(args.length>=3) background = args[2].toInteger() == 1
 //----------------------------------------------------------------------------------
 
 
@@ -73,16 +73,23 @@ if(!fcMapRun) throw new Exception("run ${runnum} not found in "+fcFileName);
 
 
 // define plot of number of FC-normalized triggers vs. file number
-def grET = sectors.collect{
-  def gr = new GraphErrors('grET_'+sec(it))
-  gr.setTitle("Run $runnum Electron Trigger N/F -- sector "+sec(it))
-  gr.setTitleY("N/F")
-  gr.setTitleX("file number")
-  return gr
+def defineGraph = { name,suffix ->
+  sectors.collect {
+    def g = new GraphErrors(name+"_"+sec(it)+suffix)
+    g.setTitle("Electron Trigger N/F -- sector "+sec(it))
+    g.setTitleY("N/F")
+    g.setTitleX("file number")
+    return g
+  }
 }
-def minET = sectors.collect {1E10}
-def maxET = sectors.collect {0}
-def ET
+def grNF = defineGraph("grNF","")
+def grCleanedNF = defineGraph("gr_sec","")
+def grOutlierNF = defineGraph("gr_sec",":outliers")
+grOutlierNF.each { it.setMarkerColor(2) }
+
+def minNF = sectors.collect {1E10}
+def maxNF = sectors.collect {0}
+def NF
 
 
 // define output files
@@ -136,21 +143,21 @@ fileList.each{ fileN ->
 
     // compute N/F
     nTrig = { int i -> heth[i].integral() }
-    ET = sectors.collect { nTrig(it) / fcCounts }
+    NF = sectors.collect { nTrig(it) / fcCounts }
 
-    // fill grET
-    sectors.each{ grET[it].addPoint(filenum, ET[it], 0, 0) }
+    // fill grNF
+    sectors.each{ grNF[it].addPoint(filenum, NF[it], 0, 0) }
 
     // set minima and maxima
-    minET = sectors.collect { Math.min(minET[it],ET[it]) }
-    maxET = sectors.collect { Math.max(maxET[it],ET[it]) }
+    minNF = sectors.collect { Math.min(minNF[it],NF[it]) }
+    maxNF = sectors.collect { Math.max(maxNF[it],NF[it]) }
     minFilenum = filenum < minFilenum ? filenum : minFilenum
     maxFilenum = filenum > maxFilenum ? filenum : maxFilenum
 
     // output to datfile
     sectors.each{
       datfileWriter << [ 
-        runnum, filenum, sec(it), nTrig(it), fcStart, fcStop, ET[it]
+        runnum, filenum, sec(it), nTrig(it), fcStart, fcStop, NF[it]
       ].join(' ') << '\n'
     }
 
@@ -160,28 +167,6 @@ fileList.each{ fileN ->
 println "--- done reading hipo files"
 
 
-// HISTOGRAMS
-//----------------------------------------------------------------------------------
-
-// define histograms
-def buf = 0.1
-histLoET = minET*.multiply(1-buf)
-histHiET = maxET*.multiply(1+buf)
-def histET = sectors.collect{ 
-  new H1F("histET_"+sec(it), "N/F -- sector "+sec(it), 50, histLoET[it], histHiET[it] )
-}
-histET.each { it.setOptStat("1111100") }
-
-// fill histograms
-grET.eachWithIndex { gr, it ->
-  gr.getDataSize(0).times { i -> 
-    //println "sec"+sec(it)+": "+gr.getDataX(i)+" "+gr.getDataY(i)
-    histET[it].fill(gr.getDataY(i))
-  }
-}
-
-// get means
-def meanET = histET.collect { it.getMean() }
 
 
 // QUARTILES
@@ -194,9 +179,9 @@ def median = { d ->
   d.size() % 2 ? d[m] : (d[m-1]+d[m]) / 2
 }
 
-// assemble N/F values into a data structure, called "dataET":
+// assemble N/F values into a data structure, called "dataNF":
 // a list of 6 lists, one for each sector; each sector's list is of its N/F values
-def dataET = grET.collect { gr ->
+def dataNF = grNF.collect { gr ->
   def d = []
   gr.getDataSize(0).times { i -> d.add(gr.getDataY(i)) }
   return d
@@ -204,19 +189,19 @@ def dataET = grET.collect { gr ->
 
 
 // determine quartiles
-def mqET = dataET.collect { median(it) } // mq = middle quartile (overall median)
-dataBelowET = dataET.withIndex().collect { d,s -> d.findAll{ it < mqET[s] } }
-dataAboveET = dataET.withIndex().collect { d,s -> d.findAll{ it > mqET[s] } }
-def lqET = dataBelowET.collect { median(it) } // lq = lower quartile
-def uqET = dataAboveET.collect { median(it) } // uq = upper quartile
-def iqrET = sectors.collect { uqET[it] - lqET[it] } // iqr = interquartile range
+def mqNF = dataNF.collect { median(it) } // mq = middle quartile (overall median)
+dataBelowNF = dataNF.withIndex().collect { d,s -> d.findAll{ it < mqNF[s] } }
+dataAboveNF = dataNF.withIndex().collect { d,s -> d.findAll{ it > mqNF[s] } }
+def lqNF = dataBelowNF.collect { median(it) } // lq = lower quartile
+def uqNF = dataAboveNF.collect { median(it) } // uq = upper quartile
+def iqrNF = sectors.collect { uqNF[it] - lqNF[it] } // iqr = interquartile range
 
 // print data and quartiles
 /*
 sectors.each { 
-  print "data: "; println dataET[it]; println "MQ="+mqET[it]
-  print "dataBelow: "; println dataBelowET[it]; println "LQ="+lqET[it]
-  print "dataAbove: "; println dataAboveET[it]; println "UQ="+uqET[it]
+  print "data: "; println dataNF[it]; println "MQ="+mqNF[it]
+  print "dataBelow: "; println dataBelowNF[it]; println "LQ="+lqNF[it]
+  print "dataAbove: "; println dataAboveNF[it]; println "UQ="+uqNF[it]
 }
 */
 
@@ -227,34 +212,45 @@ sectors.each {
 
 // determine outlier cuts via cutFactor*IQR method
 def cutFactor = 2.5
-def cutLoET = lqET.withIndex().collect { q,i -> q - cutFactor * iqrET[i] }
-def cutHiET = uqET.withIndex().collect { q,i -> q + cutFactor * iqrET[i] }
-sectors.each { println "SECTOR "+sec(it)+" CUTS: "+cutLoET[it]+" to "+cutHiET[it] }
+def cutLoNF = lqNF.withIndex().collect { q,i -> q - cutFactor * iqrNF[i] }
+def cutHiNF = uqNF.withIndex().collect { q,i -> q + cutFactor * iqrNF[i] }
+sectors.each { println "SECTOR "+sec(it)+" CUTS: "+cutLoNF[it]+" to "+cutHiNF[it] }
 
 
-// define graph of outliers
-def grBadET = sectors.collect{
-  def gr = new GraphErrors('grBadET_'+sec(it))
-  gr.setTitle("Run $runnum Electron Trigger N/F -- sector "+sec(it))
+// define separate graphs for outliers and non-outliers
+/*
+def grOutlierNF = sectors.collect{
+  def gr = new GraphErrors('gr_sec_'+sec(it)+":outliers")
+  gr.setTitle("Electron Trigger N/F -- sector "+sec(it))
   gr.setTitleY("N/F")
   gr.setTitleX("file number")
   gr.setMarkerColor(2)
   return gr
 }
+def grCleanedNF = sectors.collect{
+  def gr = new GraphErrors('gr_sec_'+sec(it))
+  gr.setTitle("Electron Trigger N/F -- sector "+sec(it))
+  gr.setTitleY("N/F")
+  gr.setTitleX("file number")
+  gr.setMarkerColor(1)
+  return gr
+}
+*/
 
 
 // loop through N/F values, determining which are outliers
 def badlist = [:] // filenum -> list of sectors in which N/F was an outlier
-grET.eachWithIndex { gr, it ->
+grNF.eachWithIndex { gr, it ->
   gr.getDataSize(0).times { i -> 
     def val = gr.getDataY(i) // N/F
     def fn = gr.getDataX(i).toInteger() // filenum
-    if( val < cutLoET[it] || val > cutHiET[it] ) {
-      grBadET[it].addPoint( fn, val, 0, 0 )
+    if( val < cutLoNF[it] || val > cutHiNF[it] ) {
+      grOutlierNF[it].addPoint( fn, val, 0, 0 )
       if(badlist.containsKey(fn)) badlist[fn].add(sec(it))
       else badlist[fn] = [sec(it)]
-      //badness = Math.abs( val - mqET[it] ) / iqrET[it]
+      //badness = Math.abs( val - mqNF[it] ) / iqrNF[it]
     }
+    else grCleanedNF[it].addPoint( fn, val, 0, 0 )
   }
 }
 println "badlist = "+badlist
@@ -267,34 +263,89 @@ badlist.each { fn, seclist ->
 
 
 
+// HISTOGRAMS
+//----------------------------------------------------------------------------------
+
+// define histograms
+def buf = 0.1
+histL = minNF*.multiply(1-buf)
+histH = maxNF*.multiply(1+buf)
+def defineHist = { name,suffix -> 
+  sectors.collect {
+    def h = new H1F(
+      name+"_"+sec(it)+suffix, "N/F -- sector "+sec(it), 50, histL[it], histH[it] 
+    )
+    h.setOptStat("1111100")
+    return h
+  }
+}
+def histNF = defineHist("histNF","")
+def histCleanedNF = defineHist("hist_sec","")
+def histOutlierNF = defineHist("hist_sec",":outliers")
+histOutlierNF.each { it.setLineColor(2) }
+
+
+// fill histograms
+def fillHist = { graphs,histos ->
+  graphs.eachWithIndex { graph,s ->
+    graph.getDataSize(0).times { i ->
+      histos[s].fill(graph.getDataY(i))
+    }
+  }
+}
+fillHist(grNF,histNF)
+fillHist(grCleanedNF,histCleanedNF)
+fillHist(grOutlierNF,histOutlierNF)
+
+/*
+grNF.eachWithIndex { gr, it ->
+  gr.getDataSize(0).times { i -> 
+    //println "sec"+sec(it)+": "+gr.getDataX(i)+" "+gr.getDataY(i)
+    histNF[it].fill(gr.getDataY(i))
+  }
+}
+*/
+
+// get means
+def meanNF = histNF.collect { it.getMean() }
+
+
+
 // PLOTTING
 //----------------------------------------------------------------------------------
 
 // determine N/F axis plot ranges
-def plotLoET = cutLoET.withIndex().collect { c,i -> Math.min(c,minET[i]) - buf }
-def plotHiET = cutHiET.withIndex().collect { c,i -> Math.max(c,maxET[i]) + buf }
+def plotLoNF = cutLoNF.withIndex().collect { c,i -> Math.min(c,minNF[i]) - buf }
+def plotHiNF = cutHiNF.withIndex().collect { c,i -> Math.max(c,maxNF[i]) + buf }
 
 // define lines
 minFilenum -= 10
 maxFilenum += 10
-def buildLine = { a -> a.collect { new DataLine(minFilenum, it, maxFilenum, it) } }
-def lineMeanET = buildLine(meanET)
-def lineMqET = buildLine(mqET)
-def lineLqET = buildLine(lqET)
-def lineUqET = buildLine(uqET)
-def lineCutLoET = buildLine(cutLoET)
-def lineCutHiET = buildLine(cutHiET)
-lineMeanET.each { it.setLineColor(1) }
-lineMqET.each { it.setLineColor(2) }
-lineLqET.each { it.setLineColor(3) }
-lineUqET.each { it.setLineColor(3) }
-lineCutLoET.each { it.setLineColor(4) }
-lineCutHiET.each { it.setLineColor(4) }
+//def buildLine = { a -> a.collect { new DataLine(minFilenum, it, maxFilenum, it) } }
+def buildLine = { nums,name -> 
+  nums.withIndex().collect { val,s ->
+    new F1D("gr_sec_"+sec(s)+":"+name, Double.toString(val), minFilenum, maxFilenum) 
+  }
+}
+def lineMeanNF = buildLine(meanNF,"mean")
+def lineMqNF = buildLine(mqNF,"mq")
+def lineLqNF = buildLine(lqNF,"lq")
+def lineUqNF = buildLine(uqNF,"uq")
+def lineCutLoNF = buildLine(cutLoNF,"cutLo")
+def lineCutHiNF = buildLine(cutHiNF,"cutHi")
+lineMeanNF.each { it.setLineColor(1) }
+lineMqNF.each { it.setLineColor(2) }
+lineLqNF.each { it.setLineColor(3) }
+lineUqNF.each { it.setLineColor(3) }
+lineCutLoNF.each { it.setLineColor(4) }
+lineCutHiNF.each { it.setLineColor(4) }
 
 
 // define canvases and draw
+/*
 int canvX = 1200
 int canvY = 800
+*/
 
 /*
 //def grCanv = sectors.collect { new TCanvas("grCanv_"+sec(it), canvX, canvY) }
@@ -302,15 +353,15 @@ def grCanv = sectors.collect { new EmbeddedCanvas() }
 //grCanv.each { it.setName("grCanv_"+sec(it)) }
 sectors.each {
   grCanv[it].cd(0)
-  grCanv[it].draw(grET[it])
-  grCanv[it].draw(lineMeanET[it])
+  grCanv[it].draw(grNF[it])
+  grCanv[it].draw(lineMeanNF[it])
 }
 */
 
-///*
+/*
 def grCanv = new TCanvas("grCanv", canvX, canvY)
 grCanv.setVisible(!background)
-//*/
+*/
 /*
 def grFrame = new JFrame("grFrame")
 grFrame.setVisible(true)
@@ -320,30 +371,57 @@ grFrame.setSize(canvX, canvY)
 grFrame.add(grCanv)
 */
 
+/*
 grCanv.divide(2,3)
 sectors.each { 
-  grCanv.getCanvas().getPad(it).getAxisY().setRange(plotLoET[it],plotHiET[it])
-  //grCanv.getPad(it).getAxisY().setRange(plotLoET[it],plotHiET[it])
+  grCanv.getCanvas().getPad(it).getAxisY().setRange(plotLoNF[it],plotHiNF[it])
+  //grCanv.getPad(it).getAxisY().setRange(plotLoNF[it],plotHiNF[it])
   grCanv.cd(it)
-  grCanv.draw(grET[it])
-  if(grBadET[it].getDataSize(0)>0) grCanv.draw(grBadET[it],"same")
-  //grCanv.draw(lineMeanET[it])
-  grCanv.draw(lineMqET[it])
-  //grCanv.draw(lineUqET[it])
-  //grCanv.draw(lineLqET[it])
-  grCanv.draw(lineCutLoET[it])
-  grCanv.draw(lineCutHiET[it])
+  grCanv.draw(grNF[it])
+  if(grOutlierNF[it].getDataSize(0)>0) grCanv.draw(grOutlierNF[it],"same")
+  //grCanv.draw(lineMeanNF[it])
+  grCanv.draw(lineMqNF[it])
+  //grCanv.draw(lineUqNF[it])
+  //grCanv.draw(lineLqNF[it])
+  grCanv.draw(lineCutLoNF[it])
+  grCanv.draw(lineCutHiNF[it])
 }
+*/
 
 
 // output plots to hipo file
+def writeHipo = { o -> o.each{ outHipo.addDataSet(it) } }
+// -- timeline
+def timeline = sectors.collect{ new GraphErrors("sec"+sec(it)) }
+timeline.eachWithIndex { g,i -> g.addPoint( runnum, mqNF[i], 0, 0 ) }
+outHipo.mkdir("/timelines")
+outHipo.cd("/timelines")
+writeHipo(timeline)
+outHipo.mkdir("/"+runnum)
+outHipo.cd("/"+runnum)
+// -- this run's plots
+writeHipo(grCleanedNF)
+writeHipo(grOutlierNF)
+//writeHipo(lineMeanNF)
+writeHipo(lineMqNF)
+//writeHipo(lineLqNF)
+//writeHipo(lineUqNF)
+writeHipo(lineCutLoNF)
+writeHipo(lineCutHiNF)
+writeHipo(histCleanedNF)
+writeHipo(histOutlierNF)
+
+
+
+/*
 outHipo.mkdir("/graphs")
 outHipo.cd("/graphs")
-grET.each{ outHipo.addDataSet(it) }
+grNF.each{ outHipo.addDataSet(it) }
 
 outHipo.mkdir("/hists")
 outHipo.cd("/hists")
-histET.each{ outHipo.addDataSet(it) }
+histNF.each{ outHipo.addDataSet(it) }
+*/
 
 /*
 outHipo.mkdir("/canvs")
@@ -365,10 +443,10 @@ println badfile.text
 
 
 // output canvas
-///*
+/*
 grCanv.save("outpng/qa.${runnum}.png")
 if(background) grCanv.dispose()
-//*/
+*/
 /*
 BufferedImage grFrameImg = new BufferedImage(
   grFrame.getWidth(), grFrame.getHeight(), BufferedImage.TYPE_INT_RGB);

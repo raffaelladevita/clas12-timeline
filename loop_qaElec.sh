@@ -2,8 +2,10 @@
 
 # set monsub directory, which contains monplots_${RUN}_${FILE}.hipo files
 # default is ../monsub
-if [ $# -eq 1 ]; then monsubdir=$1;
-else monsubdir="../monsub"; fi
+monsubdir="../monsub";
+outputpng=0
+if [ $# -ge 1 ]; then monsubdir=$1;
+if [ $# -ge 2 ]; then outputpng=$2;
 
 
 # maximum number of jobs to run in parallel

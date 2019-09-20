@@ -4,12 +4,6 @@ import org.jlab.groot.data.H1F
 import org.jlab.groot.math.F1D
 import org.jlab.groot.ui.TCanvas
 
-import org.jlab.groot.graphics.EmbeddedCanvas
-import javax.swing.JFrame
-import java.awt.image.BufferedImage
-import java.awt.Graphics2D
-import javax.imageio.ImageIO 
-
 import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
 import static groovy.io.FileType.FILES
@@ -19,17 +13,17 @@ import static groovy.io.FileType.FILES
 //----------------------------------------------------------------------------------
 def runnum
 def monsubDir = "../monsub"
-//def background = false
+def outputPNG = false
 if(args.length==0) {
   print "USAGE: groovy qaElec.groovy [run number]"
   print " [monsubDir (default="+monsubDir+")]"
-  //print " [background (default=0)]"
+  print " [outputPNG (default=0)]"
   print '\n'
   return
 }
 else runnum = args[0].toInteger()
 if(args.length>=2) monsubDir = args[1]
-//if(args.length>=3) background = args[2].toInteger() == 1
+if(args.length>=3) outputPNG = args[2].toInteger() == 1
 //----------------------------------------------------------------------------------
 
 
@@ -217,27 +211,6 @@ def cutHiNF = uqNF.withIndex().collect { q,i -> q + cutFactor * iqrNF[i] }
 sectors.each { println "SECTOR "+sec(it)+" CUTS: "+cutLoNF[it]+" to "+cutHiNF[it] }
 
 
-// define separate graphs for outliers and non-outliers
-/*
-def grOutlierNF = sectors.collect{
-  def gr = new GraphErrors('gr_sec_'+sec(it)+":outliers")
-  gr.setTitle("Electron Trigger N/F -- sector "+sec(it))
-  gr.setTitleY("N/F")
-  gr.setTitleX("file number")
-  gr.setMarkerColor(2)
-  return gr
-}
-def grCleanedNF = sectors.collect{
-  def gr = new GraphErrors('gr_sec_'+sec(it))
-  gr.setTitle("Electron Trigger N/F -- sector "+sec(it))
-  gr.setTitleY("N/F")
-  gr.setTitleX("file number")
-  gr.setMarkerColor(1)
-  return gr
-}
-*/
-
-
 // loop through N/F values, determining which are outliers
 def badlist = [:] // filenum -> list of sectors in which N/F was an outlier
 grNF.eachWithIndex { gr, it ->
@@ -297,14 +270,6 @@ fillHist(grNF,histNF)
 fillHist(grCleanedNF,histCleanedNF)
 fillHist(grOutlierNF,histOutlierNF)
 
-/*
-grNF.eachWithIndex { gr, it ->
-  gr.getDataSize(0).times { i -> 
-    //println "sec"+sec(it)+": "+gr.getDataX(i)+" "+gr.getDataY(i)
-    histNF[it].fill(gr.getDataY(i))
-  }
-}
-*/
 
 // get means
 def meanNF = histNF.collect { it.getMean() }
@@ -321,7 +286,6 @@ def plotHiNF = cutHiNF.withIndex().collect { c,i -> Math.max(c,maxNF[i]) + buf }
 // define lines
 minFilenum -= 10
 maxFilenum += 10
-//def buildLine = { a -> a.collect { new DataLine(minFilenum, it, maxFilenum, it) } }
 def buildLine = { nums,name -> 
   nums.withIndex().collect { val,s ->
     new F1D("gr_sec_"+sec(s)+":"+name, Double.toString(val), minFilenum, maxFilenum) 
@@ -340,53 +304,6 @@ lineUqNF.each { it.setLineColor(3) }
 lineCutLoNF.each { it.setLineColor(4) }
 lineCutHiNF.each { it.setLineColor(4) }
 
-
-// define canvases and draw
-/*
-int canvX = 1200
-int canvY = 800
-*/
-
-/*
-//def grCanv = sectors.collect { new TCanvas("grCanv_"+sec(it), canvX, canvY) }
-def grCanv = sectors.collect { new EmbeddedCanvas() }
-//grCanv.each { it.setName("grCanv_"+sec(it)) }
-sectors.each {
-  grCanv[it].cd(0)
-  grCanv[it].draw(grNF[it])
-  grCanv[it].draw(lineMeanNF[it])
-}
-*/
-
-/*
-def grCanv = new TCanvas("grCanv", canvX, canvY)
-grCanv.setVisible(!background)
-*/
-/*
-def grFrame = new JFrame("grFrame")
-grFrame.setVisible(true)
-//grFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE)
-def grCanv = new EmbeddedCanvas()
-grFrame.setSize(canvX, canvY)
-grFrame.add(grCanv)
-*/
-
-/*
-grCanv.divide(2,3)
-sectors.each { 
-  grCanv.getCanvas().getPad(it).getAxisY().setRange(plotLoNF[it],plotHiNF[it])
-  //grCanv.getPad(it).getAxisY().setRange(plotLoNF[it],plotHiNF[it])
-  grCanv.cd(it)
-  grCanv.draw(grNF[it])
-  if(grOutlierNF[it].getDataSize(0)>0) grCanv.draw(grOutlierNF[it],"same")
-  //grCanv.draw(lineMeanNF[it])
-  grCanv.draw(lineMqNF[it])
-  //grCanv.draw(lineUqNF[it])
-  //grCanv.draw(lineLqNF[it])
-  grCanv.draw(lineCutLoNF[it])
-  grCanv.draw(lineCutHiNF[it])
-}
-*/
 
 
 // output plots to hipo file
@@ -411,29 +328,10 @@ writeHipo(lineCutHiNF)
 writeHipo(histCleanedNF)
 writeHipo(histOutlierNF)
 
-
-
-/*
-outHipo.mkdir("/graphs")
-outHipo.cd("/graphs")
-grNF.each{ outHipo.addDataSet(it) }
-
-outHipo.mkdir("/hists")
-outHipo.cd("/hists")
-histNF.each{ outHipo.addDataSet(it) }
-*/
-
-/*
-outHipo.mkdir("/canvs")
-outHipo.cd("/canvs")
-grCanv.eachWithIndex{ c,it -> outHipo.add("c"+sec(it), c) }
-*/
-
 def outHipoN = "outhipo/mondata."+runnum+".hipo"
 File outHipoFile = new File(outHipoN)
 if(outHipoFile.exists()) outHipoFile.delete()
 outHipo.writeFile(outHipoN)
-
 
 // close buffer writers
 datfileWriter.close()
@@ -442,16 +340,29 @@ badfileWriter.close()
 println badfile.text
 
 
-// output canvas
-/*
-grCanv.save("outpng/qa.${runnum}.png")
-if(background) grCanv.dispose()
-*/
-/*
-BufferedImage grFrameImg = new BufferedImage(
-  grFrame.getWidth(), grFrame.getHeight(), BufferedImage.TYPE_INT_RGB);
-Graphics2D grFrameGraphics = grFrameImg.createGraphics();
-grFrame.printAll(grFrameGraphics);
-//grFrameGraphics.dispose();
-ImageIO.write(grFrameImg, "png", new File("outpng/qa.${runnum}.png"));
-*/
+// output plots to PNG
+int canvX = 1200
+int canvY = 800
+def grCanv
+if(outputPNG) {
+  grCanv = new TCanvas("grCanv", canvX, canvY)
+
+  grCanv.divide(2,3)
+  sectors.each { 
+    grCanv.getCanvas().getPad(it).getAxisY().setRange(plotLoNF[it],plotHiNF[it])
+    grCanv.cd(it)
+    grCanv.draw(grNF[it])
+    if(grOutlierNF[it].getDataSize(0)>0) grCanv.draw(grOutlierNF[it],"same")
+    //grCanv.draw(lineMeanNF[it])
+    grCanv.draw(lineMqNF[it],"same")
+    //grCanv.draw(lineUqNF[it])
+    //grCanv.draw(lineLqNF[it])
+    grCanv.draw(lineCutLoNF[it],"same")
+    grCanv.draw(lineCutHiNF[it],"same")
+  }
+
+  sleep(2000)
+  grCanv.save("outpng/qa.${runnum}.png")
+  println "png saved"
+  grCanv.dispose()
+}

@@ -4,12 +4,12 @@
 # default is ../monsub
 monsubdir="../monsub";
 outputpng=0
-if [ $# -ge 1 ]; then monsubdir=$1;
-if [ $# -ge 2 ]; then outputpng=$2;
+if [ $# -ge 1 ]; then monsubdir=$1; fi
+if [ $# -ge 2 ]; then outputpng=$2; fi
 
 
 # maximum number of jobs to run in parallel
-let njobs=16
+let njobs=4
 
 
 # if njobs > number of available threads, set njobs to that number
@@ -34,11 +34,12 @@ let cnt=1
 while read run; do
   log="logfiles/job.$run"
   echo "analyzing run $run"
-  groovy qaElec.groovy $run $monsubdir 1 > ${log}.out 2> ${log}.err &
-  if [ $cnt -le $njobs ]; then
+  groovy qaElec.groovy $run $monsubdir $outputpng 1 > ${log}.out 2> ${log}.err &
+  if [ $cnt -lt $njobs ]; then
     let cnt++
   else
     wait
+    exit # prematurely
     let cnt=1
   fi
 done < runlist.tmp

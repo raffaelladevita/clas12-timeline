@@ -14,16 +14,19 @@ import static groovy.io.FileType.FILES
 def runnum
 def monsubDir = "../monsub"
 def outputPNG = false
+def garbageCollect = true
 if(args.length==0) {
   print "USAGE: groovy qaElec.groovy [run number]"
   print " [monsubDir (default="+monsubDir+")]"
   print " [outputPNG (default=0)]"
+  print " [garbageCollect (default=0)]"
   print '\n'
   return
 }
 else runnum = args[0].toInteger()
 if(args.length>=2) monsubDir = args[1]
 if(args.length>=3) outputPNG = args[2].toInteger() == 1
+if(args.length>=4) garbageCollect = args[3].toInteger() == 1
 //----------------------------------------------------------------------------------
 
 
@@ -31,6 +34,9 @@ if(args.length>=3) outputPNG = args[2].toInteger() == 1
 def sectors = 0..<6
 def sec = { int i -> i+1 }
 boolean success
+def fileNtok
+def runnumCheck
+def heth
 def fcMapRunFiles
 def fcVals
 def fcStart
@@ -103,8 +109,8 @@ fileList.each{ fileN ->
   success = true
 
   // get file number, and double-check run number
-  def fileNtok = fileN.split('/')[-1].tokenize('_.')
-  def runnumCheck = fileNtok[1].toInteger()
+  fileNtok = fileN.split('/')[-1].tokenize('_.')
+  runnumCheck = fileNtok[1].toInteger()
   filenum = fileNtok[2].toInteger()
   if(runnumCheck!=runnum) errPrint("runnum!=runnumCheck (runnumCheck="+runnumCheck+")")
   //println "fileNtok="+fileNtok+" runnum="+runnum+" filenum="+filenum
@@ -128,7 +134,7 @@ fileList.each{ fileN ->
 
 
   // read electron trigger histograms 
-  def heth = sectors.collect{ tdir.getObject('/electron/trigger/heth_'+sec(it)) }
+  heth = sectors.collect{ tdir.getObject('/electron/trigger/heth_'+sec(it)) }
   sectors.each{ if(heth[it]==null) errPrint("missing histogram in sector "+sec(it)) }
 
 
@@ -154,6 +160,10 @@ fileList.each{ fileN ->
         runnum, filenum, sec(it), nTrig(it), fcStart, fcStop, NF[it]
       ].join(' ') << '\n'
     }
+
+    // force garbage collection (only if garbageCollect==true)
+    tdir = null
+    if(garbageCollect) System.gc()
 
 
   } // eo if(success)

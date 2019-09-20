@@ -18,15 +18,11 @@ if [ $njobs -gt $nthreads ]; then njobs=$nthreads; fi
 echo "will run a maximum of $njobs jobs in parallel"
 
 
-# clean output and log dirs
-rm -rf outdat/*.dat
-rm -rf outbad/*.dat
-rm -rf outhipo/*.hipo
 rm -rf logfiles/*.{err,out}
 
 
 # build list of monsub files, stripping off file numbers
-ls ../monsub/monplots_*.hipo | sed 's/^.*\///' | cut -d'_' -f2 | uniq > runlist.tmp
+ls ${monsubdir}/monplots_*.hipo | sed 's/^.*\///' | cut -d'_' -f2 | uniq > runlist.tmp
 
 
 # loop over runs
@@ -39,7 +35,6 @@ while read run; do
     let cnt++
   else
     wait
-    exit # prematurely
     let cnt=1
   fi
 done < runlist.tmp

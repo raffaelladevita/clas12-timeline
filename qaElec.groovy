@@ -36,6 +36,7 @@ def sec = { int i -> i+1 }
 boolean success
 def fileNtok
 def runnumCheck
+def runnumTmp = 0
 def heth
 def fcMapRunFiles
 def fcVals
@@ -44,21 +45,32 @@ def fcStop
 def fcCounts
 def nTrig
 def filenum
-def minFilenum = 1E6
+def filenumIT = 0
+def filenumITmap = [:]
+def runnumITmap = [:]
+def filenumDraw
+def val
+def fn
+def rn
+def minFilenum = 1E10
 def maxFilenum = 0
-def jprint = { map -> println JsonOutput.prettyPrint(JsonOutput.toJson(map)) }
 def errPrint = { str -> 
   System.err << "ERROR in run ${runnum}_${filenum}: "+str+"\n" 
   success = false
 }
 
 
+// if runnum is this number, all runs will be looped over
+boolean runAll = runnum==5000
+
+
 // get list of monsub hipo files
 def monsubDirObj = new File(monsubDir)
 def fileList = []
+def fileFilter = runAll ? ~/monplots_.*\.hipo/ : ~/monplots_${runnum}.*\.hipo/
 monsubDirObj.traverse(
   type: groovy.io.FileType.FILES,
-  nameFilter: ~/monplots_${runnum}.*\.hipo/ )
+  nameFilter: fileFilter )
 { fileList << monsubDir+"/"+it.getName() }
 fileList.sort()
 //fileList.each { println it }
@@ -68,23 +80,31 @@ fileList.sort()
 def fcFileName = "fcdata.json"
 def slurp = new JsonSlurper()
 def fcFile = new File(fcFileName)
-def fcMapRun = slurp.parse(fcFile).groupBy{ it.run }.get(runnum)
-if(!fcMapRun) throw new Exception("run ${runnum} not found in "+fcFileName);
+def fcMapRun
+if(!runAll) {
+  fcMapRun = slurp.parse(fcFile).groupBy{ it.run }.get(runnum)
+  if(!fcMapRun) throw new Exception("run ${runnum} not found in "+fcFileName);
+}
+
+
+// define plot name prefixes
+def grPrefix = "gr_${runnum}_sec"
+def histPrefix = "hist_${runnum}_sec"
 
 
 // define plot of number of FC-normalized triggers vs. file number
 def defineGraph = { name,suffix ->
   sectors.collect {
     def g = new GraphErrors(name+"_"+sec(it)+suffix)
-    g.setTitle("Electron Trigger N/F -- sector "+sec(it))
+    g.setTitle("Electron Trigger N/F vs. file number -- sector "+sec(it))
     g.setTitleY("N/F")
     g.setTitleX("file number")
     return g
   }
 }
 def grNF = defineGraph("grNF","")
-def grCleanedNF = defineGraph("gr_sec","")
-def grOutlierNF = defineGraph("gr_sec",":outliers")
+def grCleanedNF = defineGraph(grPrefix,"")
+def grOutlierNF = defineGraph(grPrefix,":outliers")
 grOutlierNF.each { it.setMarkerColor(2) }
 
 def minNF = sectors.collect {1E10}
@@ -98,11 +118,15 @@ def datfileWriter = datfile.newWriter(false)
 def badfile = new File("outbad/outliers."+runnum+".dat")
 def badfileWriter = badfile.newWriter(false)
 def outHipo = new TDirectory()
+def runnumDir = "/"+runnum
+def outHipoN = "outhipo/mondata."+runnum+".hipo"
+def pngname = "outpng/qa.${runnum}.png"
 
 
 // loop through input hipo files
 //----------------------------------------------------------------------------------
 println "---- BEGIN READING FILES"
+TDirectory tdir
 fileList.each{ fileN ->
   println "-- READ: "+fileN
 
@@ -112,12 +136,21 @@ fileList.each{ fileN ->
   fileNtok = fileN.split('/')[-1].tokenize('_.')
   runnumCheck = fileNtok[1].toInteger()
   filenum = fileNtok[2].toInteger()
+  if(runAll) runnum=runnumCheck // change to current runnum, if looping over all runs
   if(runnumCheck!=runnum) errPrint("runnum!=runnumCheck (runnumCheck="+runnumCheck+")")
   //println "fileNtok="+fileNtok+" runnum="+runnum+" filenum="+filenum
 
 
+  // if looping over all runs, be sure to parse each new run's fcMapRun
+  if(runAll && runnum!=runnumTmp) {
+    fcMapRun = slurp.parse(fcFile).groupBy{ it.run }.get(runnum)
+    if(!fcMapRun) throw new Exception("run ${runnum} not found in "+fcFileName);
+    runnumTmp = runnum
+  }
+
+
   // open hipo file
-  TDirectory tdir = new TDirectory()
+  tdir = new TDirectory()
   tdir.readFile(fileN)
 
 
@@ -138,6 +171,16 @@ fileList.each{ fileN ->
   sectors.each{ if(heth[it]==null) errPrint("missing histogram in sector "+sec(it)) }
 
 
+  // set maps from filenumIT to filenum and runnum (used only if looping over all runs)
+  filenumIT += 1
+  filenumITmap[filenumIT] = filenum 
+  runnumITmap[filenumIT] = runnum
+
+  
+  // set filenumDraw, which will be the file number drawn to plots
+  filenumDraw = runAll ? filenumIT : filenum
+
+
   // if no errors thrown above, continue analyzing
   if(success) {
 
@@ -146,13 +189,13 @@ fileList.each{ fileN ->
     NF = sectors.collect { nTrig(it) / fcCounts }
 
     // fill grNF
-    sectors.each{ grNF[it].addPoint(filenum, NF[it], 0, 0) }
+    sectors.each{ grNF[it].addPoint(filenumDraw, NF[it], 0, 0) }
 
     // set minima and maxima
     minNF = sectors.collect { Math.min(minNF[it],NF[it]) }
     maxNF = sectors.collect { Math.max(maxNF[it],NF[it]) }
-    minFilenum = filenum < minFilenum ? filenum : minFilenum
-    maxFilenum = filenum > maxFilenum ? filenum : maxFilenum
+    minFilenum = filenumDraw < minFilenum ? filenumDraw : minFilenum
+    maxFilenum = filenumDraw > maxFilenum ? filenumDraw : maxFilenum
 
     // output to datfile
     sectors.each{
@@ -164,6 +207,7 @@ fileList.each{ fileN ->
     // force garbage collection (only if garbageCollect==true)
     tdir = null
     if(garbageCollect) System.gc()
+    //if(garbageCollect || runAll) System.gc()
 
 
   } // eo if(success)
@@ -225,8 +269,8 @@ sectors.each { println "SECTOR "+sec(it)+" CUTS: "+cutLoNF[it]+" to "+cutHiNF[it
 def badlist = [:] // filenum -> list of sectors in which N/F was an outlier
 grNF.eachWithIndex { gr, it ->
   gr.getDataSize(0).times { i -> 
-    def val = gr.getDataY(i) // N/F
-    def fn = gr.getDataX(i).toInteger() // filenum
+    val = gr.getDataY(i) // N/F
+    fn = gr.getDataX(i).toInteger() // filenum
     if( val < cutLoNF[it] || val > cutHiNF[it] ) {
       grOutlierNF[it].addPoint( fn, val, 0, 0 )
       if(badlist.containsKey(fn)) badlist[fn].add(sec(it))
@@ -240,8 +284,15 @@ println "badlist = "+badlist
 
 
 // print outliers to outbad file
-badlist.each { fn, seclist ->
-  badfileWriter << [ runnum, fn, seclist.join(' ') ].join(' ') << '\n'
+badlist.each { fnum, seclist ->
+  if(runAll) {
+    rn = runnumITmap[fnum]
+    fn = filenumITmap[fnum]
+  } else {
+    rn = runnum
+    fn = fnum
+  }
+  badfileWriter << [ rn, fn, seclist.join(' ') ].join(' ') << '\n'
 }
 
 
@@ -256,15 +307,16 @@ histH = maxNF*.multiply(1+buf)
 def defineHist = { name,suffix -> 
   sectors.collect {
     def h = new H1F(
-      name+"_"+sec(it)+suffix, "N/F -- sector "+sec(it), 50, histL[it], histH[it] 
+      name+"_"+sec(it)+suffix, "Electron Trigger N/F -- sector "+sec(it),
+      50, histL[it], histH[it] 
     )
     h.setOptStat("1111100")
     return h
   }
 }
 def histNF = defineHist("histNF","")
-def histCleanedNF = defineHist("hist_sec","")
-def histOutlierNF = defineHist("hist_sec",":outliers")
+def histCleanedNF = defineHist(histPrefix,"")
+def histOutlierNF = defineHist(histPrefix,":outliers")
 histOutlierNF.each { it.setLineColor(2) }
 
 
@@ -297,8 +349,9 @@ def plotHiNF = cutHiNF.withIndex().collect { c,i -> Math.max(c,maxNF[i]) + buf }
 minFilenum -= 10
 maxFilenum += 10
 def buildLine = { nums,name -> 
-  nums.withIndex().collect { val,s ->
-    new F1D("gr_sec_"+sec(s)+":"+name, Double.toString(val), minFilenum, maxFilenum) 
+  nums.withIndex().collect { num,s ->
+    new F1D(grPrefix+"_"+sec(s)+":"+name,
+    Double.toString(num), minFilenum, maxFilenum) 
   }
 }
 def lineMeanNF = buildLine(meanNF,"mean")
@@ -318,15 +371,8 @@ lineCutHiNF.each { it.setLineColor(4) }
 
 // output plots to hipo file
 def writeHipo = { o -> o.each{ outHipo.addDataSet(it) } }
-// -- timeline
-def timeline = sectors.collect{ new GraphErrors("sec"+sec(it)) }
-timeline.eachWithIndex { g,i -> g.addPoint( runnum, mqNF[i], 0, 0 ) }
-outHipo.mkdir("/timelines")
-outHipo.cd("/timelines")
-writeHipo(timeline)
-outHipo.mkdir("/"+runnum)
-outHipo.cd("/"+runnum)
-// -- this run's plots
+outHipo.mkdir(runnumDir)
+outHipo.cd(runnumDir)
 writeHipo(grCleanedNF)
 writeHipo(grOutlierNF)
 //writeHipo(lineMeanNF)
@@ -338,7 +384,6 @@ writeHipo(lineCutHiNF)
 writeHipo(histCleanedNF)
 writeHipo(histOutlierNF)
 
-def outHipoN = "outhipo/mondata."+runnum+".hipo"
 File outHipoFile = new File(outHipoN)
 if(outHipoFile.exists()) outHipoFile.delete()
 outHipo.writeFile(outHipoN)
@@ -372,7 +417,7 @@ if(outputPNG) {
   }
 
   sleep(2000)
-  grCanv.save("outpng/qa.${runnum}.png")
+  grCanv.save(pngname)
   println "png saved"
   grCanv.dispose()
 }

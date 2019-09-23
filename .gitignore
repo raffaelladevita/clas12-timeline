@@ -2,6 +2,7 @@
 *.hipo
 *.root
 *.png
+*.tmp
 */*.dat
 logfiles/*.out
 logfiles/*.err

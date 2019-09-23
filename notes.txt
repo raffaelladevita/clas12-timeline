@@ -13,5 +13,4 @@ below QA boundary
 5181 - sectors 2,3,6 went out toward the end of the run
 5196 - a lot of sproradic outliers
 
-
-CROSS CHECK BAD LIST
+there's an overall decreasing trend in N/F

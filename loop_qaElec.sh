@@ -42,8 +42,8 @@ done < runlist.tmp
 
 # concatenate
 wait
-cat outdat/mondata*.dat > outdat/all.dat
 cat outbad/outliers*.dat > outbad/bad.dat
+#cat outdat/mondata*.dat > outdat/all.dat
 
 # cleanup
 rm runlist.tmp

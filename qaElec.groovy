@@ -30,6 +30,14 @@ if(args.length>=4) garbageCollect = args[3].toInteger() == 1
 //----------------------------------------------------------------------------------
 
 
+// OPTIONS
+//----------------------------------------------------------------------------------
+boolean useOverallCuts = true // use cuts determined from runAll==true execution
+                              // for each run individually
+//----------------------------------------------------------------------------------
+
+
+
 // vars and subroutines
 def sectors = 0..<6
 def sec = { int i -> i+1 }
@@ -61,7 +69,7 @@ def errPrint = { str ->
 
 
 // if runnum is this number, all runs will be looped over
-boolean runAll = runnum==5000
+boolean runAll = runnum==10000
 
 
 // get list of monsub hipo files
@@ -93,12 +101,13 @@ def histPrefix = "hist_${runnum}_sec"
 
 
 // define plot of number of FC-normalized triggers vs. file number
+def filenumStr = runAll ? "file index" : "file number"
 def defineGraph = { name,suffix ->
   sectors.collect {
     def g = new GraphErrors(name+"_"+sec(it)+suffix)
-    g.setTitle("Electron Trigger N/F vs. file number -- sector "+sec(it))
+    g.setTitle("Electron Trigger N/F vs. "+filenumStr+" -- sector "+sec(it))
     g.setTitleY("N/F")
-    g.setTitleX("file number")
+    g.setTitleX(filenumStr)
     return g
   }
 }
@@ -262,7 +271,42 @@ sectors.each {
 def cutFactor = 2.5
 def cutLoNF = lqNF.withIndex().collect { q,i -> q - cutFactor * iqrNF[i] }
 def cutHiNF = uqNF.withIndex().collect { q,i -> q + cutFactor * iqrNF[i] }
-sectors.each { println "SECTOR "+sec(it)+" CUTS: "+cutLoNF[it]+" to "+cutHiNF[it] }
+
+
+// override cuts with overall cuts determined from runAll==true execution
+def cutfile = new File("cuts.txt")
+def tok
+def ss
+if(!runAll && useOverallCuts) {
+  println("---- OVERRIDE CUTS WITH cuts.txt !")
+  if(cutfile.exists()) {
+    cutfile.eachLine { line ->
+      tok = line.tokenize(' ')
+      ss = tok[0].toInteger() - 1
+      cutLoNF[ss] = tok[1].toFloat()
+      mqNF[ss]    = tok[2].toFloat()
+      cutHiNF[ss] = tok[3].toFloat()
+    }
+  } else {
+    println("... cuts.txt not found; using this run's cuts instead")
+  }
+}
+
+// write cuts to file (if runAll==true)
+def cutfileWriter
+if(runAll) {
+  cutfileWriter = cutfile.newWriter(false)
+  sectors.each { cutfileWriter << [
+    sec(it),cutLoNF[it],mqNF[it],cutHiNF[it]
+  ].join(' ') << '\n' }
+  cutfileWriter.close()
+}
+
+// print cuts
+sectors.each { 
+  println "SECTOR "+sec(it)+" CUTS: "+cutLoNF[it]+" to "+cutHiNF[it]+
+  " (med="+mqNF[it]+")"
+}
 
 
 // loop through N/F values, determining which are outliers
@@ -284,15 +328,17 @@ println "badlist = "+badlist
 
 
 // print outliers to outbad file
-badlist.each { fnum, seclist ->
-  if(runAll) {
-    rn = runnumITmap[fnum]
-    fn = filenumITmap[fnum]
-  } else {
-    rn = runnum
-    fn = fnum
+if(!runAll) {
+  badlist.each { fnum, seclist ->
+    if(runAll) {
+      rn = runnumITmap[fnum]
+      fn = filenumITmap[fnum]
+    } else {
+      rn = runnum
+      fn = fnum
+    }
+    badfileWriter << [ rn, fn, seclist.join(' ') ].join(' ') << '\n'
   }
-  badfileWriter << [ rn, fn, seclist.join(' ') ].join(' ') << '\n'
 }
 
 

@@ -1,0 +1,17 @@
+5036 - sectors 1,2,6 step down toward end of run, but not far down enough to be marked
+bad
+5120 - files near filenum=120: two are lower than normal, but only the second one gets
+marked bad, since the first one is actually just barely within the QA boundary
+5127 - sector 5 went out toward the end of the run, and those files are correctly
+identified as outliers
+5138 - all sectors except for sector 3 have significantly lower than average N/F for all
+files
+5160 - sectors 1,2,6 have several step-downs toward the end of run; these steps are
+mostly below the QA boundary
+5165 - sectors 1,2,6 have a step down, and sectors 1 and 6 N/F decreases enough to be
+below QA boundary
+5181 - sectors 2,3,6 went out toward the end of the run
+5196 - a lot of sproradic outliers
+
+
+CROSS CHECK BAD LIST

@@ -58,7 +58,7 @@ done
 
 # concatenate
 wait
-cat outbad/outliers*.dat > outbad/bad.dat
+cat outbad/outliers*.dat > outbad/bad.txt
 #cat outdat/mondata*.dat > outdat/all.dat
 
 # cleanup

@@ -66,10 +66,14 @@ def errPrint = { str ->
   System.err << "ERROR in run ${runnum}_${filenum}: "+str+"\n" 
   success = false
 }
+def pPrint = { str ->
+  JsonOutput.prettyPrint(JsonOutput.toJson(str))
+}
 
 
 // if runnum is this number, all runs will be looped over
 boolean runAll = runnum==10000
+int epoch = runAll ? runnum - 10000 : -1 // aqui
 
 
 // get list of monsub hipo files
@@ -273,40 +277,69 @@ def cutLoNF = lqNF.withIndex().collect { q,i -> q - cutFactor * iqrNF[i] }
 def cutHiNF = uqNF.withIndex().collect { q,i -> q + cutFactor * iqrNF[i] }
 
 
-// override cuts with overall cuts determined from runAll==true execution
-def cutfile = new File("cuts.txt")
-def tok
-def ss
-if(!runAll && useOverallCuts) {
-  println("---- OVERRIDE CUTS WITH cuts.txt !")
-  if(cutfile.exists()) {
-    cutfile.eachLine { line ->
-      tok = line.tokenize(' ')
-      ss = tok[0].toInteger() - 1
-      cutLoNF[ss] = tok[1].toFloat()
-      mqNF[ss]    = tok[2].toFloat()
-      cutHiNF[ss] = tok[3].toFloat()
-    }
-  } else {
-    println("... cuts.txt not found; using this run's cuts instead")
+// parse cuts.json
+def cutJsonFile = new File("cuts.json")
+def epochCutList
+def epochInMap
+def epochOutMap
+def cutMap
+if(cutJsonFile.exists()) {
+  epochCutList = slurp.parse(cutJsonFile)
+  epochInMap = epochCutList.groupBy{it.epoch}.get(epoch).find()
+} else {
+  epochCutList = []
+  epochInMap = null
+}
+
+
+// write cuts to cuts.json
+if(runAll) {
+  // if this epoch's cuts were found in json file, delete them
+  if(epochInMap!=null) epochCutList.removeElement(epochInMap)
+
+  // build map of cuts
+  cutMap = sectors.collectEntries { s->
+    [ (sec(s)): [
+      'lo': cutLoNF[s],
+      'hi': cutHiNF[s],
+      'mq': mqNF[s],
+    ] ]
+  }
+  epochOutMap = [
+    'epoch': epoch,
+    'runLB': 2,
+    'runUB': 300,
+    'cuts': cutMap,
+  ]
+
+  // add map to the list of cut maps and output to json
+  epochCutList.add(epochOutMap)
+  new File("cuts.json").write(JsonOutput.toJson(epochCutList))
+  //println pPrint(epochCutList)
+}
+
+
+// read cuts from json
+if(!runAll && cutJsonFile.exists() && useOverallCuts) {
+  println("---- OVERRIDE CUTS WITH cuts.json !")
+  if(epochInMap!=null) cutMap = epochInMap.get('cuts')
+  else throw new Exception("epoch not found in cuts.json")
+  //println pPrint(cutMap)
+  sectors.each { s ->
+    def mp = cutMap.get(Integer.toString(sec(s)))
+    cutLoNF[s] = mp.get('lo')
+    cutHiNF[s] = mp.get('hi')
+    mqNF[s] = mp.get('mq')
   }
 }
 
-// write cuts to file (if runAll==true)
-def cutfileWriter
-if(runAll) {
-  cutfileWriter = cutfile.newWriter(false)
-  sectors.each { cutfileWriter << [
-    sec(it),cutLoNF[it],mqNF[it],cutHiNF[it]
-  ].join(' ') << '\n' }
-  cutfileWriter.close()
-}
 
 // print cuts
 sectors.each { 
   println "SECTOR "+sec(it)+" CUTS: "+cutLoNF[it]+" to "+cutHiNF[it]+
   " (med="+mqNF[it]+")"
 }
+return
 
 
 // loop through N/F values, determining which are outliers

@@ -32,7 +32,7 @@ if(args.length>=4) garbageCollect = args[3].toInteger() == 1
 
 // OPTIONS
 //----------------------------------------------------------------------------------
-boolean useOverallCuts = true // use cuts determined from runAll==true execution
+boolean useOverallCuts = true // use cuts determined from runMany==true execution
                               // for each run individually
 //----------------------------------------------------------------------------------
 
@@ -71,15 +71,57 @@ def pPrint = { str ->
 }
 
 
-// if runnum is this number, all runs will be looped over
-boolean runAll = runnum==10000
-int epoch = runAll ? runnum - 10000 : -1 // aqui
+// if runnum == 10000, all runs will be looped over
+// if runnum > 10000, all runs in epoch # runnum-10000 will be looped over
+// if runnum < 10000, only that specific run will be analyzed, and if QA cuts exist
+//                    for that run's epoch, those epoch's cuts will be used
+boolean runMany = runnum>=10000
+
+
+// determine epoch number, runLB, and runUB
+int epoch = runMany ? runnum - 10000 : -1
+def epochFile = new File("epochs.txt")
+if(!(epochFile.exists())) throw new Exception("epochs.txt not found")
+epochIT = 0
+def runLB = -1
+def runUB = -1
+def lb
+def ub
+epochFile.eachLine { line ->
+  epochIT += 1
+  (lb,ub) = line.tokenize(' ').collect{it.toInteger()}
+  if(runMany) {
+    if(epoch==0) {
+      if(epochIT==1) runLB = lb
+      runUB = ub
+    }
+    else if(epoch>0) {
+      if(epoch==epochIT) {
+        runLB = lb
+        runUB = ub
+      }
+    }
+  }
+  else {
+    if(epoch<0) {
+      if(runnum>=lb && runnum<=ub) {
+        epoch = epochIT
+        runLB = lb
+        runUB = ub
+      }
+    }
+  }
+}
+if(runLB<0 || runUB<0) throw new Exception("epoch number problem... bad run number?")
+println "runnum=$runnum  epoch=$epoch  runLB=$runLB  runUB=$runUB"
+      
+
 
 
 // get list of monsub hipo files
 def monsubDirObj = new File(monsubDir)
 def fileList = []
-def fileFilter = runAll ? ~/monplots_.*\.hipo/ : ~/monplots_${runnum}.*\.hipo/
+def fileFilter = runMany ? ~/monplots_.*\.hipo/ : ~/monplots_${runnum}.*\.hipo/
 monsubDirObj.traverse(
   type: groovy.io.FileType.FILES,
   nameFilter: fileFilter )
@@ -93,7 +135,7 @@ def fcFileName = "fcdata.json"
 def slurp = new JsonSlurper()
 def fcFile = new File(fcFileName)
 def fcMapRun
-if(!runAll) {
+if(!runMany) {
   fcMapRun = slurp.parse(fcFile).groupBy{ it.run }.get(runnum)
   if(!fcMapRun) throw new Exception("run ${runnum} not found in "+fcFileName);
 }
@@ -105,7 +147,7 @@ def histPrefix = "hist_${runnum}_sec"
 
 
 // define plot of number of FC-normalized triggers vs. file number
-def filenumStr = runAll ? "file index" : "file number"
+def filenumStr = runMany ? "file index" : "file number"
 def defineGraph = { name,suffix ->
   sectors.collect {
     def g = new GraphErrors(name+"_"+sec(it)+suffix)
@@ -149,83 +191,91 @@ fileList.each{ fileN ->
   fileNtok = fileN.split('/')[-1].tokenize('_.')
   runnumCheck = fileNtok[1].toInteger()
   filenum = fileNtok[2].toInteger()
-  if(runAll) runnum=runnumCheck // change to current runnum, if looping over all runs
+  if(runMany) runnum=runnumCheck // change to current runnum, if looping over all runs
   if(runnumCheck!=runnum) errPrint("runnum!=runnumCheck (runnumCheck="+runnumCheck+")")
   //println "fileNtok="+fileNtok+" runnum="+runnum+" filenum="+filenum
 
 
-  // if looping over all runs, be sure to parse each new run's fcMapRun
-  if(runAll && runnum!=runnumTmp) {
-    fcMapRun = slurp.parse(fcFile).groupBy{ it.run }.get(runnum)
-    if(!fcMapRun) throw new Exception("run ${runnum} not found in "+fcFileName);
-    runnumTmp = runnum
-  }
+  // proceed if this run is in the epoch we are analyzing
+  if( runnum>=runLB && runnum<=runUB ) {
 
-
-  // open hipo file
-  tdir = new TDirectory()
-  tdir.readFile(fileN)
-
-
-  // read faraday cup info for this runfile
-  if(fcMapRun) fcMapRunFiles = fcMapRun.groupBy{ it.fnum }.get(filenum)
-  if(fcMapRunFiles) fcVals = fcMapRunFiles.find()."data"."fc"
-  if(fcVals) {
-    fcStart = fcVals."fcmin"
-    fcStop = fcVals."fcmax"
-    //println "fcStart="+fcStart+" fcStop="+fcStop
-  } else errPrint("not found in "+fcFileName)
-  fcCounts = fcStop - fcStart
-  if(fcCounts<=0) errPrint("fcCounts = ${fcCounts} <= 0")
-
-
-  // read electron trigger histograms 
-  heth = sectors.collect{ tdir.getObject('/electron/trigger/heth_'+sec(it)) }
-  sectors.each{ if(heth[it]==null) errPrint("missing histogram in sector "+sec(it)) }
-
-
-  // set maps from filenumIT to filenum and runnum (used only if looping over all runs)
-  filenumIT += 1
-  filenumITmap[filenumIT] = filenum 
-  runnumITmap[filenumIT] = runnum
-
-  
-  // set filenumDraw, which will be the file number drawn to plots
-  filenumDraw = runAll ? filenumIT : filenum
-
-
-  // if no errors thrown above, continue analyzing
-  if(success) {
-
-    // compute N/F
-    nTrig = { int i -> heth[i].integral() }
-    NF = sectors.collect { nTrig(it) / fcCounts }
-
-    // fill grNF
-    sectors.each{ grNF[it].addPoint(filenumDraw, NF[it], 0, 0) }
-
-    // set minima and maxima
-    minNF = sectors.collect { Math.min(minNF[it],NF[it]) }
-    maxNF = sectors.collect { Math.max(maxNF[it],NF[it]) }
-    minFilenum = filenumDraw < minFilenum ? filenumDraw : minFilenum
-    maxFilenum = filenumDraw > maxFilenum ? filenumDraw : maxFilenum
-
-    // output to datfile
-    sectors.each{
-      datfileWriter << [ 
-        runnum, filenum, sec(it), nTrig(it), fcStart, fcStop, NF[it]
-      ].join(' ') << '\n'
+    // if looping over all runs, be sure to parse each new run's fcMapRun
+    if(runMany && runnum!=runnumTmp) {
+      fcMapRun = slurp.parse(fcFile).groupBy{ it.run }.get(runnum)
+      if(!fcMapRun) throw new Exception("run ${runnum} not found in "+fcFileName);
+      runnumTmp = runnum
     }
 
-    // force garbage collection (only if garbageCollect==true)
-    tdir = null
-    if(garbageCollect) System.gc()
-    //if(garbageCollect || runAll) System.gc()
+
+    // open hipo file
+    tdir = new TDirectory()
+    tdir.readFile(fileN)
 
 
-  } // eo if(success)
+    // read faraday cup info for this runfile
+    if(fcMapRun) fcMapRunFiles = fcMapRun.groupBy{ it.fnum }.get(filenum)
+    if(fcMapRunFiles) fcVals = fcMapRunFiles.find()."data"."fc"
+    if(fcVals) {
+      fcStart = fcVals."fcmin"
+      fcStop = fcVals."fcmax"
+      //println "fcStart="+fcStart+" fcStop="+fcStop
+    } else errPrint("not found in "+fcFileName)
+    fcCounts = fcStop - fcStart
+    if(fcCounts<=0) errPrint("fcCounts = ${fcCounts} <= 0")
+
+
+    // read electron trigger histograms 
+    heth = sectors.collect{ tdir.getObject('/electron/trigger/heth_'+sec(it)) }
+    sectors.each{ if(heth[it]==null) errPrint("missing histogram in sector "+sec(it)) }
+
+
+    // set maps from filenumIT to filenum and runnum (used only if looping over many runs)
+    filenumIT += 1
+    filenumITmap[filenumIT] = filenum 
+    runnumITmap[filenumIT] = runnum
+
+    
+    // set filenumDraw, which will be the file number drawn to plots
+    filenumDraw = runMany ? filenumIT : filenum
+
+
+    // if no errors thrown above, continue analyzing
+    if(success) {
+
+      // compute N/F
+      nTrig = { int i -> heth[i].integral() }
+      NF = sectors.collect { nTrig(it) / fcCounts }
+
+      // fill grNF
+      sectors.each{ grNF[it].addPoint(filenumDraw, NF[it], 0, 0) }
+
+      // set minima and maxima
+      minNF = sectors.collect { Math.min(minNF[it],NF[it]) }
+      maxNF = sectors.collect { Math.max(maxNF[it],NF[it]) }
+      minFilenum = filenumDraw < minFilenum ? filenumDraw : minFilenum
+      maxFilenum = filenumDraw > maxFilenum ? filenumDraw : maxFilenum
+
+      // output to datfile
+      sectors.each{
+        datfileWriter << [ 
+          runnum, filenum, sec(it), nTrig(it), fcStart, fcStop, NF[it]
+        ].join(' ') << '\n'
+      }
+
+      // force garbage collection (only if garbageCollect==true)
+      tdir = null
+      if(garbageCollect) System.gc()
+      //if(garbageCollect || runMany) System.gc()
+
+
+    } // eo if(success)
+  } // eo if runnum>=runLB && runnum<=runUB
+  else println "... not in epoch ${epoch}, skipping"
 } // eo loop over hipo files
 println "--- done reading hipo files"
+
+
+if(filenumIT==0) throw new Exception("no files were read!")
 
 
 
@@ -293,7 +343,7 @@ if(cutJsonFile.exists()) {
 
 
 // write cuts to cuts.json
-if(runAll) {
+if(runMany) {
   // if this epoch's cuts were found in json file, delete them
   if(epochInMap!=null) epochCutList.removeElement(epochInMap)
 
@@ -307,8 +357,8 @@ if(runAll) {
   }
   epochOutMap = [
     'epoch': epoch,
-    'runLB': 2,
-    'runUB': 300,
+    'runLB': runLB,
+    'runUB': runUB,
     'cuts': cutMap,
   ]
 
@@ -320,8 +370,8 @@ if(runAll) {
 
 
 // read cuts from json
-if(!runAll && cutJsonFile.exists() && useOverallCuts) {
-  println("---- OVERRIDE CUTS WITH cuts.json !")
+if(!runMany && cutJsonFile.exists() && useOverallCuts) {
+  println("---- OVERRIDE CUTS WITH cuts.json, epoch=${epoch}")
   if(epochInMap!=null) cutMap = epochInMap.get('cuts')
   else throw new Exception("epoch not found in cuts.json")
   //println pPrint(cutMap)
@@ -339,7 +389,6 @@ sectors.each {
   println "SECTOR "+sec(it)+" CUTS: "+cutLoNF[it]+" to "+cutHiNF[it]+
   " (med="+mqNF[it]+")"
 }
-return
 
 
 // loop through N/F values, determining which are outliers
@@ -361,9 +410,9 @@ println "badlist = "+badlist
 
 
 // print outliers to outbad file
-if(!runAll) {
+if(!runMany) {
   badlist.each { fnum, seclist ->
-    if(runAll) {
+    if(runMany) {
       rn = runnumITmap[fnum]
       fn = filenumITmap[fnum]
     } else {
@@ -387,7 +436,7 @@ def defineHist = { name,suffix ->
   sectors.collect {
     def h = new H1F(
       name+"_"+sec(it)+suffix, "Electron Trigger N/F -- sector "+sec(it),
-      50, histL[it], histH[it] 
+      runMany ? 200:50, histL[it], histH[it] 
     )
     h.setOptStat("1111100")
     return h

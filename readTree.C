@@ -3,7 +3,8 @@ void readTree() {
   TTree * tr = new TTree("tr","tr");
   TString cols = "i/I:runnum/I:filenum/I:sector/I:ntrig/F:fcstart/F:fcstop/F:nf/F";
   tr->ReadFile("tree.tmp",cols);
-  Double_t maxNF = tr->GetMaximum("nf");
+  //Double_t maxNF = tr->GetMaximum("nf");
+  Double_t maxNF = 4;
 
   const Int_t maxN = 50;
   TLine * eLine[2][maxN];
@@ -31,12 +32,11 @@ void readTree() {
     cN = Form("sector%d",s+1);
     cut = Form("sector==%d",s+1);
     c[s] = new TCanvas(cN,cN,800,800);
-    ///*
     c[s]->Divide(2,1);
+    for(int p=1; p<=2; p++) c[s]->GetPad(p)->SetGrid(0,1);
     c[s]->cd(1);
     tr->Draw("nf:i",cut,"*");
     c[s]->cd(2);
-    //*/
     tr->Draw("nf:runnum",cut,"*");
     for(int k=0; k<n; k++) for(int j=0; j<2; j++) eLine[j][k]->Draw("same");
     c[s]->Write();

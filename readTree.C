@@ -27,19 +27,27 @@ void readTree() {
 
 
   TCanvas * c[6];
-  TString cN,cut;
+  TString cN,cut,rundraw;
   for(int s=0; s<6; s++) {
     cN = Form("sector%d",s+1);
     cut = Form("sector==%d",s+1);
+    rundraw = Form("nf:runnum>>r%d(300,5000,5300,200,0,5)",s+1);
     c[s] = new TCanvas(cN,cN,800,800);
     c[s]->Divide(2,1);
     for(int p=1; p<=2; p++) c[s]->GetPad(p)->SetGrid(0,1);
     c[s]->cd(1);
     tr->Draw("nf:i",cut,"*");
     c[s]->cd(2);
-    tr->Draw("nf:runnum",cut,"*");
+    tr->Draw(rundraw,cut,"colz");
+    c[s]->GetPad(2)->SetLogz();
     for(int k=0; k<n; k++) for(int j=0; j<2; j++) eLine[j][k]->Draw("same");
     c[s]->Write();
   };
   tr->Write();
+
+  // study sector 1's increased N/F in epoch 3
+  /*
+  new TCanvas();
+  tr->Draw("ntrig/(fcstop-fcstart):runnum>>a(300,5000,5300,100,0,5)","sector==1","colz");
+  */
 };

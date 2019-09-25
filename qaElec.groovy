@@ -147,6 +147,7 @@ def histPrefix = "hist_${runnum}_sec"
 
 
 // define plot of number of FC-normalized triggers vs. file number
+// note: Faraday cup info is expressed as charge in nC
 def filenumStr = runMany ? "file index" : "file number"
 def defineGraph = { name,suffix ->
   sectors.collect {

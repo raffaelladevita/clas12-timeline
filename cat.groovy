@@ -69,11 +69,11 @@ inHipoList.each { fileN ->
     outHipoTdir.addDataSet(inHipoTdir.getObject(obj))
 
     // get numbers of good and bad files
-    if(obj ==~ /^.*gr_.*_sec_.$/) {
+    if(obj ==~ /^.*grNF_.*_sec_.$/) {
       secnum = getSec(obj)
       nGood[secnum] = inHipoTdir.getObject(obj).getDataSize(0)
     }
-    else if(obj ==~ /^.*gr_.*_sec_.:outliers$/) {
+    else if(obj ==~ /^.*grNF_.*_sec_.:outliers$/) {
       secnum = getSec(obj)
       nBad[secnum] = inHipoTdir.getObject(obj).getDataSize(0)
     }

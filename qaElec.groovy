@@ -141,27 +141,34 @@ if(!runMany) {
 }
 
 
-// define plot name prefixes
-def grPrefix = "gr_${runnum}_sec"
-def histPrefix = "hist_${runnum}_sec"
-
 
 // define plot of number of FC-normalized triggers vs. file number
 // note: Faraday cup info is expressed as charge in nC
 def filenumStr = runMany ? "file index" : "file number"
-def defineGraph = { name,suffix ->
+def defineGraph = { name,ytitle,suffix ->
   sectors.collect {
     def g = new GraphErrors(name+"_"+sec(it)+suffix)
-    g.setTitle("Electron Trigger N/F vs. "+filenumStr+" -- sector "+sec(it))
-    g.setTitleY("N/F")
+    g.setTitle(ytitle+" vs. "+filenumStr+" -- sector "+sec(it))
+    g.setTitleY(ytitle)
     g.setTitleX(filenumStr)
     return g
   }
 }
-def grNF = defineGraph("grNF","")
-def grCleanedNF = defineGraph(grPrefix,"")
-def grOutlierNF = defineGraph(grPrefix,":outliers")
+def grNF = defineGraph("grNF","Electron Trigger N/F","")
+def grCleanedNF = defineGraph("grNF_${runnum}_sec","Electron Trigger N/F","")
+def grOutlierNF = defineGraph("grNF_${runnum}_sec","Electron Trigger N/F",":outliers")
 grOutlierNF.each { it.setMarkerColor(2) }
+
+def grN = defineGraph("grN_${runnum}_sec","Number electron trigs N","")
+def grCleanedN = defineGraph("grN_${runnum}_sec","Number electron trigs N","")
+def grOutlierN = defineGraph("grN_${runnum}_sec","Number electron trigs N",":outliers")
+grOutlierN.each { it.setMarkerColor(2) }
+
+def grF = defineGraph("grF_${runnum}_sec","Faraday cup charge F","")
+def grCleanedF = defineGraph("grF_${runnum}_sec","Faraday cup charge F","")
+def grOutlierF = defineGraph("grF_${runnum}_sec","Faraday cup charge F",":outliers")
+grOutlierF.each { it.setMarkerColor(2) }
+
 
 def minNF = sectors.collect {1E10}
 def maxNF = sectors.collect {0}
@@ -176,7 +183,6 @@ def badfileWriter = badfile.newWriter(false)
 def outHipo = new TDirectory()
 def runnumDir = "/"+runnum
 def outHipoN = "outhipo/mondata."+runnum+".hipo"
-def pngname = "outpng/qa.${runnum}.png"
 
 
 // loop through input hipo files
@@ -247,7 +253,9 @@ fileList.each{ fileN ->
       nTrig = { int i -> heth[i].integral() }
       NF = sectors.collect { nTrig(it) / fcCounts }
 
-      // fill grNF
+      // fill grNF and grF
+      sectors.each{ grN[it].addPoint(filenumDraw, nTrig(it), 0, 0) }
+      sectors.each{ grF[it].addPoint(filenumDraw, fcCounts, 0, 0) }
       sectors.each{ grNF[it].addPoint(filenumDraw, NF[it], 0, 0) }
 
       // set minima and maxima
@@ -400,11 +408,17 @@ grNF.eachWithIndex { gr, it ->
     fn = gr.getDataX(i).toInteger() // filenum
     if( val < cutLoNF[it] || val > cutHiNF[it] ) {
       grOutlierNF[it].addPoint( fn, val, 0, 0 )
+      grOutlierN[it].addPoint( fn, grN[it].getDataY(i), 0, 0)
+      grOutlierF[it].addPoint( fn, grF[it].getDataY(i), 0, 0)
       if(badlist.containsKey(fn)) badlist[fn].add(sec(it))
       else badlist[fn] = [sec(it)]
       //badness = Math.abs( val - mqNF[it] ) / iqrNF[it]
     }
-    else grCleanedNF[it].addPoint( fn, val, 0, 0 )
+    else {
+      grCleanedNF[it].addPoint( fn, val, 0, 0 )
+      grCleanedN[it].addPoint( fn, grN[it].getDataY(i), 0, 0)
+      grCleanedF[it].addPoint( fn, grF[it].getDataY(i), 0, 0)
+    }
   }
 }
 println "badlist = "+badlist
@@ -444,8 +458,8 @@ def defineHist = { name,suffix ->
   }
 }
 def histNF = defineHist("histNF","")
-def histCleanedNF = defineHist(histPrefix,"")
-def histOutlierNF = defineHist(histPrefix,":outliers")
+def histCleanedNF = defineHist("histNF_${runnum}_sec","")
+def histOutlierNF = defineHist("histNF_${runnum}_sec",":outliers")
 histOutlierNF.each { it.setLineColor(2) }
 
 
@@ -479,7 +493,7 @@ minFilenum -= 10
 maxFilenum += 10
 def buildLine = { nums,name -> 
   nums.withIndex().collect { num,s ->
-    new F1D(grPrefix+"_"+sec(s)+":"+name,
+    new F1D("grNF_${runnum}_sec_"+sec(s)+":"+name,
     Double.toString(num), minFilenum, maxFilenum) 
   }
 }
@@ -504,6 +518,8 @@ outHipo.mkdir(runnumDir)
 outHipo.cd(runnumDir)
 writeHipo(grCleanedNF)
 writeHipo(grOutlierNF)
+writeHipo(grCleanedF)
+writeHipo(grOutlierF)
 //writeHipo(lineMeanNF)
 writeHipo(lineMqNF)
 //writeHipo(lineLqNF)
@@ -527,26 +543,54 @@ println badfile.text
 // output plots to PNG
 int canvX = 1200
 int canvY = 800
-def grCanv
+def grNFcanv
+def grNcanv
+def grFcanv
 if(outputPNG) {
-  grCanv = new TCanvas("grCanv", canvX, canvY)
+  grNFcanv = new TCanvas("grNFcanv", canvX, canvY)
+  grNcanv = new TCanvas("grNcanv", canvX, canvY)
+  grFcanv = new TCanvas("grFcanv", canvX, canvY)
 
-  grCanv.divide(2,3)
+  grNFcanv.divide(2,3)
+  grNcanv.divide(2,3)
+  grFcanv.divide(2,3)
+
   sectors.each { 
-    grCanv.getCanvas().getPad(it).getAxisY().setRange(plotLoNF[it],plotHiNF[it])
-    grCanv.cd(it)
-    grCanv.draw(grNF[it])
-    if(grOutlierNF[it].getDataSize(0)>0) grCanv.draw(grOutlierNF[it],"same")
-    //grCanv.draw(lineMeanNF[it])
-    grCanv.draw(lineMqNF[it],"same")
-    //grCanv.draw(lineUqNF[it])
-    //grCanv.draw(lineLqNF[it])
-    grCanv.draw(lineCutLoNF[it],"same")
-    grCanv.draw(lineCutHiNF[it],"same")
+    grNFcanv.getCanvas().getPad(it).getAxisY().setRange(plotLoNF[it],plotHiNF[it])
+    grNFcanv.cd(it)
+    grNFcanv.draw(grNF[it])
+    if(grOutlierNF[it].getDataSize(0)>0) grNFcanv.draw(grOutlierNF[it],"same")
+    //grNFcanv.draw(lineMeanNF[it])
+    grNFcanv.draw(lineMqNF[it],"same")
+    //grNFcanv.draw(lineUqNF[it])
+    //grNFcanv.draw(lineLqNF[it])
+    grNFcanv.draw(lineCutLoNF[it],"same")
+    grNFcanv.draw(lineCutHiNF[it],"same")
   }
-
   sleep(2000)
-  grCanv.save(pngname)
+  grNFcanv.save("outpng/qa.NF.${runnum}.png")
   println "png saved"
-  grCanv.dispose()
+  grNFcanv.dispose()
+
+  sectors.each { 
+    //grNcanv.getCanvas().getPad(it).getAxisY().setRange(plotLoF[it],plotHiF[it])
+    grNcanv.cd(it)
+    grNcanv.draw(grN[it])
+    if(grOutlierN[it].getDataSize(0)>0) grNcanv.draw(grOutlierN[it],"same")
+  }
+  sleep(2000)
+  grNcanv.save("outpng/qa.N.${runnum}.png")
+  println "png saved"
+  grNcanv.dispose()
+
+  sectors.each { 
+    //grFcanv.getCanvas().getPad(it).getAxisY().setRange(plotLoF[it],plotHiF[it])
+    grFcanv.cd(it)
+    grFcanv.draw(grF[it])
+    if(grOutlierF[it].getDataSize(0)>0) grFcanv.draw(grOutlierF[it],"same")
+  }
+  sleep(2000)
+  grFcanv.save("outpng/qa.F.${runnum}.png")
+  println "png saved"
+  grFcanv.dispose()
 }

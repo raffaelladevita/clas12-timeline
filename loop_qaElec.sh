@@ -8,8 +8,6 @@ if [ $# -ge 1 ]; then monsubdir=$1; fi
 if [ $# -ge 2 ]; then outputpng=$2; fi
 
 
-
-
 # maximum number of jobs to run in parallel
 let njobs=8
 
@@ -59,7 +57,6 @@ done
 # concatenate
 wait
 cat outbad/outliers*.dat > outbad/bad.txt
-#cat outdat/mondata*.dat > outdat/all.dat
 
 # cleanup
 rm {epoch,run}list.tmp

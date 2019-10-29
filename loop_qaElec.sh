@@ -41,7 +41,6 @@ for runlist in {epoch,run}list.tmp; do
     log="logfiles/job.$run"
     echo "analyzing run $run"
     groovy qaElec.groovy $run $monsubdir $outputpng 1 > ${log}.out 2> ${log}.err &
-    #sleep 5 & # (for testing)
     if [ $cnt -lt $njobs ]; then
       let cnt++
     else

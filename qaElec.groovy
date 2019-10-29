@@ -183,6 +183,7 @@ def badfileWriter = badfile.newWriter(false)
 def outHipo = new TDirectory()
 def runnumDir = "/"+runnum
 def outHipoN = "outhipo/mondata."+runnum+".hipo"
+def runnumBak = runnum // backup, (if runnum>=10000, runnum will change in the loop)
 
 
 // loop through input hipo files
@@ -221,10 +222,12 @@ fileList.each{ fileN ->
 
     // read faraday cup info for this runfile
     if(fcMapRun) fcMapRunFiles = fcMapRun.groupBy{ it.fnum }.get(filenum)
-    if(fcMapRunFiles) fcVals = fcMapRunFiles.find()."data"."fc"
+    //if(fcMapRunFiles) fcVals=fcMapRunFiles.find()."data"."fc" // old fcdata.json
+    //if(fcMapRunFiles) fcVals=fcMapRunFiles.find()."data"."fcupgated" // actually ungated
+    if(fcMapRunFiles) fcVals=fcMapRunFiles.find()."data"."fcup" // actually gated
     if(fcVals) {
-      fcStart = fcVals."fcmin"
-      fcStop = fcVals."fcmax"
+      fcStart = fcVals."min"
+      fcStop = fcVals."max"
       //println "fcStart="+fcStart+" fcStop="+fcStop
     } else errPrint("not found in "+fcFileName)
     fcCounts = fcStop - fcStart
@@ -352,7 +355,7 @@ if(cutJsonFile.exists()) {
 
 
 // write cuts to cuts.json
-if(runMany) {
+if(runMany && epoch!=0) {
   // if this epoch's cuts were found in json file, delete them
   if(epochInMap!=null) epochCutList.removeElement(epochInMap)
 
@@ -458,8 +461,8 @@ def defineHist = { name,suffix ->
   }
 }
 def histNF = defineHist("histNF","")
-def histCleanedNF = defineHist("histNF_${runnum}_sec","")
-def histOutlierNF = defineHist("histNF_${runnum}_sec",":outliers")
+def histCleanedNF = defineHist("histNF_${runnumBak}_sec","")
+def histOutlierNF = defineHist("histNF_${runnumBak}_sec",":outliers")
 histOutlierNF.each { it.setLineColor(2) }
 
 
@@ -493,7 +496,7 @@ minFilenum -= 10
 maxFilenum += 10
 def buildLine = { nums,name -> 
   nums.withIndex().collect { num,s ->
-    new F1D("grNF_${runnum}_sec_"+sec(s)+":"+name,
+    new F1D("grNF_${runnumBak}_sec_"+sec(s)+":"+name,
     Double.toString(num), minFilenum, maxFilenum) 
   }
 }
@@ -568,7 +571,7 @@ if(outputPNG) {
     grNFcanv.draw(lineCutHiNF[it],"same")
   }
   sleep(2000)
-  grNFcanv.save("outpng/qa.NF.${runnum}.png")
+  grNFcanv.save("outpng/qa.NF.${runnumBak}.png")
   println "png saved"
   grNFcanv.dispose()
 
@@ -579,7 +582,7 @@ if(outputPNG) {
     if(grOutlierN[it].getDataSize(0)>0) grNcanv.draw(grOutlierN[it],"same")
   }
   sleep(2000)
-  grNcanv.save("outpng/qa.N.${runnum}.png")
+  grNcanv.save("outpng/qa.N.${runnumBak}.png")
   println "png saved"
   grNcanv.dispose()
 
@@ -590,7 +593,7 @@ if(outputPNG) {
     if(grOutlierF[it].getDataSize(0)>0) grFcanv.draw(grOutlierF[it],"same")
   }
   sleep(2000)
-  grFcanv.save("outpng/qa.F.${runnum}.png")
+  grFcanv.save("outpng/qa.F.${runnumBak}.png")
   println "png saved"
   grFcanv.dispose()
 }

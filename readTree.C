@@ -1,3 +1,5 @@
+// called by mkTree.sh
+//
 void readTree() {
   TFile * f = new TFile("tree.root","RECREATE");
   TTree * tr = new TTree("tr","tr");

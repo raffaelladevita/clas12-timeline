@@ -1,12 +1,14 @@
 // called by mkTree.sh
 //
 void readTree() {
+  gStyle->SetOptStat(0);
   TFile * f = new TFile("tree.root","RECREATE");
   TTree * tr = new TTree("tr","tr");
   TString cols = "i/I:runnum/I:filenum/I:sector/I:ntrig/F:fcstart/F:fcstop/F:nf/F";
   tr->ReadFile("tree.tmp",cols);
-  //Double_t maxNF = tr->GetMaximum("nf");
-  Double_t maxNF = 4;
+  //Double_t maxLineY = tr->GetMaximum("nf");
+  //Double_t maxLineY = 4;
+  Double_t maxLineY = 16000;
 
   const Int_t maxN = 50;
   TLine * eLine[2][maxN];
@@ -20,7 +22,7 @@ void readTree() {
   for(int x=0; x<etr->GetEntries(); x++) {
     etr->GetEntry(x);
     for(int j=0; j<2; j++) {
-      eLine[j][n] = new TLine(e[j],0,e[j],maxNF);
+      eLine[j][n] = new TLine(e[j],0,e[j],maxLineY);
       eLine[j][n]->SetLineColor(color[j]);
       eLine[j][n]->SetLineWidth(3);
     };
@@ -29,20 +31,27 @@ void readTree() {
 
 
   TCanvas * c[6];
-  TString cN,cut,rundraw;
+  TString cN,cut,rundrawNF,rundrawF;
   for(int s=0; s<6; s++) {
     cN = Form("sector%d",s+1);
     cut = Form("sector==%d",s+1);
-    rundraw = Form("nf:runnum>>r%d(300,5000,5300,200,0,5)",s+1);
+    rundrawNF = Form("nf:runnum>>rNF%d(300,5000,5300,200,0,5)",s+1);
+    rundrawF = Form("fcstop-fcstart:runnum>>rF%d(300,5000,5300,300,0,2700)",s+1);
     c[s] = new TCanvas(cN,cN,800,800);
-    c[s]->Divide(2,1);
-    for(int p=1; p<=2; p++) c[s]->GetPad(p)->SetGrid(0,1);
+    c[s]->Divide(2,2);
+    for(int p=1; p<=4; p++) c[s]->GetPad(p)->SetGrid(0,1);
     c[s]->cd(1);
-    tr->Draw("nf:i",cut,"*");
+      tr->Draw("nf:i",cut,"*");
     c[s]->cd(2);
-    tr->Draw(rundraw,cut,"colz");
-    c[s]->GetPad(2)->SetLogz();
-    for(int k=0; k<n; k++) for(int j=0; j<2; j++) eLine[j][k]->Draw("same");
+      tr->Draw(rundrawNF,cut,"colz");
+      c[s]->GetPad(2)->SetLogz();
+      for(int k=0; k<n; k++) for(int j=0; j<2; j++) eLine[j][k]->Draw("same");
+    c[s]->cd(3);
+      tr->Draw("fcstop-fcstart:i",cut,"*");
+    c[s]->cd(4);
+      tr->Draw(rundrawF,cut,"colz");
+      c[s]->GetPad(4)->SetLogz();
+      for(int k=0; k<n; k++) for(int j=0; j<2; j++) eLine[j][k]->Draw("same");
     c[s]->Write();
   };
   tr->Write();

@@ -48,9 +48,13 @@ def runnumTmp = 0
 def heth
 def fcMapRunFiles
 def fcVals
+def ufcVals
 def fcStart
 def fcStop
-def fcCounts
+def fcCharge
+def ufcStart
+def ufcStop
+def ufcCharge
 def nTrig
 def filenum
 def filenumIT = 0
@@ -154,9 +158,9 @@ def defineGraph = { name,ytitle,suffix ->
     return g
   }
 }
-def grNF = defineGraph("grNF","Electron Trigger N/F","")
-def grCleanedNF = defineGraph("grNF_${runnum}_sec","Electron Trigger N/F","")
-def grOutlierNF = defineGraph("grNF_${runnum}_sec","Electron Trigger N/F",":outliers")
+def grNF = defineGraph("grA","Electron Trigger N/F","") // named grA for hipoFile ordering
+def grCleanedNF = defineGraph("grA_${runnum}_sec","Electron Trigger N/F","")
+def grOutlierNF = defineGraph("grA_${runnum}_sec","Electron Trigger N/F",":outliers")
 grOutlierNF.each { it.setMarkerColor(2) }
 
 def grN = defineGraph("grN_${runnum}_sec","Number electron trigs N","")
@@ -164,10 +168,15 @@ def grCleanedN = defineGraph("grN_${runnum}_sec","Number electron trigs N","")
 def grOutlierN = defineGraph("grN_${runnum}_sec","Number electron trigs N",":outliers")
 grOutlierN.each { it.setMarkerColor(2) }
 
-def grF = defineGraph("grF_${runnum}_sec","Faraday cup charge F","")
-def grCleanedF = defineGraph("grF_${runnum}_sec","Faraday cup charge F","")
-def grOutlierF = defineGraph("grF_${runnum}_sec","Faraday cup charge F",":outliers")
+def grF = defineGraph("grF_${runnum}_sec","Faraday cup charge F [nC]","")
+def grCleanedF = defineGraph("grF_${runnum}_sec","Faraday cup charge F [nC]","")
+def grOutlierF = defineGraph("grF_${runnum}_sec","Faraday cup charge F [nC]",":outliers")
 grOutlierF.each { it.setMarkerColor(2) }
+
+def grT = defineGraph("grT_${runnum}_sec","Live Time","")
+def grCleanedT = defineGraph("grT_${runnum}_sec","Live Time","")
+def grOutlierT = defineGraph("grT_${runnum}_sec","Live Time",":outliers")
+grOutlierT.each { it.setMarkerColor(2) }
 
 
 def minNF = sectors.collect {1E10}
@@ -222,16 +231,22 @@ fileList.each{ fileN ->
 
     // read faraday cup info for this runfile
     if(fcMapRun) fcMapRunFiles = fcMapRun.groupBy{ it.fnum }.get(filenum)
-    //if(fcMapRunFiles) fcVals=fcMapRunFiles.find()."data"."fc" // old fcdata.json
-    //if(fcMapRunFiles) fcVals=fcMapRunFiles.find()."data"."fcupgated" // actually ungated
-    if(fcMapRunFiles) fcVals=fcMapRunFiles.find()."data"."fcup" // actually gated
-    if(fcVals) {
+    if(fcMapRunFiles) {
+      // "gated" and "ungated" were switched in hipo files...
+      fcVals=fcMapRunFiles.find()."data"."fcup" // actually gated
+      ufcVals=fcMapRunFiles.find()."data"."fcupgated" // actually ungated
+    }
+    if(fcVals && ufcVals) {
       fcStart = fcVals."min"
       fcStop = fcVals."max"
+      ufcStart = ufcVals."min"
+      ufcStop = ufcVals."max"
       //println "fcStart="+fcStart+" fcStop="+fcStop
     } else errPrint("not found in "+fcFileName)
-    fcCounts = fcStop - fcStart
-    if(fcCounts<=0) errPrint("fcCounts = ${fcCounts} <= 0")
+    fcCharge = fcStop - fcStart
+    ufcCharge = ufcStop - ufcStart
+    if(fcCharge<=0) errPrint("fcCharge = ${fcCharge} <= 0")
+    if(ufcCharge<=0) errPrint("ufcCharge = ${ufcCharge} <= 0")
 
 
     // read electron trigger histograms 
@@ -254,12 +269,14 @@ fileList.each{ fileN ->
 
       // compute N/F
       nTrig = { int i -> heth[i].integral() }
-      NF = sectors.collect { nTrig(it) / fcCounts }
+      NF = sectors.collect { nTrig(it) / fcCharge }
+      //NF = sectors.collect { (nTrig(it)*ufcCharge) / (fcCharge*fcCharge) } // test
 
-      // fill grNF and grF
-      sectors.each{ grN[it].addPoint(filenumDraw, nTrig(it), 0, 0) }
-      sectors.each{ grF[it].addPoint(filenumDraw, fcCounts, 0, 0) }
+      // fill graphs
       sectors.each{ grNF[it].addPoint(filenumDraw, NF[it], 0, 0) }
+      sectors.each{ grN[it].addPoint(filenumDraw, nTrig(it), 0, 0) }
+      sectors.each{ grF[it].addPoint(filenumDraw, fcCharge, 0, 0) }
+      sectors.each{ grT[it].addPoint(filenumDraw, fcCharge/ufcCharge, 0, 0) }
 
       // set minima and maxima
       minNF = sectors.collect { Math.min(minNF[it],NF[it]) }
@@ -413,6 +430,7 @@ grNF.eachWithIndex { gr, it ->
       grOutlierNF[it].addPoint( fn, val, 0, 0 )
       grOutlierN[it].addPoint( fn, grN[it].getDataY(i), 0, 0)
       grOutlierF[it].addPoint( fn, grF[it].getDataY(i), 0, 0)
+      grOutlierT[it].addPoint( fn, grT[it].getDataY(i), 0, 0)
       if(badlist.containsKey(fn)) badlist[fn].add(sec(it))
       else badlist[fn] = [sec(it)]
       //badness = Math.abs( val - mqNF[it] ) / iqrNF[it]
@@ -421,6 +439,7 @@ grNF.eachWithIndex { gr, it ->
       grCleanedNF[it].addPoint( fn, val, 0, 0 )
       grCleanedN[it].addPoint( fn, grN[it].getDataY(i), 0, 0)
       grCleanedF[it].addPoint( fn, grF[it].getDataY(i), 0, 0)
+      grCleanedT[it].addPoint( fn, grT[it].getDataY(i), 0, 0)
     }
   }
 }
@@ -460,9 +479,9 @@ def defineHist = { name,suffix ->
     return h
   }
 }
-def histNF = defineHist("histNF","")
-def histCleanedNF = defineHist("histNF_${runnumBak}_sec","")
-def histOutlierNF = defineHist("histNF_${runnumBak}_sec",":outliers")
+def histNF = defineHist("grAH","") // named "grAH" for hipo file ordering
+def histCleanedNF = defineHist("grAH_${runnumBak}_sec","")
+def histOutlierNF = defineHist("grAH_${runnumBak}_sec",":outliers")
 histOutlierNF.each { it.setLineColor(2) }
 
 
@@ -496,7 +515,7 @@ minFilenum -= 10
 maxFilenum += 10
 def buildLine = { nums,name -> 
   nums.withIndex().collect { num,s ->
-    new F1D("grNF_${runnumBak}_sec_"+sec(s)+":"+name,
+    new F1D("grA_${runnumBak}_sec_"+sec(s)+":"+name,
     Double.toString(num), minFilenum, maxFilenum) 
   }
 }
@@ -523,6 +542,10 @@ writeHipo(grCleanedNF)
 writeHipo(grOutlierNF)
 writeHipo(grCleanedF)
 writeHipo(grOutlierF)
+writeHipo(grCleanedN)
+writeHipo(grOutlierN)
+writeHipo(grCleanedT)
+writeHipo(grOutlierT)
 //writeHipo(lineMeanNF)
 writeHipo(lineMqNF)
 //writeHipo(lineLqNF)

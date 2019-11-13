@@ -1,6 +1,8 @@
 // called by mkTree.sh
 //
 void readTree() {
+
+  // open root file
   gStyle->SetOptStat(0);
   TFile * f = new TFile("tree.root","RECREATE");
   TTree * tr = new TTree("tr","tr");
@@ -10,6 +12,10 @@ void readTree() {
   //Double_t maxLineY = 4;
   Double_t maxLineY = 16000;
 
+  // draw epoch lines
+  // - green line is start of epoch
+  // - red line is end of epoch 
+  // - lines are shifted so they are drawn in bin centers
   const Int_t maxN = 50;
   TLine * eLine[2][maxN];
   int n=0;
@@ -22,7 +28,7 @@ void readTree() {
   for(int x=0; x<etr->GetEntries(); x++) {
     etr->GetEntry(x);
     for(int j=0; j<2; j++) {
-      eLine[j][n] = new TLine(e[j],0,e[j],maxLineY);
+      eLine[j][n] = new TLine(e[j]+0.5,0,e[j]+0.5,maxLineY);
       eLine[j][n]->SetLineColor(color[j]);
       eLine[j][n]->SetLineWidth(3);
     };
@@ -30,6 +36,7 @@ void readTree() {
   };
 
 
+  // draw everything
   TCanvas * c[6];
   TString cN,cut,rundrawNF,rundrawF;
   for(int s=0; s<6; s++) {

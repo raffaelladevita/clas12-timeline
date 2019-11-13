@@ -7,6 +7,11 @@ data monitoring tools for CLAS run QA
   `$COATJAVA` points to `coatjava` build
 * `monsub/monplots*.hipo` files, which contain data monitoring histograms
 
+## Short Procedure
+* `loop_qaElec.sh`
+* `groovy cat.groovy`
+* `ls -t *.hipo | head -n1 | xargs upload.sh`
+
 
 ## Scripts
 

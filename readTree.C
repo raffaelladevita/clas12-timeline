@@ -6,10 +6,9 @@ void readTree() {
   gStyle->SetOptStat(0);
   TFile * f = new TFile("tree.root","RECREATE");
   TTree * tr = new TTree("tr","tr");
-  TString cols = "i/I:runnum/I:filenum/I:sector/I:ntrig/F:fcstart/F:fcstop/F:nf/F";
+  TString cols = "i/I:runnum/I:filenum/I:sector/I:ntrig/F";
+  cols += ":fcstart/F:fcstop/F:ufcstart/F:ufcstop/F";
   tr->ReadFile("tree.tmp",cols);
-  //Double_t maxLineY = tr->GetMaximum("nf");
-  //Double_t maxLineY = 4;
   Double_t maxLineY = 16000;
 
   // draw epoch lines
@@ -42,13 +41,13 @@ void readTree() {
   for(int s=0; s<6; s++) {
     cN = Form("sector%d",s+1);
     cut = Form("sector==%d",s+1);
-    rundrawNF = Form("nf:runnum>>rNF%d(300,5000,5300,200,0,5)",s+1);
+    rundrawNF = Form("ntrig/(fcstop-fcstart):runnum>>rNF%d(300,5000,5300,200,0,5)",s+1);
     rundrawF = Form("fcstop-fcstart:runnum>>rF%d(300,5000,5300,300,0,2700)",s+1);
     c[s] = new TCanvas(cN,cN,800,800);
     c[s]->Divide(2,2);
     for(int p=1; p<=4; p++) c[s]->GetPad(p)->SetGrid(0,1);
     c[s]->cd(1);
-      tr->Draw("nf:i",cut,"*");
+      tr->Draw("ntrig/(fcstop-fcstart):i",cut,"*");
     c[s]->cd(2);
       tr->Draw(rundrawNF,cut,"colz");
       c[s]->GetPad(2)->SetLogz();

@@ -1,0 +1,29 @@
+start with monsub files &  fcdata.json
+readData.groovy
+-> outdat/data_table.dat
+
+   |               \
+   |                \
+   |                 \
+   V                  V
+
+mkTree.sh               plotFiller.groovy
+-> tree.root
+define epoch lines       -> outhipo/plots.hipo
+-> epoch.dat
+
+   |                  /
+   |                 /
+   |                /
+   V               V
+
+qaCutter.groovy
+- concatenate plots into 'epoch plots' with x axis set to
+  runnum*1000 + filenum, and throw err if filenum>=1000
+- for each epoch plot, calculate IQR cuts
+- for each run plot, apply cuts and filter out outliers
+-> plots_runs.hipo (includes cut lines and outlier coloring)
+-> plots_epochs.hipo (also includes lines/coloring, but are the vs. epoch plots instead
+   of the vs. run plots)
+
+

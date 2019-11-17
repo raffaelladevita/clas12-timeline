@@ -1,7 +1,7 @@
 #!/bin/bash
 # build root tree
 
-datfile="outdat/mondata.10000.dat"
+datfile="outdat/data_table.dat"
 
 > num.tmp
 n=$(echo "`cat $datfile|wc -l`/6"|bc)

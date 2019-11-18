@@ -8,6 +8,7 @@ import groovy.json.JsonSlurper
 import org.jlab.groot.data.TDirectory
 import org.jlab.groot.data.H1F
 
+//----------------------------------------------------------------------------------
 // ARGUMENTS
 def monsubDir = "../monsub"
 def garbageCollect = false
@@ -15,14 +16,6 @@ if(args.length>=1) monsubDir = args[0]
 if(args.length>=2) garbageCollect = args[1].toInteger() == 1
 //----------------------------------------------------------------------------------
 
-boolean success
-def errPrint = { str -> 
-  System.err << "ERROR in run ${runnum}_${filenum}: "+str+"\n" 
-  success = false
-}
-
-def sectors = 0..<6
-def sec = { int i -> i+1 }
 
 // get list of monsub hipo files
 println "--- get list of monsub hipo files"
@@ -45,32 +38,39 @@ def fcFileName = "fcdata.json"
 def slurp = new JsonSlurper()
 def fcFile = new File(fcFileName)
 
-// define vars
+// define vars and subroutines
 def fcMapRun
 def fcMapRunFiles
 def fcVals
 def ufcVals
-def fcStart
-def fcStop
-def ufcStart
-def ufcStop
+def fcStart, fcStop
+def ufcStart, ufcStop
 def nTrig
 def heth
+boolean success
+def errPrint = { str -> 
+  System.err << "ERROR in run ${runnum}_${filenum}: "+str+"\n" 
+  success = false
+}
+def sectors = 0..<6
+def sec = { int i -> i+1 }
 
-// define output files
+// define output data_table.dat file
 def datfile = new File("outdat/data_table.dat")
 def datfileWriter = datfile.newWriter(false)
 
-
 // loop through input hipo files
 //----------------------------------------------------------------------------------
-println "---- BEGIN READING FILES"
 TDirectory tdir
 def fileNtok
 def runnum, runnumTmp, filenum
 runnumTmp=0
+
 //fileList = fileList.subList(0,10); // (read only a few files, for fast testing)
+
+println "---- BEGIN READING FILES"
 fileList.each{ fileN ->
+
   println "-- READ: "+fileN
   success = true
 
@@ -79,13 +79,13 @@ fileList.each{ fileN ->
   runnum= fileNtok[1].toInteger()
   filenum = fileNtok[2].toInteger()
 
-
-  // if runnum changed, optain this run's faraday cup data
+  // if runnum changed, obtain this run's faraday cup data
   if(runnum!=runnumTmp) {
     fcMapRun = slurp.parse(fcFile).groupBy{ it.run }.get(runnum)
       if(!fcMapRun) throw new Exception("run ${runnum} not found in "+fcFileName);
     runnumTmp = runnum
   }
+
   // read faraday cup info for this runfile
   if(fcMapRun) fcMapRunFiles = fcMapRun.groupBy{ it.fnum }.get(filenum)
   if(fcMapRunFiles) {
@@ -101,8 +101,7 @@ fileList.each{ fileN ->
     //println "fcStart="+fcStart+" fcStop="+fcStop
   } else errPrint("not found in "+fcFileName)
 
-
-  // open hipo file get number of electron triggers
+  // open hipo file get electron trigger histograms (for obtaining num. triggers)
   tdir = new TDirectory()
   tdir.readFile(fileN)
   heth = sectors.collect{ tdir.getObject('/electron/trigger/heth_'+sec(it)) }
@@ -110,6 +109,8 @@ fileList.each{ fileN ->
 
   // if no errors thrown above, continue analyzing
   if(success) {
+
+    // get number of electron triggers
     nTrig = { int i -> heth[i].integral() }
 
     // output to datfile
@@ -118,9 +119,10 @@ fileList.each{ fileN ->
       datfileWriter << [ fcStart, fcStop, ufcStart, ufcStop ].join(' ') << '\n'
     }
 
-    // force garbage collection (only if garbageCollect==true)
+    // force garbage collection (if you want)
     tdir = null
     if(garbageCollect) System.gc()
+
   } // eo if(success)
 } // eo loop over hipo files
 println "--- done reading hipo files"

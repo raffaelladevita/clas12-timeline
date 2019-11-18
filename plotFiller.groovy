@@ -6,6 +6,10 @@
 import org.jlab.groot.data.TDirectory
 import org.jlab.groot.data.GraphErrors
 
+//----------------------------------------------------------------------------------
+// ARGUMENTS: none
+//----------------------------------------------------------------------------------
+
 // define vars and subroutines
 def sectors = 0..<6
 def sec = { int i -> i+1 }
@@ -23,7 +27,7 @@ def errPrint = { str -> System.err << "ERROR in run ${runnum}_${filenum}: "+str+
 // define graphs
 def defineGraph = { name,ytitle ->
   sectors.collect {
-    def g = new GraphErrors(name+"_${runnum}_sec_"+sec(it))
+    def g = new GraphErrors(name+"_${runnum}_"+sec(it))
     g.setTitle(ytitle+" vs. file number -- run $runnum, sector "+sec(it))
     g.setTitleY(ytitle)
     g.setTitleX("file number")
@@ -76,7 +80,7 @@ dataFile.eachLine { line ->
   }
 
 
-  // computations
+  // calculations
   fcCharge = fcStop - fcStart
   ufcCharge = ufcStop - ufcStart
   if(fcCharge<=0) errPrint("fcCharge = ${fcCharge} <= 0")
@@ -86,11 +90,13 @@ dataFile.eachLine { line ->
 
   // add points to graphs
   s = sector-1
-  if(s<0||s>5) errPrint("bad sector number $sector")
-  grA[s].addPoint(filenum,trigRat,0,0)
-  grN[s].addPoint(filenum,ntrig,0,0)
-  grF[s].addPoint(filenum,fcCharge,0,0)
-  grT[s].addPoint(filenum,liveTime,0,0)
+  if(s<0||s>5) { errPrint("bad sector number $sector") }
+  else {
+    grA[s].addPoint(filenum,trigRat,0,0)
+    grN[s].addPoint(filenum,ntrig,0,0)
+    grF[s].addPoint(filenum,fcCharge,0,0)
+    grT[s].addPoint(filenum,liveTime,0,0)
+  }
 
 } // eo loop through data_table.dat
 writePlots(runnum) // write last run's graphs

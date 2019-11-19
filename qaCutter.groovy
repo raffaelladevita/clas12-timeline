@@ -54,8 +54,8 @@ def inList = inTdir.getCompositeObjectList(inTdir)
     ...
   }
 // - also define 'cutTree', which follows the same structure as 'ratioTree', but
-//   with the [ list of N/F values ] replaced with [ cut boundaries (map) ]
-// - also define 'epochPlotTree', for plotting N/F within each epoch
+//   with the leaves [ list of N/F values ] replaced with [ cut boundaries (map) ]
+// - also define 'epochPlotTree', with leaves as maps of plots
 */
 def ratioTree = [:]
 def cutTree = [:]
@@ -81,9 +81,7 @@ inList.each { obj ->
     if(ratioTree[sector][epoch]==null) {
       ratioTree[sector].put(epoch,[])
       cutTree[sector].put(epoch,[:])
-      epochPlotTree[sector].put(epoch,new GraphErrors("epoch_${epoch}_sector_${sector}"))
-      epochPlotTree[sector][epoch].setTitle(
-        "N/F vs. file index -- epoch ${epoch}, sector ${sector}")
+      epochPlotTree[sector].put(epoch,[:])
     }
 
     // append N/F values to the list associated to this (sector,epoch)
@@ -128,6 +126,57 @@ sectors.each { s ->
 jPrint("cuts.json",cutTree) // output cutTree to JSON
 //println pPrint(cutTree)
 
+// vars and subroutines for splitting graphs into "good" and "bad", 
+// i.e., "pass QA cuts" and "outside QA cuts", respectively
+def grA,grA_good,grA_bad
+def grN,grN_good,grN_bad
+def grF,grF_good,grF_bad
+def grT,grT_good,grT_bad
+def nGood,nBad
+def copyTitles = { g1,g2 ->
+  g2.setTitle(g1.getTitle())
+  g2.setTitleX(g1.getTitleX())
+  g2.setTitleY(g1.getTitleY())
+}
+def copyPoint = { g1,g2,i ->
+  g2.addPoint(g1.getDataX(i),g1.getDataY(i),g1.getDataEX(i),g1.getDataEY(i))
+}
+def splitGraph = { g ->
+  def gG,gB
+  gG = new GraphErrors(g.getName())
+  gB = new GraphErrors(g.getName()+":outliers")
+  copyTitles(g,gG)
+  copyTitles(g,gB)
+  gB.setMarkerColor(2)
+  return [gG,gB]
+}
+
+// define 'epoch plots', which are time-ordered concatenations of all the plots, 
+// and put them in the epochPlotTree
+def defineEpochPlot = { name,ytitle,s,e ->
+  def g = new GraphErrors("${name}_s${s}_e${e}")
+  g.setTitle(ytitle+" vs. file index -- sector $s, epoch $e")
+  g.setTitleY(ytitle)
+  g.setTitleX("file index")
+  return splitGraph(g) // returns list of plots ['good','bad']
+}
+def insertEpochPlot = { map,name,plots ->
+  map.put(name+"_good",plots[0])
+  map.put(name+"_bad",plots[1])
+}
+sectors.each { s ->
+  sectorIt = sec(s)
+  ratioTree[sectorIt].each { epochIt,ratioList ->
+    insertEpochPlot(epochPlotTree[sectorIt][epochIt],
+      "grA",defineEpochPlot("egrA","Electron Trigger N/F",sectorIt,epochIt))
+    insertEpochPlot(epochPlotTree[sectorIt][epochIt],
+      "grN",defineEpochPlot("egrN","Number electron trigs N",sectorIt,epochIt))
+    insertEpochPlot(epochPlotTree[sectorIt][epochIt],
+      "grF",defineEpochPlot("egrF","Faraday cup charge F [nC]",sectorIt,epochIt))
+    insertEpochPlot(epochPlotTree[sectorIt][epochIt],
+      "grT",defineEpochPlot("egrT","Live Time",sectorIt,epochIt))
+  }
+}
 
 // define output hipo file
 def outHipoRuns = new TDirectory()
@@ -141,44 +190,31 @@ def TL = sectors.collect { s ->
   g.setTitleX("run number")
   return g
 }
-def nGood,nBad
+def epochTL = new GraphErrors("epoch_sectors")
+epochTL.setTitle("choose a sector")
+epochTL.setTitleX("sector")
+sectors.each{ epochTL.addPoint(sec(it),1.0,0,0) }
+
     
 
-// vars and subroutines for splitting graphs into "good" and "bad", 
-// i.e., "pass QA cuts" and "outside QA cuts", respectively
-def grA,grA_good,grA_bad
-def grN,grN_good,grN_bad
-def grF,grF_good,grF_bad
-def grT,grT_good,grT_bad
+
+
+
+// other subroutines
 def lineMedian, lineCutLo, lineCutHi
-def copyTitles = { g1,g2 ->
-  g2.setTitle(g1.getTitle())
-  g2.setTitleX(g1.getTitleX())
-  g2.setTitleY(g1.getTitleY())
-}
-def splitGraph = { g ->
-  def gG,gB
-  gG = new GraphErrors(g.getName())
-  gB = new GraphErrors(g.getName()+":outliers")
-  copyTitles(g,gG)
-  copyTitles(g,gB)
-  gB.setMarkerColor(2)
-  return [gG,gB]
-}
-def copyPoint = { g1,g2,i ->
-  g2.addPoint(g1.getDataX(i),g1.getDataY(i),g1.getDataEX(i),g1.getDataEY(i))
-}
-def addEpochPlotPoint = { plot,val ->
-  def n = plot.getDataSize(0) + 1
-  plot.addPoint(n,val,0,0)
-}
+def elineMedian, elineCutLo, elineCutHi
 def buildLine = { graph,name,val ->
   leftBound = graph.getDataX(0)
   rightBound = graph.getDataX(graph.getDataSize(0)-1)
   new F1D(graph.getName()+":"+name,Double.toString(val),leftBound,rightBound)
 }
-
+def addEpochPlotPoint = { plotOut,plotIn,i,r ->
+  def f = plotIn.getDataX(i) // filenum
+  def n = r + f/5000.0 // "file index"
+  plotOut.addPoint(n,plotIn.getDataY(i),0,0)
+}
 def writeHipo = { hipo,outList -> outList.each{ hipo.addDataSet(it) } }
+
   
 // loop over grA graphs, apply the QA cuts, and fill 'good' and 'bad' graphs
 def ratio
@@ -202,18 +238,25 @@ inList.each { obj ->
     // loop through points in grA and fill good and bad graphs
     grA.getDataSize(0).times { i -> 
       ratio = grA.getDataY(i)
-      addEpochPlotPoint(epochPlotTree[sector][epoch],ratio)
       if(ratio > cutTree[sector][epoch]['cutLo'] &&
          ratio < cutTree[sector][epoch]['cutHi']) {
         copyPoint(grA,grA_good,i)
         copyPoint(grN,grN_good,i)
         copyPoint(grF,grF_good,i)
         copyPoint(grT,grT_good,i)
+        addEpochPlotPoint(epochPlotTree[sector][epoch]['grA_good'],grA,i,runnum)
+        addEpochPlotPoint(epochPlotTree[sector][epoch]['grN_good'],grN,i,runnum)
+        addEpochPlotPoint(epochPlotTree[sector][epoch]['grF_good'],grF,i,runnum)
+        addEpochPlotPoint(epochPlotTree[sector][epoch]['grT_good'],grT,i,runnum)
       } else {
         copyPoint(grA,grA_bad,i)
         copyPoint(grN,grN_bad,i)
         copyPoint(grF,grF_bad,i)
         copyPoint(grT,grT_bad,i)
+        addEpochPlotPoint(epochPlotTree[sector][epoch]['grA_bad'],grA,i,runnum)
+        addEpochPlotPoint(epochPlotTree[sector][epoch]['grN_bad'],grN,i,runnum)
+        addEpochPlotPoint(epochPlotTree[sector][epoch]['grF_bad'],grF,i,runnum)
+        addEpochPlotPoint(epochPlotTree[sector][epoch]['grT_bad'],grT,i,runnum)
       }
     }
 
@@ -236,15 +279,6 @@ inList.each { obj ->
       ]
     )
 
-    /* aqui
-    outHipoEpochs.mkdir("/${sector}")
-    outHipoEpochs.cd("/${sector}")
-    writeHipo(
-      outHipoEpochs,
-      epochPlotTree[sector].collect{...}
-    )
-    */
-
     // add QA passing fraction to timeline graph
     nGood = grA_good.getDataSize(0)
     nBad = grA_bad.getDataSize(0)
@@ -256,13 +290,42 @@ inList.each { obj ->
   }
 }
 
+
+// write epoch plots to hipo file
+sectors.each { s ->
+  sectorIt = sec(s)
+  outHipoEpochs.mkdir("/${sectorIt}")
+  outHipoEpochs.cd("/${sectorIt}")
+  epochPlotTree[sectorIt].each { epochIt,map ->
+
+    elineMedian = buildLine(map['grA_good'],"median",cutTree[sectorIt][epochIt]['mq'])
+    elineCutLo = buildLine(map['grA_good'],"cutLo",cutTree[sectorIt][epochIt]['cutLo'])
+    elineCutHi = buildLine(map['grA_good'],"cutHi",cutTree[sectorIt][epochIt]['cutHi'])
+
+    writeHipo(outHipoEpochs,map.values())
+    writeHipo(outHipoEpochs,[elineMedian,elineCutLo,elineCutHi])
+  }
+}
+
+
+
 // write timelines to output hipo file
 outHipoRuns.mkdir("/timelines")
 outHipoRuns.cd("/timelines")
 TL.each { outHipoRuns.addDataSet(it) }
+outHipoEpochs.mkdir("/timelines")
+outHipoEpochs.cd("/timelines")
+outHipoEpochs.addDataSet(epochTL)
 
-// write hipo file to disk
-def outHipoN = "timeline_vsRun.hipo"
-File outHipoFile = new File(outHipoN)
-if(outHipoFile.exists()) outHipoFile.delete()
+// write hipo files to disk
+def outHipoN 
+
+outHipoN = "outhipo/QA_timeline.hipo"
+File outHipoRunsFile = new File(outHipoN)
+if(outHipoRunsFile.exists()) outHipoRunsFile.delete()
 outHipoRuns.writeFile(outHipoN)
+
+outHipoN = "outhipo/QA_timeline_epochs.hipo"
+File outHipoEpochsFile = new File(outHipoN)
+if(outHipoEpochsFile.exists()) outHipoEpochsFile.delete()
+outHipoEpochs.writeFile(outHipoN)

@@ -1,6 +1,9 @@
 # clasqa
 data monitoring tools for CLAS run QA
 
+IMPORTANT NOTE: this README contains deprecated information and will be updated soon;
+for now see diagram.txt instead
+
 ## Dependencies
 
 * `coatjava`: ensure that `$CLASSPATH` includes `$COATJAVA/lib/clas/*`, where

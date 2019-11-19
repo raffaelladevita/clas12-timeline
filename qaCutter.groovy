@@ -150,6 +150,7 @@ def grA,grA_good,grA_bad
 def grN,grN_good,grN_bad
 def grF,grF_good,grF_bad
 def grT,grT_good,grT_bad
+def lineMedian, lineCutLo, lineCutHi
 def copyTitles = { g1,g2 ->
   g2.setTitle(g1.getTitle())
   g2.setTitleX(g1.getTitleX())
@@ -157,8 +158,8 @@ def copyTitles = { g1,g2 ->
 }
 def splitGraph = { g ->
   def gG,gB
-  gG = new GraphErrors("t"+g.getName())
-  gB = new GraphErrors("t"+g.getName()+":outliers")
+  gG = new GraphErrors(g.getName())
+  gB = new GraphErrors(g.getName()+":outliers")
   copyTitles(g,gG)
   copyTitles(g,gB)
   gB.setMarkerColor(2)
@@ -170,6 +171,11 @@ def copyPoint = { g1,g2,i ->
 def addEpochPlotPoint = { plot,val ->
   def n = plot.getDataSize(0) + 1
   plot.addPoint(n,val,0,0)
+}
+def buildLine = { graph,name,val ->
+  leftBound = graph.getDataX(0)
+  rightBound = graph.getDataX(graph.getDataSize(0)-1)
+  new F1D(graph.getName()+":"+name,Double.toString(val),leftBound,rightBound)
 }
 
 def writeHipo = { hipo,outList -> outList.each{ hipo.addDataSet(it) } }
@@ -211,6 +217,11 @@ inList.each { obj ->
       }
     }
 
+    // define lines
+    lineMedian = buildLine(grA,"median",cutTree[sector][epoch]['mq'])
+    lineCutLo = buildLine(grA,"cutLo",cutTree[sector][epoch]['cutLo'])
+    lineCutHi = buildLine(grA,"cutHi",cutTree[sector][epoch]['cutHi'])
+
     // write graphs to hipo file
     outHipoRuns.mkdir("/${runnum}")
     outHipoRuns.cd("/${runnum}")
@@ -220,7 +231,8 @@ inList.each { obj ->
         grA_good,grA_bad,
         grN_good,grN_bad,
         grF_good,grF_bad,
-        grT_good,grT_bad
+        grT_good,grT_bad,
+        lineMedian, lineCutLo, lineCutHi
       ]
     )
 

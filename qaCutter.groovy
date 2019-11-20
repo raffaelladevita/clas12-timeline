@@ -69,6 +69,7 @@ sectors.each{
 }
 
 // loop over 'grA' graphs (of N/F vs. filenum), filling ratioTree leaves
+def (minA,maxA) = [100000,0]
 inList.each { obj ->
   if(obj.contains("/grA_")) {
 
@@ -85,8 +86,14 @@ inList.each { obj ->
     }
 
     // append N/F values to the list associated to this (sector,epoch)
+    // also determine minimum and maximum values of N/F
     gr = inTdir.getObject(obj)
-    gr.getDataSize(0).times { i -> ratioTree[sector][epoch].add(gr.getDataY(i)) }
+    gr.getDataSize(0).times { i -> 
+      def val = gr.getDataY(i)
+      minA = val < minA ? val : minA
+      maxA = val > maxA ? val : maxA
+      ratioTree[sector][epoch].add(val) 
+    }
     //ratioTree[sector][epoch].add(runnum) // useful for testing
   }
 }
@@ -168,13 +175,13 @@ sectors.each { s ->
   sectorIt = sec(s)
   ratioTree[sectorIt].each { epochIt,ratioList ->
     insertEpochPlot(epochPlotTree[sectorIt][epochIt],
-      "grA",defineEpochPlot("egrA","Electron Trigger N/F",sectorIt,epochIt))
+      "grA",defineEpochPlot("grA_epoch","Electron Trigger N/F",sectorIt,epochIt))
     insertEpochPlot(epochPlotTree[sectorIt][epochIt],
-      "grN",defineEpochPlot("egrN","Number electron trigs N",sectorIt,epochIt))
+      "grN",defineEpochPlot("grN_epoch","Number electron trigs N",sectorIt,epochIt))
     insertEpochPlot(epochPlotTree[sectorIt][epochIt],
-      "grF",defineEpochPlot("egrF","Faraday cup charge F [nC]",sectorIt,epochIt))
+      "grF",defineEpochPlot("grF_epoch","Faraday cup charge F [nC]",sectorIt,epochIt))
     insertEpochPlot(epochPlotTree[sectorIt][epochIt],
-      "grT",defineEpochPlot("egrT","Live Time",sectorIt,epochIt))
+      "grT",defineEpochPlot("grT_epoch","Live Time",sectorIt,epochIt))
   }
 }
 
@@ -215,9 +222,35 @@ def addEpochPlotPoint = { plotOut,plotIn,i,r ->
 }
 def writeHipo = { hipo,outList -> outList.each{ hipo.addDataSet(it) } }
 
+
+// subroutine for projecting a graph onto the y-axis as a histogram
+def buildHisto = { graph,nbins,binmin,binmax ->
+
+  // expand histogram range a bit so the projected histogram is padded
+  def range = binmax - binmin
+  binmin -= 0.05*range
+  binmax += 0.05*range
+
+  // set the histogram names and titles
+  // assumes the graph name is 'gr._.*' (regex syntax) and names the histogram 'gr.h_.*'
+  def histN = graph.getName().replaceAll(/^gr./) { graph.getName().replaceAll(/_.*$/,"h") }
+  def histT = graph.getTitle().replaceAll(/vs\..*--/,"distribution --")
+
+  // define histogram and set formatting
+  def hist = new H1F(histN,histT,nbins,binmin,binmax)
+  hist.setTitleX(graph.getTitleY())
+  hist.setLineColor(graph.getMarkerColor())
+
+  // project the graph and return the histogram
+  graph.getDataSize(0).times { i -> hist.fill(graph.getDataY(i)) }
+  return hist
+}
+  
+
   
 // loop over grA graphs, apply the QA cuts, and fill 'good' and 'bad' graphs
 def ratio
+def histA_good, histA_bad
 inList.each { obj ->
   if(obj.contains("/grA_")) {
 
@@ -260,6 +293,10 @@ inList.each { obj ->
       }
     }
 
+    // fill histograms
+    histA_good = buildHisto(grA_good,250,minA,maxA)
+    histA_bad = buildHisto(grA_bad,250,minA,maxA)
+
     // define lines
     lineMedian = buildLine(grA,"median",cutTree[sector][epoch]['mq'])
     lineCutLo = buildLine(grA,"cutLo",cutTree[sector][epoch]['cutLo'])
@@ -275,6 +312,7 @@ inList.each { obj ->
         grN_good,grN_bad,
         grF_good,grF_bad,
         grT_good,grT_bad,
+        histA_good,histA_bad,
         lineMedian, lineCutLo, lineCutHi
       ]
     )
@@ -302,7 +340,11 @@ sectors.each { s ->
     elineCutLo = buildLine(map['grA_good'],"cutLo",cutTree[sectorIt][epochIt]['cutLo'])
     elineCutHi = buildLine(map['grA_good'],"cutHi",cutTree[sectorIt][epochIt]['cutHi'])
 
+    histA_good = buildHisto(map['grA_good'],500,minA,maxA)
+    histA_bad = buildHisto(map['grA_bad'],500,minA,maxA)
+
     writeHipo(outHipoEpochs,map.values())
+    writeHipo(outHipoEpochs,[histA_good,histA_bad])
     writeHipo(outHipoEpochs,[elineMedian,elineCutLo,elineCutHi])
   }
 }

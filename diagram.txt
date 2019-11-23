@@ -10,7 +10,7 @@ readData.groovy
 mkTree.sh               plotFiller.groovy
 -> tree.root
 define epoch lines       -> outhipo/plots.hipo
--> epoch.dat
+-> epoch.txt
 
    |                  /
    |                 /

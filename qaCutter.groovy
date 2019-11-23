@@ -11,7 +11,7 @@ import groovy.json.JsonOutput
 // vars and subroutines
 def sectors = 0..<6 
 def sec = { int i -> i+1 }
-def runnum, sector, epoch
+def runnum, filenum, sector, epoch
 def gr
 def pPrint = { str -> JsonOutput.prettyPrint(JsonOutput.toJson(str)) }
 def jPrint = { name,object -> new File(name).write(JsonOutput.toJson(object)) }
@@ -21,6 +21,7 @@ def jPrint = { name,object -> new File(name).write(JsonOutput.toJson(object)) }
 def epochFile = new File("epochs.txt")
 if(!(epochFile.exists())) throw new Exception("epochs.txt not found")
 def getEpoch = { r,s ->
+  //return 1 // (for testing single-epoch mode)
   def lb,ub
   def e = -1
   epochFile.eachLine { line,i ->
@@ -31,8 +32,6 @@ def getEpoch = { r,s ->
   return e
 }
   
-
-
 
 // open hipo file
 def inTdir = new TDirectory()
@@ -61,6 +60,7 @@ def ratioTree = [:]
 def cutTree = [:]
 def epochPlotTree = [:]
 
+
 // initialize sector branches
 sectors.each{ 
   ratioTree.put(sec(it),[:])
@@ -68,12 +68,13 @@ sectors.each{
   epochPlotTree.put(sec(it),[:])
 }
 
+
 // loop over 'grA' graphs (of N/F vs. filenum), filling ratioTree leaves
 def (minA,maxA) = [100000,0]
 inList.each { obj ->
   if(obj.contains("/grA_")) {
 
-    // get runnum and filenum
+    // get runnum and sector
     (runnum,sector) = obj.tokenize('_').subList(1,3).collect{ it.toInteger() }
     if(sector<1||sector>6) throw new Exception("bad sector number $sector")
 
@@ -109,7 +110,7 @@ def median = { d ->
 
 
 // establish cut lines using 'cutFactor' x IQR method, and fill cutTree
-def cutFactor = 2.5
+def cutFactor = 3.0
 def mq,lq,uq,iqr,cutLo,cutHi
 sectors.each { s ->
   sectorIt = sec(s)
@@ -133,6 +134,7 @@ sectors.each { s ->
 jPrint("cuts.json",cutTree) // output cutTree to JSON
 //println pPrint(cutTree)
 
+
 // vars and subroutines for splitting graphs into "good" and "bad", 
 // i.e., "pass QA cuts" and "outside QA cuts", respectively
 def grA,grA_good,grA_bad
@@ -140,6 +142,8 @@ def grN,grN_good,grN_bad
 def grF,grF_good,grF_bad
 def grT,grT_good,grT_bad
 def nGood,nBad
+def nGoodTotal = 0
+def nBadTotal = 0
 def copyTitles = { g1,g2 ->
   g2.setTitle(g1.getTitle())
   g2.setTitleX(g1.getTitleX())
@@ -157,6 +161,7 @@ def splitGraph = { g ->
   gB.setMarkerColor(2)
   return [gG,gB]
 }
+
 
 // define 'epoch plots', which are time-ordered concatenations of all the plots, 
 // and put them in the epochPlotTree
@@ -185,9 +190,13 @@ sectors.each { s ->
   }
 }
 
-// define output hipo file
+
+// define output hipo files and outliers list
 def outHipoRuns = new TDirectory()
 def outHipoEpochs = new TDirectory()
+def badfile = new File("outdat/outliers.dat")
+def badfileWriter = badfile.newWriter(false)
+
 
 // define timeline graphs
 def TL = sectors.collect { s ->
@@ -203,10 +212,6 @@ epochTL.setTitleX("sector")
 sectors.each{ epochTL.addPoint(sec(it),1.0,0,0) }
 
     
-
-
-
-
 // other subroutines
 def lineMedian, lineCutLo, lineCutHi
 def elineMedian, elineCutLo, elineCutHi
@@ -270,6 +275,7 @@ inList.each { obj ->
 
     // loop through points in grA and fill good and bad graphs
     grA.getDataSize(0).times { i -> 
+      filenum = grA.getDataX(i).toInteger()
       ratio = grA.getDataY(i)
       if(ratio > cutTree[sector][epoch]['cutLo'] &&
          ratio < cutTree[sector][epoch]['cutHi']) {
@@ -290,6 +296,7 @@ inList.each { obj ->
         addEpochPlotPoint(epochPlotTree[sector][epoch]['grN_bad'],grN,i,runnum)
         addEpochPlotPoint(epochPlotTree[sector][epoch]['grF_bad'],grF,i,runnum)
         addEpochPlotPoint(epochPlotTree[sector][epoch]['grT_bad'],grT,i,runnum)
+        badfileWriter << [ runnum, filenum, sector ].join(' ') << "\n"
       }
     }
 
@@ -320,6 +327,8 @@ inList.each { obj ->
     // add QA passing fraction to timeline graph
     nGood = grA_good.getDataSize(0)
     nBad = grA_bad.getDataSize(0)
+    nGoodTotal += nGood
+    nBadTotal += nBad
     TL[sector-1].addPoint(
       runnum,
       nGood+nBad>0 ? nGood/(nGood+nBad) : 0,
@@ -371,3 +380,10 @@ outHipoN = "outhipo/QA_timeline_epochs.hipo"
 File outHipoEpochsFile = new File(outHipoN)
 if(outHipoEpochsFile.exists()) outHipoEpochsFile.delete()
 outHipoEpochs.writeFile(outHipoN)
+
+// close buffer writers
+badfileWriter.close()
+
+// print total QA passing fractions
+def PF = nGoodTotal / (nGoodTotal+nBadTotal)
+println "\n QA cut overall passing fraction: $PF"

@@ -194,8 +194,14 @@ sectors.each { s ->
 // define output hipo files and outliers list
 def outHipoRuns = new TDirectory()
 def outHipoEpochs = new TDirectory()
-def badfile = new File("outdat/outliers.dat")
-def badfileWriter = badfile.newWriter(false)
+
+// define good and bad file lists
+def qaTree = [:] // [runnum][filenum][sector] -> "good" or "bad"
+def goodFile = new File("outdat/goodFiles.dat")
+def goodFileWriter = goodFile.newWriter(false)
+def badFile = new File("outdat/badFiles.dat")
+def badFileWriter = badFile.newWriter(false)
+
 
 
 // define timeline graphs
@@ -262,6 +268,7 @@ inList.each { obj ->
     // get runnum, sector, epoch
     (runnum,sector) = obj.tokenize('_').subList(1,3).collect{ it.toInteger() }
     epoch = getEpoch(runnum,sector)
+    if(!qaTree.containsKey(runnum)) qaTree[runnum] = [:]
 
     // split graphs into good and bad
     grA = inTdir.getObject(obj)
@@ -275,8 +282,12 @@ inList.each { obj ->
 
     // loop through points in grA and fill good and bad graphs
     grA.getDataSize(0).times { i -> 
+
       filenum = grA.getDataX(i).toInteger()
+      if(!qaTree[runnum].containsKey(filenum)) qaTree[runnum][filenum] = [:]
+
       ratio = grA.getDataY(i)
+
       if(ratio > cutTree[sector][epoch]['cutLo'] &&
          ratio < cutTree[sector][epoch]['cutHi']) {
         copyPoint(grA,grA_good,i)
@@ -287,6 +298,7 @@ inList.each { obj ->
         addEpochPlotPoint(epochPlotTree[sector][epoch]['grN_good'],grN,i,runnum)
         addEpochPlotPoint(epochPlotTree[sector][epoch]['grF_good'],grF,i,runnum)
         addEpochPlotPoint(epochPlotTree[sector][epoch]['grT_good'],grT,i,runnum)
+        qaTree[runnum][filenum][sector] = "good"
       } else {
         copyPoint(grA,grA_bad,i)
         copyPoint(grN,grN_bad,i)
@@ -296,7 +308,7 @@ inList.each { obj ->
         addEpochPlotPoint(epochPlotTree[sector][epoch]['grN_bad'],grN,i,runnum)
         addEpochPlotPoint(epochPlotTree[sector][epoch]['grF_bad'],grF,i,runnum)
         addEpochPlotPoint(epochPlotTree[sector][epoch]['grT_bad'],grT,i,runnum)
-        badfileWriter << [ runnum, filenum, sector ].join(' ') << "\n"
+        qaTree[runnum][filenum][sector] = "bad"
       }
     }
 
@@ -381,8 +393,26 @@ File outHipoEpochsFile = new File(outHipoN)
 if(outHipoEpochsFile.exists()) outHipoEpochsFile.delete()
 outHipoEpochs.writeFile(outHipoN)
 
-// close buffer writers
-badfileWriter.close()
+
+// sort qaTree and output to json file
+qaTree.each { qaRun, qaRunTree ->
+  qaRunTree.each { qaFile, qaFileTree -> qaFileTree.sort() }
+  qaRunTree.sort()
+}
+qaTree.sort()
+new File("outdat/qaTree.json").write(JsonOutput.toJson(qaTree))
+
+// write goodFile and badFile: lists of good and bad files
+def nbad
+qaTree.each { qaRun, qaRunTree ->
+  qaRunTree.each { qaFile, qaFileTree -> 
+    nbad = 0
+    qaFileTree.each { sectorNum, qaStr -> if(qaStr=="bad") nbad++ }
+    ( nbad>0 ? badFileWriter:goodFileWriter) << [ qaRun, qaFile ].join(' ') << '\n'
+  }
+}
+goodFileWriter.close()
+badFileWriter.close()
 
 // print total QA passing fractions
 def PF = nGoodTotal / (nGoodTotal+nBadTotal)

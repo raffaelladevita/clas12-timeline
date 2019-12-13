@@ -8,28 +8,53 @@ def dstName = args[0]
 def reader = new HipoDataSource()
 reader.open(dstName)
 
+// define variables
+def pidList = []
+def particleBank
+def event
+def bankRows
+def pipList = []
+def pimList = []
+
+// subroutine which returns a list of Particle objects of a certain PID, satisfying 
+// desired cuts
+def findParticles = { pid ->
+  def partList
+  // get list of bank rows corresponding to this PID
+  def rowList = pidList.findIndexValues{ it == pid }.collect{it as Integer}
+  println "pid=$pid  found in rows $rowList"
+  // apply cuts
+  //rowList = rowList.findAll{ particleBank.getShort('status',it)<0 }
+  // get list of Particle objects
+  partList = rowList.collect { row ->
+    new Particle(pid,*['px','py','pz'].collect{particleBank.getFloat(it,row)})
+  }
+  return partList
+}
+
 
 // event loop
-def event
-def particleBank
-def pionList = []
-def pion
-def phi
 while(reader.hasEvent()) {
   event = reader.getNextEvent()
   if(event.hasBank("REC::Particle")) {
+
+    println "---"
     particleBank = event.getBank("REC::Particle")
-    pionList = (0..<particleBank.rows()).findAll{
-      particleBank.getInt('pid',it)==211 /*&& particleBank.getShort('status',it)<0*/
+    bankRows = 0..<particleBank.rows()
+
+    // get list of PIDs, with list index corresponding to bank row
+    pidList = bankRows.collect{ particleBank.getInt('pid',it) }
+    println "pidList = $pidList"
+
+    // get lists of pions
+    pipList = findParticles(211)
+    pimList = findParticles(-211)
+
+    pipList.each{
+      println it.phi()
     }
-    println pionList
-    pionList.each{ ind ->
-      pion = new Particle(
-        211,
-        *['px','py','pz'].collect{particleBank.getFloat(it,ind)}
-      )
-      phi = pion.phi()
-    }
+
+
   }
 }
 

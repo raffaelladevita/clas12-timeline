@@ -7,3 +7,4 @@
 logfiles/*.out
 logfiles/*.err
 .nfs*
+dst

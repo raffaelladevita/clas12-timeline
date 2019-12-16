@@ -6,7 +6,6 @@
 import static groovy.io.FileType.FILES
 import groovy.json.JsonSlurper
 import org.jlab.groot.data.TDirectory
-import org.jlab.groot.data.H1F
 
 //----------------------------------------------------------------------------------
 // ARGUMENTS

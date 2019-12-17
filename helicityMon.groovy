@@ -117,8 +117,9 @@ dstList.each { dstFile ->
       configBank = event.getBank("RUN::config")
 
       // get run number, event number, and helicity 
-      eventNum = configBank.getInt('event')
-      helicity = eventBank.getByte('helicity')
+      eventNum = configBank.getInt('event',0)
+      helicity = eventBank.getByte('helicity',0)
+      println helicity
       helDefined = true
       switch(helicity) {
         case 1:
@@ -128,8 +129,8 @@ dstList.each { dstFile ->
           helStr = 'hp'
           break
         default:
-          //helDefined = false
-          helStr = 'hp' // override
+          helDefined = false
+          //helStr = 'hp' // override
           break
       }
 

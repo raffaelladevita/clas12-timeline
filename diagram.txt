@@ -23,3 +23,13 @@ qaCutter.groovy
 - for each run plot, apply cuts and filter out outliers
 -> outhipo/QA_timeline.hipo
 -> outhipo/QA_timeline_epochs.hipo
+
+=====================================
+
+helicityPhiRead.groovy
+-> outhipo/sinphi_${runnum}.hipo
+
+   |
+   V
+
+helicityPhiPlot.groovy

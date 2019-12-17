@@ -129,8 +129,8 @@ dstList.each { dstFile ->
           helStr = 'hp'
           break
         default:
-          helDefined = false
-          //helStr = 'hp' // override
+          //helDefined = false
+          helStr = 'hp' // override
           break
       }
 

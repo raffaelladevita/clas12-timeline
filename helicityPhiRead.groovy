@@ -155,13 +155,16 @@ dstList.each { dstFile ->
   }
   reader.close()
 
-  // write histograms to hipo file, and then set them to null for garbage collection
+  // write histograms to hipo file
+  // and then set them to null for garbage collection
   hist.each{ pName,pMap -> 
     pMap.each{ hName,histo -> 
       outHipo.addDataSet(histo) 
       histo = null
     } 
   }
+  reader = null
+  System.gc()
 }
 
 

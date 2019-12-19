@@ -10,6 +10,7 @@ import java.lang.Math.*
 // ARGUMENTS
 def dstDir = "dst"
 if(args.length>=1) dstDir = args[0]
+println "dstDir=$dstDir"
 
 
 // get list of DST files
@@ -119,7 +120,6 @@ dstList.each { dstFile ->
       // get run number, event number, and helicity 
       eventNum = configBank.getInt('event',0)
       helicity = eventBank.getByte('helicity',0)
-      println helicity
       helDefined = true
       switch(helicity) {
         case 1:

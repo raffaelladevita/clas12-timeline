@@ -64,7 +64,9 @@ inList.each { inFile ->
       graph = graphTree[runnum][part][hel]
 
       // add <sinPhi> to the graph
-      graph.addPoint(filenum,obj.getMean(),0,0)
+      if(obj.integral()>0) {
+        graph.addPoint(filenum,obj.getMean(),0,0)
+      }
     }
   }
 

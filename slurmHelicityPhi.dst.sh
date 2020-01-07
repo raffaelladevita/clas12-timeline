@@ -4,7 +4,7 @@
 #SBATCH --account=clas12
 #SBATCH --partition=production
 
-#SBATCH --mem-per-cpu=256
+#SBATCH --mem-per-cpu=6000
 #SBATCH --time=1:30:00
 
 #SBATCH --array=1-11
@@ -16,5 +16,5 @@
 dataList=(/cache/clas12/rg-a/production/reconstructed/Fall2018/Torus+1/pass1/v1/*)
 
 srun echo "pwd=$(pwd)"
-srun groovy helicityPhiPlot.groovy ${dataList[$SLURM_ARRAY_TASK_ID]}
+srun groovy helicityPhiRead.groovy ${dataList[$SLURM_ARRAY_TASK_ID]}
 

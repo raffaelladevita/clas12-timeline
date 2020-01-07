@@ -211,14 +211,8 @@ inHipoList.each { inHipoFile ->
   } // end event loop
   reader.close()
 
-<<<<<<< HEAD
   // write histograms to hipo file, and then set them to null for garbage collection
   histTree.each{ pName,pMap -> 
-=======
-  // write histograms to hipo file
-  // and then set them to null for garbage collection
-  hist.each{ pName,pMap -> 
->>>>>>> 89bf2f8231f2cbdcde2a168772d7d3817788593f
     pMap.each{ hName,histo -> 
       outHipo.addDataSet(histo) 
       histo = null

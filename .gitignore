@@ -6,5 +6,6 @@
 */*.dat*
 logfiles/*.out
 logfiles/*.err
+farmout/*
 .nfs*
 dst

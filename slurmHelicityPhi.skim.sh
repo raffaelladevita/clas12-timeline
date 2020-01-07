@@ -7,7 +7,7 @@
 #SBATCH --mem-per-cpu=6000
 #SBATCH --time=1:30:00
 
-#SBATCH --array=1-11
+#SBATCH --array=1-64
 #SBATCH --ntasks=1
 
 #SBATCH --output=/farm_out/%u/%x-%j-%N.out
@@ -15,6 +15,4 @@
 
 dataList=(/work/clas12/rg-a/trains/v16_v2/skim4_inclusive/*)
 
-srun echo "pwd=$(pwd)"
 srun groovy helicityPhiRead.groovy ${dataList[$SLURM_ARRAY_TASK_ID]}
-

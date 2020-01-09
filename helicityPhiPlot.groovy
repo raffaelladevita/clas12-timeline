@@ -1,6 +1,7 @@
 import org.jlab.groot.data.TDirectory
 import org.jlab.groot.data.GraphErrors
 import org.jlab.groot.data.H1F
+import java.lang.Math.*
 
 // get list of sinphi hipo files
 def inDir = "outhipo"
@@ -17,7 +18,7 @@ inList.each { println it }
 graphTree:
 runnum
 │
-└ particle
+└ particle (pi+,pi-)
   │
   ├ helicity+ : <sinphi> vs. filenum
   └ helicity- : <sinphi> vs. filenum
@@ -65,13 +66,53 @@ inList.each { inFile ->
 
       // add <sinPhi> to the graph
       if(obj.integral()>0) {
-        graph.addPoint(filenum,obj.getMean(),0,0)
+        graph.addPoint(
+          filenum,
+          obj.getMean(),
+          0,
+          1.0/Math.sqrt(obj.getIntegral())
+        )
       }
     }
   }
 
   inFile = null // "close" the file
 }
+
+// define timelines
+def buildTimeline = { tPart,tHel ->
+  def tl = new GraphErrors("${tPart}_${tHel}")
+  tl.setTitle("<sinPhi> vs. runnum")
+  def g
+  def cnt
+  def avg
+  graphTree.each { tRun,bRun ->
+    avg = 0
+    g = bRun[tPart][tHel]
+    cnt = g.getDataSize(0)
+    cnt.times { i -> avg += g.getDataY(i) / cnt }
+    tl.addPoint(tRun,avg,0,0)
+  }
+  return tl
+}
+/*
+timelineTree:
+particle (pi+,pi-)
+ │
+ ├ helicity+ : <sinphi> vs. runnum
+ └ helicity- : <sinphi> vs. runnum
+*/
+def timelineTree = [:]
+graphTree.each { kRun,bRun ->
+  bRun.each{ kPart,bPart ->
+    timelineTree.put(kPart,[:])
+    bPart.each{ kHel,gr ->
+      timelineTree[kPart].put(kHel,buildTimeline(kPart,kHel))
+    }
+  }
+}
+
+
     
 // define output hipo file
 def outHipo = new TDirectory()
@@ -84,6 +125,15 @@ graphTree.each { kRun,bRun ->
     }
   }
 }
+
+outHipo.mkdir("/timelines")
+outHipo.cd("/timelines")
+timelineTree.each{ kPart,bPart ->
+  bPart.each{ kHel,t ->
+    outHipo.addDataSet(t)
+  }
+}
+
 def outHipoN = "outhipo/helicityPhi.hipo"
 File outHipoFile = new File(outHipoN)
 if(outHipoFile.exists()) outHipoFile.delete()

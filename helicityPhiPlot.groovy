@@ -79,7 +79,7 @@ inList.each { inFile ->
   inFile = null // "close" the file
 }
 
-// define timelines
+// build timelines
 def buildTimeline = { tPart,tHel ->
   def tl = new GraphErrors("${tPart}_${tHel}")
   tl.setTitle("<sinPhi> vs. runnum")
@@ -102,13 +102,14 @@ particle (pi+,pi-)
  ├ helicity+ : <sinphi> vs. runnum
  └ helicity- : <sinphi> vs. runnum
 */
+// build timelineTree by taking the last run's particle & helicity branches and 
+// copying the tree structure; the subroutine `buildTimeline` will calculate each
+// <sinPhi> for each run and fill the timeline graphs
 def timelineTree = [:]
-graphTree.each { kRun,bRun ->
-  bRun.each{ kPart,bPart ->
-    timelineTree.put(kPart,[:])
-    bPart.each{ kHel,gr ->
-      timelineTree[kPart].put(kHel,buildTimeline(kPart,kHel))
-    }
+graphTree[runnum].each{ kPart,bPart ->
+  timelineTree.put(kPart,[:])
+  bPart.each{ kHel,gr ->
+    timelineTree[kPart].put(kHel,buildTimeline(kPart,kHel))
   }
 }
 

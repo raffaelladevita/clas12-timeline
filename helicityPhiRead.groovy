@@ -65,8 +65,10 @@ def configBank
 def eventBank
 def pipList = []
 def pimList = []
+def eventNum
 def eventNumList = []
 def eventNumAve
+def eventNumDev
 def helicity
 def helStr
 def helDefined
@@ -136,15 +138,18 @@ inHipoList.each { inHipoFile ->
   def writeHistos = {
     if(inHipoType=="skim") {
       // get average event number; then clear list of events
-      eventNumAve = eventNumList.sum() / eventNumList.size()
-      println eventNumList
-      println eventNumAve
+      eventNumAve = Math.round( eventNumList.sum() / eventNumList.size() )
+      eventNumDev = Math.round(Math.sqrt( 
+       eventNumList.collect{ n -> Math.pow((n-eventNumAve),2) }.sum() / 
+       (eventNumList.size()-1)
+      ))
+      println "eventNumAve=$eventNumAve  eventNumDev=$eventNumDev"
       eventNumList.clear()
       // loop through histTree, adding histos to the hipo file;
       // note that the average event number is appended to the name and title
       histTree.each{ pName,pMap -> 
         pMap.each{ hName,histo -> 
-          histN = histo.getName().replaceAll(/0$/,"$eventNumAve")
+          histN = histo.getName().replaceAll(/0$/,"${eventNumAve}_${eventNumDev}")
           histT = histo.getTitle().replaceAll(
             / filenum.*$/," vs. segment's <eventNum>")
           histo.setName(histN)
@@ -234,7 +239,8 @@ inHipoList.each { inHipoFile ->
         if(pipList.size>0 || pimList.size>0) {
           evCount++
           if(evCount % 100000 == 0) println "found $evCount events which contain a pion"
-          if(inHipoType=="skim") eventNumList.add(configBank.getInt('event',0))
+          eventNum = BigInteger.valueOf(configBank.getInt('event',0))
+          if(inHipoType=="skim") eventNumList.add(eventNum)
         }
       }
     }

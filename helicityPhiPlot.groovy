@@ -40,15 +40,15 @@ runnum
 │
 └ particle (pi+,pi-)
   │
-  ├ helicity+ : <sinphi> vs. filenum
-  └ helicity- : <sinphi> vs. filenum
+  ├ helicity+ : <sinphi> vs. xnum
+  └ helicity- : <sinphi> vs. xnum
 */
 def graphTree = [:]
 
 def inTdir = new TDirectory()
 def objList
 def part,hel
-def runnum,filenum
+def runnum,xnum
 def tok
 def obj
 def graph
@@ -61,12 +61,13 @@ inList.each { inFile ->
     if(objN.contains("/sinPhi_")) {
       obj = inTdir.getObject(objN)
 
-      // tokenize histogram name to get runnum, filenum, particle type, and helicity
+      // tokenize histogram name to get runnum, xnum, particle type, and helicity
       tok = objN.tokenize('/')[-1].tokenize('_')
       part = tok[1]
       hel = tok[2]
       runnum = tok[3].toInteger()
-      filenum = tok[4].toInteger()
+      xnum = new BigInteger(tok[4])
+      xnumDev = tok.size()==6 ? new BigInteger(tok[5]) : 0
 
       // initialize graph, if it hasn't been
       if(graphTree[runnum]==null) graphTree.put(runnum,[:])
@@ -79,9 +80,9 @@ inList.each { inFile ->
       // add <sinPhi> to the graph
       if(obj.integral()>0) {
         graph.addPoint(
-          filenum,
+          xnum,
           obj.getMean(),
-          0,
+          xnumDev,
           1.0/Math.sqrt(obj.getIntegral())
         )
       }

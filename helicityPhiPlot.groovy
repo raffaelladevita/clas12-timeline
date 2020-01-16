@@ -20,12 +20,16 @@ inList.each { println it }
 // or "time slice" of events
 def buildGraph = { tObj ->
   def grN = tObj.getName().tokenize('_').subList(0,3).join('_')
+  grN = grN.replaceAll(/_hp$/,"")
+  grN = grN.replaceAll(/_hm$/,":hm")
   def grT = tObj.getTitle()
   grT = grT.replaceAll(/ filenum.*$/," vs. file number")
   grT = grT.replaceAll(/ firstEventOfSegment.*$/," vs. segment's 1st eventNum")
   grT = grT.replaceAll(/sinPhi/,"<sinPhi>")
   def gr = new GraphErrors(grN)
   gr.setTitle(grT)
+  if(grN.contains(":hm")) { gr.setMarkerColor(2); gr.setLineColor(2); }
+  else { gr.setMarkerColor(4); gr.setLineColor(4); }
   return gr
 }
 

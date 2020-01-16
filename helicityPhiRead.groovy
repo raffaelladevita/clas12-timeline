@@ -39,21 +39,22 @@ else if(inHipoType=="skim") { inHipoList << inHipo }
 // define sinPhi histograms
 def partT = [ 'pip':'pi+', 'pim':'pi-' ]
 def helT = [ 'hp':'hel+', 'hm':'hel-' ]
-def buildHist = { partN,helN,runn,xn ->
+def buildHist = { partN, helN, runn, xn ->
   new H1F(
     "sinPhi_${partN}_${helN}_${runn}_${xn}",
-    "sinPhi "+partT[partN]+" "+helT[helN]+" run${runn} file${xn}",
+    "sinPhi "+partT[partN]+" "+helT[helN]+" run=${runn} filenum=${xn}",
     100,-1,1
   )
 }
 /*
 histTree:
 particle
- ├ helicity+ : <sinphi> vs. xnum
- └ helicity- : <sinphi> vs. xnum
+ ├ helicity+ : <sinphi> distribution for segment (or filenum)
+ └ helicity- : <sinphi> distribution for segment (or filenum)
 */
 def histTree = [:]
 partT.each{ histTree[it.key] = [:] }
+def histN,histT
 
 
 // define variables
@@ -64,18 +65,19 @@ def configBank
 def eventBank
 def pipList = []
 def pimList = []
-def eventNum
+def eventNumList = []
+def eventNumAve
 def helicity
 def helStr
 def helDefined
 def phi
-def xnum
-def xnumTmp = -1
 def runnum
 def runnumTmp = -1
 def reader
 def inHipoName
 def evCount
+def segment
+def segmentTmp = -1
 
 // subroutine which returns a list of Particle objects of a certain PID, satisfying 
 // desired cuts
@@ -101,18 +103,16 @@ def outHipo = new TDirectory()
 // loop through files
 inHipoList.each { inHipoFile ->
 
-  // get runnum and xnum, where xnum is what will be plotted on the horizontal axis
-  // - for DST files, xnum = filenum; we define the corresponding histos here
-  // - for SKIM files, xnum = event number (or a similar proxy); we define
-  //   the histograms later in the event loop, as needed
+  // get runnum and filenum
+  // - for DST files, we define the corresponding histos here
   inHipoName = inHipoFile.tokenize('/')[-1]
   if(inHipoType=="dst") {
     runnum = inHipoName.tokenize('.')[0].tokenize('_')[-1].toInteger()
-    xnum = inHipoName.tokenize('.')[-2].tokenize('-')[0].toInteger()
-    println "runnum=$runnum  xnum=$xnum"
+    filenum = inHipoName.tokenize('.')[-2].tokenize('-')[0].toInteger()
+    println "runnum=$runnum  filenum=$filenum"
     histTree.each{ part,h ->
-      h['hp'] = buildHist(part,'hp',runnum,xnum)
-      h['hm'] = buildHist(part,'hm',runnum,xnum)
+      h['hp'] = buildHist(part,'hp',runnum,filenum)
+      h['hm'] = buildHist(part,'hm',runnum,filenum)
     }
   }
   else if(inHipoType=="skim") {
@@ -132,51 +132,74 @@ inHipoList.each { inHipoFile ->
   reader = new HipoDataSource()
   reader.open(inHipoFile)
 
-
-  // event loop
-  evCount = 0
-  while(reader.hasEvent()) {
-
-    evCount++
-    //if(evCount>100000) break // limiter
-    if(evCount % 100000 == 0) println "analyzed $evCount events"
-
-    // if reading skim file, get xnum, and either define new histograms or
-    // write out the filled ones
+  // subroutine to write out to hipo file (if reading skim file)
+  def writeHistos = {
     if(inHipoType=="skim") {
-      xnum = (evCount/10000).toInteger()
-      if(xnum!=xnumTmp) {
-        // write out filled histogram
-        if(xnumTmp>=0) {
-          histTree.each{ pName,pMap -> 
-            pMap.each{ hName,histo -> 
-              outHipo.addDataSet(histo) 
-              histo = null
-            } 
-          }
-        }
-        // define new histograms
-        histTree.each{ part,h ->
-          h['hp'] = buildHist(part,'hp',runnum,xnum)
-          h['hm'] = buildHist(part,'hm',runnum,xnum)
-        }
-        // update tmp number
-        xnumTmp = xnum
+      // get average event number; then clear list of events
+      eventNumAve = eventNumList.sum() / eventNumList.size()
+      println eventNumList
+      println eventNumAve
+      eventNumList.clear()
+      // loop through histTree, adding histos to the hipo file;
+      // note that the average event number is appended to the name and title
+      histTree.each{ pName,pMap -> 
+        pMap.each{ hName,histo -> 
+          histN = histo.getName().replaceAll(/0$/,"$eventNumAve")
+          histT = histo.getTitle().replaceAll(
+            / filenum.*$/," vs. segment's <eventNum>")
+          histo.setName(histN)
+          histo.setTitle(histT)
+          outHipo.addDataSet(histo) 
+          histo = null
+        } 
       }
     }
+  }
 
-    // read event
+
+  //----------------------
+  // event loop
+  //----------------------
+  evCount = 0
+  while(reader.hasEvent()) {
+    //if(evCount>100000) break // limiter
     event = reader.getNextEvent()
+
     if(event.hasBank("REC::Particle") &&
        event.hasBank("REC::Event") &&
        event.hasBank("RUN::config") ){
 
+      // get banks
       particleBank = event.getBank("REC::Particle")
       eventBank = event.getBank("REC::Event")
       configBank = event.getBank("RUN::config")
 
-      // get run number, event number, and helicity 
-      eventNum = configBank.getInt('event',0)
+      // if reading skim file, get segment number, and either define new histograms or
+      // write out the filled ones
+      if(inHipoType=="skim") {
+
+        // segment iterator
+        segment = (evCount/10000).toInteger()
+
+        // if segment changed:
+        if(segment!=segmentTmp) {
+
+          // if this isn't the first segment, write out filled histograms
+          if(segmentTmp>=0) writeHistos()
+
+          // define new histograms (with filenum argument "0", to be replaced later
+          // by average event number for this segment)
+          histTree.each{ part,h ->
+            h['hp'] = buildHist(part,'hp',runnum,0)
+            h['hm'] = buildHist(part,'hm',runnum,0)
+          }
+
+          // update tmp number
+          segmentTmp = segment
+        }
+      }
+
+      // get helicity
       helicity = eventBank.getByte('helicity',0)
       helDefined = true
       switch(helicity) {
@@ -203,8 +226,16 @@ inHipoList.each { inHipoFile ->
         pipList = findParticles(211)
         pimList = findParticles(-211)
 
+        // fill sinPhi distributions
         pipList.each{ histTree['pip'][helStr].fill(Math.sin(it.phi())) }
         pimList.each{ histTree['pim'][helStr].fill(Math.sin(it.phi())) }
+
+        // increment evCount and add event number to event number list
+        if(pipList.size>0 || pimList.size>0) {
+          evCount++
+          if(evCount % 100000 == 0) println "found $evCount events which contain a pion"
+          if(inHipoType=="skim") eventNumList.add(configBank.getInt('event',0))
+        }
       }
     }
 
@@ -212,11 +243,14 @@ inHipoList.each { inHipoFile ->
   reader.close()
 
   // write histograms to hipo file, and then set them to null for garbage collection
-  histTree.each{ pName,pMap -> 
-    pMap.each{ hName,histo -> 
-      outHipo.addDataSet(histo) 
-      histo = null
-    } 
+  if(inHipoType=="skim") writeHistos()
+  else if(inHipoType=="dst") {
+    histTree.each{ pName,pMap -> 
+      pMap.each{ hName,histo -> 
+        outHipo.addDataSet(histo) 
+        histo = null
+      } 
+    }
   }
   reader = null
   System.gc()

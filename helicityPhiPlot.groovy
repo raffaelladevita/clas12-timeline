@@ -3,6 +3,7 @@ import org.jlab.groot.data.GraphErrors
 import org.jlab.groot.data.H1F
 import java.lang.Math.*
 
+
 // get list of sinphi hipo files
 def inDir = "outhipo"
 def inDirObj = new File(inDir)
@@ -14,6 +15,25 @@ inDirObj.traverse( type: groovy.io.FileType.FILES, nameFilter: inFilter ) {
 inList.sort()
 inList.each { println it }
 
+
+// subroutine to build a graph of <sinPhi> vs. xnum, where xnum is a file number 
+// or "time slice" of events
+def buildGraph = { tObj ->
+  def grN = tObj.getName().tokenize('_').subList(0,3).join('_')
+  def grT = tObj.getTitle()
+  grT = grT.replaceAll(/ filenum.*$/," vs. file number")
+  grT = grT.replaceAll(/ firstEventOfSegment.*$/," vs. segment's 1st eventNum")
+  grT = grT.replaceAll(/sinPhi/,"<sinPhi>")
+  def gr = new GraphErrors(grN)
+  gr.setTitle(grT)
+  return gr
+}
+
+
+//-----------------------------------------
+// fill the <sinPhi> vs. xnum graphs
+//-----------------------------------------
+
 /*
 graphTree:
 runnum
@@ -24,16 +44,6 @@ runnum
   └ helicity- : <sinphi> vs. filenum
 */
 def graphTree = [:]
-def buildGraph = { tObj ->
-  def grN = tObj.getName().tokenize('_').subList(0,3).join('_')
-  def grT = tObj.getTitle().replaceAll(/ file.*$/," vs. file number")
-  grT = grT.replaceAll(/sinPhi/,"<sinPhi>")
-  def gr = new GraphErrors(grN)
-  gr.setTitle(grT)
-  return gr
-}
-  
-
 
 def inTdir = new TDirectory()
 def objList
@@ -42,6 +52,8 @@ def runnum,filenum
 def tok
 def obj
 def graph
+
+// loop over sinphi hipo files
 inList.each { inFile ->
   inTdir.readFile(inFile)
   objList = inTdir.getCompositeObjectList(inTdir)
@@ -79,7 +91,12 @@ inList.each { inFile ->
   inFile = null // "close" the file
 }
 
+
+//---------------------
 // build timelines
+//---------------------
+
+// subroutine to fill a timeline
 def buildTimeline = { tPart,tHel ->
   def tl = new GraphErrors("${tPart}_${tHel}")
   tl.setTitle("<sinPhi> vs. runnum")
@@ -95,6 +112,7 @@ def buildTimeline = { tPart,tHel ->
   }
   return tl
 }
+
 /*
 timelineTree:
 particle (pi+,pi-)
@@ -103,8 +121,7 @@ particle (pi+,pi-)
  └ helicity- : <sinphi> vs. runnum
 */
 // build timelineTree by taking the last run's particle & helicity branches and 
-// copying the tree structure; the subroutine `buildTimeline` will calculate each
-// <sinPhi> for each run and fill the timeline graphs
+// copying that tree structure
 def timelineTree = [:]
 graphTree[runnum].each{ kPart,bPart ->
   timelineTree.put(kPart,[:])
@@ -114,8 +131,7 @@ graphTree[runnum].each{ kPart,bPart ->
 }
 
 
-    
-// define output hipo file
+// output everything to a hipo file
 def outHipo = new TDirectory()
 graphTree.each { kRun,bRun ->
   outHipo.mkdir("/${kRun}")

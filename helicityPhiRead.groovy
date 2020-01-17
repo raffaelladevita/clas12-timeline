@@ -3,6 +3,8 @@ import org.jlab.clas.physics.Particle
 import org.jlab.clas.physics.Vector3
 import org.jlab.groot.data.H1F
 import org.jlab.groot.data.TDirectory
+import org.jlab.clas.physics.LorentzVector
+import org.jlab.clas.physics.Vector3
 import groovy.json.JsonOutput
 import java.lang.Math.*
 
@@ -82,6 +84,15 @@ def evCount
 def segment
 def segmentTmp = -1
 
+// lorentz vectors
+def vecBeam = new LorentzVector(0, 0, 10.6, 10.6)
+def vecTarget = new LorentzVector(0, 0, 0, 0.938)
+def vecQ,vecH
+def z
+
+// scalar product of 4-vectors
+def lorentzDot{ v1,v2 -> return v1.e()*v2.e() - v1.vect().dot(v2.vect()) }
+
 // subroutine which returns a list of Particle objects of a certain PID, satisfying 
 // desired cuts
 def findParticles = { pid ->
@@ -97,11 +108,22 @@ def findParticles = { pid ->
 
   // apply cuts
   // - electrons
-  if(pid==11) partList = partList.findAll{ it.e() > 2 }
+  if(pid==11) {
+    partList = partList.max{ it.e() } // choose max-E electron
+    partList = partList.findAll{ it.e() > 2 } // cut E>2
+    if(partList.size()>0) {
+      vecQ = LorentzVector(vecBeam)
+      vecQ.sub(eleList[0].vector()) // virtual photon momentum
+    }
+  }
   // - pions
-  //if(Math.abs(pid)==211) {
-  //rowList = rowList.findAll{ particleBank.getShort('status',it)<0 }
-  //}
+  if(Math.abs(pid)==211) {
+    partList = partList.findAll{ pion ->
+      vecH = LorentzVector(pion.vector())
+      z = lorentzDot(vecTarget,vecH) / lorentzDot(vecTarget,vecQ)
+      z > 0.3 // aqui
+    }
+  }
 
   return partList
 }
@@ -236,25 +258,25 @@ inHipoList.each { inHipoFile ->
         pidList = (0..<particleBank.rows()).collect{ particleBank.getInt('pid',it) }
         //println "pidList = $pidList"
 
-        // get lists of pions
-        pipList = findParticles(211)
-        pimList = findParticles(-211)
+        // find scattered electron, and store it in eleList (eleList.size()  should = 1)
         eleList = findParticles(11)
+        if(eleList.size()==1) {
 
-        // fill sinPhi distributions
-        pipList.each{ histTree['pip'][helStr].fill(Math.sin(it.phi())) }
-        pimList.each{ histTree['pim'][helStr].fill(Math.sin(it.phi())) }
+          // get lists of pions
+          pipList = findParticles(211)
+          pimList = findParticles(-211)
 
-        // check for electron with E>2 GeV
-        eleFound = false
-        eleList.find{ ele -> (new Vector3(*['px','py','pz'].collect{
+          // fill sinPhi distributions
+          pipList.each{ histTree['pip'][helStr].fill(Math.sin(it.phi())) }
+          pimList.each{ histTree['pim'][helStr].fill(Math.sin(it.phi())) }
 
-        // increment evCount and add event number to event number list
-        if(pipList.size>0 || pimList.size>0) {
-          evCount++
-          if(evCount % 100000 == 0) println "found $evCount events which contain a pion"
-          eventNum = BigInteger.valueOf(configBank.getInt('event',0))
-          if(inHipoType=="skim") eventNumList.add(eventNum)
+          // increment evCount and add event number to event number list
+          if(pipList.size()>0 || pimList.size()>0) {
+            evCount++
+            if(evCount % 100000 == 0) println "found $evCount events which contain a pion"
+            eventNum = BigInteger.valueOf(configBank.getInt('event',0))
+            if(inHipoType=="skim") eventNumList.add(eventNum)
+          }
         }
       }
     }

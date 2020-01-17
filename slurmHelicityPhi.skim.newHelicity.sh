@@ -13,6 +13,6 @@
 #SBATCH --output=/farm_out/%u/%x-%j-%N.out
 #SBATCH --error=/farm_out/%u/%x-%j-%N.err
 
-dataList=(/work/clas12/rg-a/trains/v16_v2/skim4_inclusive/*)
+dataList=(/lustre/expphy/volatile/clas12_old/rg-a/production/postprocess/merged/*)
 
 srun groovy helicityPhiRead.groovy ${dataList[$SLURM_ARRAY_TASK_ID]}

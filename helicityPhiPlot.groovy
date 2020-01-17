@@ -17,7 +17,7 @@ inList.each { println it }
 
 
 // subroutine to build a graph of <sinPhi> vs. xnum, where xnum is a file number 
-// or "time slice" of events
+// or a segment ("time slice") of events
 def buildGraph = { tObj ->
   def grN = tObj.getName().tokenize('_').subList(0,3).join('_')
   grN = grN.replaceAll(/_hp$/,"")

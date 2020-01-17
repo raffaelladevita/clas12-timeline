@@ -65,6 +65,7 @@ def configBank
 def eventBank
 def pipList = []
 def pimList = []
+def eleList = []
 def eventNum
 def eventNumList = []
 def eventNumAve
@@ -84,16 +85,24 @@ def segmentTmp = -1
 // subroutine which returns a list of Particle objects of a certain PID, satisfying 
 // desired cuts
 def findParticles = { pid ->
-  def partList
+
   // get list of bank rows corresponding to this PID
   def rowList = pidList.findIndexValues{ it == pid }.collect{it as Integer}
   //println "pid=$pid  found in rows $rowList"
-  // apply cuts
-  //rowList = rowList.findAll{ particleBank.getShort('status',it)<0 }
+
   // get list of Particle objects
-  partList = rowList.collect { row ->
+  def partList = rowList.collect { row ->
     new Particle(pid,*['px','py','pz'].collect{particleBank.getFloat(it,row)})
   }
+
+  // apply cuts
+  // - electrons
+  if(pid==11) partList = partList.findAll{ it.e() > 2 }
+  // - pions
+  //if(Math.abs(pid)==211) {
+  //rowList = rowList.findAll{ particleBank.getShort('status',it)<0 }
+  //}
+
   return partList
 }
 
@@ -230,10 +239,15 @@ inHipoList.each { inHipoFile ->
         // get lists of pions
         pipList = findParticles(211)
         pimList = findParticles(-211)
+        eleList = findParticles(11)
 
         // fill sinPhi distributions
         pipList.each{ histTree['pip'][helStr].fill(Math.sin(it.phi())) }
         pimList.each{ histTree['pim'][helStr].fill(Math.sin(it.phi())) }
+
+        // check for electron with E>2 GeV
+        eleFound = false
+        eleList.find{ ele -> (new Vector3(*['px','py','pz'].collect{
 
         // increment evCount and add event number to event number list
         if(pipList.size>0 || pimList.size>0) {

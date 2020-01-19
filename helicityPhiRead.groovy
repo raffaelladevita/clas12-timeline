@@ -91,7 +91,7 @@ def vecQ,vecH
 def z
 
 // scalar product of 4-vectors
-def lorentzDot{ v1,v2 -> return v1.e()*v2.e() - v1.vect().dot(v2.vect()) }
+def lorentzDot = { v1,v2 -> return v1.e()*v2.e() - v1.vect().dot(v2.vect()) }
 
 // subroutine which returns a list of Particle objects of a certain PID, satisfying 
 // desired cuts
@@ -110,18 +110,19 @@ def findParticles = { pid ->
   // - electrons
   if(pid==11) {
     partList = partList.max{ it.e() } // choose max-E electron
-    partList = partList.findAll{ it.e() > 2 } // cut E>2
+    partList = partList.findAll{ it.e()>2 && it.e()<11 } // cut E>2
     if(partList.size()>0) {
-      vecQ = LorentzVector(vecBeam)
-      vecQ.sub(eleList[0].vector()) // virtual photon momentum
+      vecQ = new LorentzVector(vecBeam)
+      vecQ.sub(partList[0].vector()) // virtual photon momentum
     }
   }
   // - pions
   if(Math.abs(pid)==211) {
+    // z cut
     partList = partList.findAll{ pion ->
-      vecH = LorentzVector(pion.vector())
+      vecH = new LorentzVector(pion.vector())
       z = lorentzDot(vecTarget,vecH) / lorentzDot(vecTarget,vecQ)
-      z > 0.3 // aqui
+      z>0.3 && z<1
     }
   }
 

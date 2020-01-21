@@ -216,7 +216,7 @@ inHipoList.each { inHipoFile ->
       if(inHipoType=="skim") {
 
         // segment iterator
-        segment = (evCount/10000).toInteger()
+        segment = (evCount/50000).toInteger()
 
         // if segment changed:
         if(segment!=segmentTmp) {

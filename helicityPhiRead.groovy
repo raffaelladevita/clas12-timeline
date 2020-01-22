@@ -1,7 +1,11 @@
+// fill distributions of sin(phiH) for pions, etc.
+// -note: search for 'CUT' to find which cuts are applied
+
 import org.jlab.io.hipo.HipoDataSource
 import org.jlab.clas.physics.Particle
 import org.jlab.clas.physics.Vector3
 import org.jlab.groot.data.H1F
+import org.jlab.groot.data.H2F
 import org.jlab.groot.data.TDirectory
 import org.jlab.clas.physics.LorentzVector
 import org.jlab.clas.physics.Vector3
@@ -10,6 +14,8 @@ import java.lang.Math.*
 
 // OPTIONS
 def inHipoType = "skim" // options: "dst", "skim"
+def segmentSize = 10000 // number of events in each segment
+
 
 // ARGUMENTS
 def inHipo = "skim/skim4_5052.hipo" // directory of DST files, or a single SKIM file
@@ -55,8 +61,22 @@ particle
  └ helicity- : <sinphi> distribution for segment (or filenum)
 */
 def histTree = [:]
-partT.each{ histTree[it.key] = [:] }
+def partNlist = partT.collect{it.key}
+partNlist.each{ histTree[it] = [:] }
 def histN,histT
+
+
+// define "overall" histograms (q2, z, phiH, etc.)
+// - the ones pertaining to pions are maps to histograms, e.g., zdist['pip'] for pi+ z
+def nbins = 50
+def q2dist = new H1F("q2dist","Q2 distribution",nbins,0,12)
+def Wdist = new H1F("Wdist","W distribution",nbins,0,6)
+def q2vsW = new H2F("q2vsW","Q2 vs. W",nbins,0,6,nbins,0,12)
+def zdist = partNlist.collectEntries{ [ (it) :
+  new H1F("zdist_${it}",partT[it]+" z distribution",nbins,0,1) ] }
+def phiHdist = partNlist.collectEntries{ [ (it) :
+  new H1F("phiHdist_${it}",partT[it]+" phiH distribution",nbins,-3.15,3.15) ] }
+
 
 
 // define variables
@@ -67,7 +87,7 @@ def configBank
 def eventBank
 def pipList = []
 def pimList = []
-def eleList = []
+def electron
 def eventNum
 def eventNumList = []
 def eventNumAve
@@ -87,46 +107,86 @@ def segmentTmp = -1
 // lorentz vectors
 def vecBeam = new LorentzVector(0, 0, 10.6, 10.6)
 def vecTarget = new LorentzVector(0, 0, 0, 0.938)
-def vecQ,vecH
-def z
+def vecEle = new LorentzVector()
+def vecH = new LorentzVector()
+def vecQ = new LorentzVector()
+def vecW = new LorentzVector()
 
-// scalar product of 4-vectors
+// subroutine to calculate scalar product of 4-vectors
 def lorentzDot = { v1,v2 -> return v1.e()*v2.e() - v1.vect().dot(v2.vect()) }
 
-// subroutine which returns a list of Particle objects of a certain PID, satisfying 
-// desired cuts
+// subroutine to calculate angle between two planes (used for PhiH)
+def crossAB,crossCD
+def sgn
+def numer
+def denom
+def planeAngle = { vA,vB,vC,vD ->
+  crossAB = vA.cross(vB) // AxB
+  crossCD = vC.cross(vD) // CxD
+
+  // calculate sign of (AxB).D
+  sgn = crossAB.dot(vD) // (AxB).D
+  if(Math.abs(sgn)<0.00001) return -10000
+  sgn /= Math.abs(sgn)
+
+  // calculate numerator and denominator 
+  numer = crossAB.dot(crossCD) // (AxB).(CxD)
+  denom = crossAB.mag() * crossCD.mag() // |AxB|*|CxD|
+  if(Math.abs(denom)<0.00001) return -10000
+
+  // return angle
+  return sgn * Math.acos(numer/denom)
+}
+  
+
+// subroutine which returns a list of Particle objects of a certain PID
 def findParticles = { pid ->
 
   // get list of bank rows corresponding to this PID
   def rowList = pidList.findIndexValues{ it == pid }.collect{it as Integer}
   //println "pid=$pid  found in rows $rowList"
 
-  // get list of Particle objects
-  def partList = rowList.collect { row ->
+  // return list of Particle objects
+  return rowList.collect { row ->
     new Particle(pid,*['px','py','pz'].collect{particleBank.getFloat(it,row)})
   }
+}
 
-  // apply cuts
-  // - electrons
-  if(pid==11) {
-    partList = partList.max{ it.e() } // choose max-E electron
-    partList = partList.findAll{ it.e()>2 && it.e()<11 } // cut E>2
-    if(partList.size()>0) {
-      vecQ = new LorentzVector(vecBeam)
-      vecQ.sub(partList[0].vector()) // virtual photon momentum
+
+// subroutine to calculate hadron (pion) kinematics, and fill histograms
+// note: needs to have some kinematics defined (vecQ,q2,W), and helStr
+def q2
+def W
+def z
+def phiH
+def countEvent
+def fillHistos = { list, partN ->
+  list.each { part ->
+
+    // calculate z
+    vecH.copy(part.vector())
+    z = lorentzDot(vecTarget,vecH) / lorentzDot(vecTarget,vecQ)
+
+    // CUT: particle z
+    if(z>0.3 && z<1) {
+
+      // calculate phiH
+      phiH = planeAngle( vecQ.vect(), vecEle.vect(), vecQ.vect(), vecH.vect() )
+      if(phiH>-10000) {
+
+        // fill histograms
+        histTree[partN][helStr].fill(Math.sin(phiH))
+        q2dist.fill(q2)
+        Wdist.fill(W)
+        q2vsW.fill(W,q2)
+        zdist[partN].fill(z)
+        phiHdist[partN].fill(phiH)
+
+        // tell event counter that this event has at least one particle added to histos
+        countEvent = true
+      }
     }
   }
-  // - pions
-  if(Math.abs(pid)==211) {
-    // z cut
-    partList = partList.findAll{ pion ->
-      vecH = new LorentzVector(pion.vector())
-      z = lorentzDot(vecTarget,vecH) / lorentzDot(vecTarget,vecQ)
-      z>0.3 && z<1
-    }
-  }
-
-  return partList
 }
 
 
@@ -216,7 +276,7 @@ inHipoList.each { inHipoFile ->
       if(inHipoType=="skim") {
 
         // segment iterator
-        segment = (evCount/50000).toInteger()
+        segment = (evCount/segmentSize).toInteger()
 
         // if segment changed:
         if(segment!=segmentTmp) {
@@ -259,24 +319,42 @@ inHipoList.each { inHipoFile ->
         pidList = (0..<particleBank.rows()).collect{ particleBank.getInt('pid',it) }
         //println "pidList = $pidList"
 
-        // find scattered electron, and store it in eleList (eleList.size()  should = 1)
-        eleList = findParticles(11)
-        if(eleList.size()==1) {
+        // CUT: find scattered electron: highest-E electron such that 2 < E < 11
+        electron = findParticles(11).findAll{ it.e()>2 && it.e()<11 }.max{it.e()}
+        if(electron) {
 
-          // get lists of pions
-          pipList = findParticles(211)
-          pimList = findParticles(-211)
+          // calculate Q2
+          vecQ.copy(vecBeam)
+          vecEle.copy(electron.vector())
+          vecQ.sub(vecEle) 
+          q2 = -1*vecQ.mass2()
 
-          // fill sinPhi distributions
-          pipList.each{ histTree['pip'][helStr].fill(Math.sin(it.phi())) }
-          pimList.each{ histTree['pim'][helStr].fill(Math.sin(it.phi())) }
+          // calculate W
+          vecW.copy(vecBeam)
+          vecW.add(vecTarget)
+          vecW.sub(vecEle)
+          W = vecW.mass()
 
-          // increment evCount and add event number to event number list
-          if(pipList.size()>0 || pimList.size()>0) {
-            evCount++
-            if(evCount % 100000 == 0) println "found $evCount events which contain a pion"
-            eventNum = BigInteger.valueOf(configBank.getInt('event',0))
-            if(inHipoType=="skim") eventNumList.add(eventNum)
+          // CUT: q2 and W
+          if( q2>1 && W>2 ) {
+
+            // get lists of pions
+            pipList = findParticles(211)
+            pimList = findParticles(-211)
+
+            // calculate pion kinematics and fill histograms
+            countEvent = false
+            fillHistos(pipList,'pip')
+            fillHistos(pimList,'pim')
+
+            // increment evCount and add event number to event number list
+            if(countEvent) {
+              evCount++
+              if(evCount % 100000 == 0) println "found $evCount events which contain a pion"
+              eventNum = BigInteger.valueOf(configBank.getInt('event',0))
+              if(inHipoType=="skim") eventNumList.add(eventNum)
+            }
+
           }
         }
       }
@@ -299,7 +377,17 @@ inHipoList.each { inHipoFile ->
   System.gc()
 }
 
+// add overall histos to outHipo
+outHipo.mkdir("/histos")
+outHipo.cd("/histos")
+outHipo.addDataSet(q2dist)
+outHipo.addDataSet(Wdist)
+outHipo.addDataSet(q2vsW)
+zdist.each{outHipo.addDataSet(it.value)}
+phiHdist.each{outHipo.addDataSet(it.value)}
 
+
+// write outHipo file
 outHipoN = "outhipo/sinphi_${runnum}.hipo"
 File outHipoFile = new File(outHipoN)
 if(outHipoFile.exists()) outHipoFile.delete()

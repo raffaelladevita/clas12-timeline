@@ -24,8 +24,7 @@ def buildGraph = { tObj ->
   grN = grN.replaceAll(/_hm$/,":hm")
   def grT = tObj.getTitle()
   grT = grT.replaceAll(/ filenum.*$/," vs. file number")
-  grT = grT.replaceAll(/ firstEventOfSegment.*$/," vs. segment's 1st eventNum")
-  grT = grT.replaceAll(/sinPhi/,"<sinPhi>")
+  grT = grT.replaceAll(/sinPhi.*vs./,"<sinPhi> vs.")
   def gr = new GraphErrors(grN)
   gr.setTitle(grT)
   if(grN.contains(":hm")) { gr.setMarkerColor(2); gr.setLineColor(2); }

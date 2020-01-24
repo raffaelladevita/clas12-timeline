@@ -11,6 +11,7 @@ import org.jlab.clas.physics.LorentzVector
 import org.jlab.clas.physics.Vector3
 import groovy.json.JsonOutput
 import java.lang.Math.*
+import groovy.json.JsonOutput
 
 // OPTIONS
 def segmentSize = 10000 // number of events in each segment
@@ -22,7 +23,7 @@ if(args.length>=1) inHipo = args[0]
 println "inHipo=$inHipo"
 
 
-// define sinPhi histograms
+// property lists
 def propT = [ 
   'pip':'pi+',
   'pim':'pi-', 
@@ -33,6 +34,9 @@ def propT = [
 def partList = [ 'pip', 'pim' ]
 def helList = [ 'hp', 'hm' ]
 def heluList = [ 'hp', 'hm', 'hu' ]
+
+
+// subroutine to build a histogram
 def buildHist = { histName, propList, runn, nb, lb, ub ->
   new H1F(
     "${histName}_" + propList.join('_') + "_${runn}",
@@ -40,12 +44,15 @@ def buildHist = { histName, propList, runn, nb, lb, ub ->
     nb,lb,ub
   )
 }
+// subroutine to append segment number to a histogram name & title
 def appendSegnum = { hist, segn ->
   def hN = hist.getName() + "_$segn"
   def hT = hist.getTitle() + " seg=$segn"
   hist.setName(hN)
   hist.setTitle(hT)
 }
+
+
 /*
 histTree:
 |
@@ -63,13 +70,77 @@ histTree:
   | - particle : pi+/pi-
   - phiHdist
     - particle : pi+/pi-
-    
 */
-
 def histTree = [:]
-println partList
-partList.each{ histTree[it] = [:] }
-def histN,histT
+
+
+// build a tree recursively, with branch levels specified by levelList
+// - call the subroutine 'buildTree' to initiate
+def rec_buildTree 
+rec_buildTree = { levelList, tree, lev ->
+  def levNew = lev
+  levelList.each{ branches ->
+    if(lev==levNew) {
+      branches.each{ branch ->
+        if(levelList.size()==1) tree[branch] = 0
+        else {
+          tree[branch] = [:]
+          levNew = rec_buildTree(levelList[1..-1],tree[branch],lev+1)
+        }
+      }
+    }
+  }
+  return lev
+}
+def buildTree = { treeName, levelList -> 
+  rec_buildTree( [[treeName],*levelList], histTree, 0 )
+}
+
+// build trees
+buildTree('sinPhi',[partList,helList])
+buildTree('helic',[heluList])
+println new groovy.json.JsonBuilder( histTree ).toPrettyString()
+
+// subroutine to get a leaf
+def getLeaf = { tree,path ->
+  def node = tree
+  path.each { node = node[it] }
+  return node
+}
+
+// execute a closure on all leaves which stem from a given node
+def exeLeaves
+def leaf
+def leafPath
+def leafKey
+exeLeaves = { node,path,clos ->
+  if(node.getClass()==java.util.LinkedHashMap) {
+    node.each { 
+      path.push(it.key)
+      exeLeaves(it.value,path,clos)
+      if(it.value.getClass()!=java.util.LinkedHashMap) {
+        it.value = leaf
+      }
+      path.pop()
+    }
+  }
+  else {
+    leaf = node
+    leafPath = path
+    clos()
+  }
+}
+exeLeaves( histTree, [], { println "$leafPath $leaf"} )
+println "---"
+exeLeaves( histTree.sinPhi, [], { leaf++; println leaf } )
+println "---"
+exeLeaves( histTree, [], { println "$leafPath $leaf"} )
+println "---"
+println getLeaf(histTree.sinPhi,['pip','hp'])
+println getLeaf(histTree,['sinPhi','pip','hp'])
+return 
+
+
 
 
 // define "overall" histograms (q2, z, phiH, etc.)
@@ -180,7 +251,7 @@ def fillHistos = { list, partN ->
       if(phiH>-10000) {
 
         // fill histograms
-        histTree[partN][helStr].fill(Math.sin(phiH))
+        histTree['sinPhi'][partN][helStr].fill(Math.sin(phiH))
         q2dist.fill(q2)
         Wdist.fill(W)
         q2vsW.fill(W,q2)
@@ -199,11 +270,9 @@ def fillHistos = { list, partN ->
 def outHipo = new TDirectory()
 
 
-
 // get runnum
 runnum = inHipo.tokenize('.')[-2].tokenize('_')[-1].toInteger()
-println runnum
-return
+
 
 // define outHipo directory
 if(runnum!=runnumTmp) {
@@ -219,6 +288,7 @@ reader = new HipoDataSource()
 reader.open(inHipo)
 
 // subroutine to write out to hipo file
+def histN,histT
 def writeHistos = {
   // get average event number; then clear list of events
   eventNumAve = Math.round( eventNumList.sum() / eventNumList.size() )
@@ -230,7 +300,7 @@ def writeHistos = {
   eventNumList.clear()
   // loop through histTree, adding histos to the hipo file;
   // note that the average event number is appended to the name and title
-  histTree.each{ pName,pMap -> 
+  histTree['sinPhi'].each{ pName,pMap -> 
     pMap.each{ hName,histo -> 
       histN = histo.getName().replaceAll(/0$/,"${eventNumAve}_${eventNumDev}")
       histT = histo.getTitle().replaceAll(
@@ -274,10 +344,9 @@ while(reader.hasEvent()) {
 
       // define new histograms (with filenum argument "0", to be replaced later
       // by average event number for this segment)
-      histTree.each{ part,h ->
-        h['hp'] = buildHist(part,'hp',runnum,0)
-        h['hm'] = buildHist(part,'hm',runnum,0)
-      }
+      exeLeaves( histTree.sinPhi, [], 
+        { hist,path -> hist = buildHist('sinPhi',path,runnum,100,-1,1) } )
+      
 
       // update tmp number
       segmentTmp = segment

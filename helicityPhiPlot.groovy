@@ -24,7 +24,7 @@ def buildGraph = { tObj ->
   grN = grN.replaceAll(/_hm$/,":hm")
   def grT = tObj.getTitle()
   grT = grT.replaceAll(/ filenum.*$/," vs. file number")
-  grT = grT.replaceAll(/sinPhi.*vs./,"<sinPhi> vs.")
+  grT = grT.replaceAll(/sinPhi.*vs./,"average sinPhiH vs.")
   def gr = new GraphErrors(grN)
   gr.setTitle(grT)
   if(grN.contains(":hm")) { gr.setMarkerColor(2); gr.setLineColor(2); }
@@ -103,7 +103,7 @@ inList.each { inFile ->
 // subroutine to fill a timeline
 def buildTimeline = { tPart,tHel ->
   def tl = new GraphErrors("${tPart}_${tHel}")
-  tl.setTitle("<sinPhi> vs. runnum")
+  tl.setTitle("average sinPhiH vs. runnum")
   def g
   def cnt
   def avg

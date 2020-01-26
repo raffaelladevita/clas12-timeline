@@ -1,6 +1,5 @@
 import org.jlab.clas.physics.LorentzVector
 import org.jlab.clas.physics.Vector3
-import groovy.json.JsonOutput
 
 class Tools {
 
@@ -49,7 +48,7 @@ class Tools {
         branches.each{ branch ->
           if(levelList.size()==1) { tree[branch] = clos() }
           else {
-            tree[branch] = [:]
+            if(!tree.containsKey(branch)) tree[branch] = [:]
             levNew = rec_buildTree(tree[branch],levelList[1..-1],lev+1,clos)
           }
         }
@@ -77,12 +76,30 @@ class Tools {
     return node
   }
 
+  // add a leaf to a tree, specified by closure 'clos'; if the branches listed in 'path'
+  // don't exist, create them
+  def addLeaf ( tree,path,clos ) {
+    def pathNode = path[0]
+    if(tree[pathNode]==null) {
+      if(path.size()==1 && !tree.containsKey(pathNode)) {
+        tree.put(pathNode,clos())
+      }
+      else if(path.size()>1) {
+        tree.put(pathNode,[:])
+        addLeaf(tree[pathNode],path[1..-1],clos)
+      }
+    }
+    else addLeaf(tree[pathNode],path[1..-1],clos)
+  }
+
+
   // execute a closure on all leaves which stem from a given node
   // - set 'node' to the top level node of the (sub)tree
   // - set 'clos' to the closure, wherein you may use the variables 'this.leaf' and
   //   'this.leafPath'
   def leaf
   def leafPath
+  def key
   def exeLeaves( node, clos, path=[] ) {
     // if the current node has branches, it is not a leaf; loop through the branches and
     // analyze their nodes
@@ -90,9 +107,7 @@ class Tools {
       node.each { 
         path.push(it.key)
         exeLeaves(it.value,clos,path)
-        if(it.value.getClass()!=java.util.LinkedHashMap) {
-          it.value = leaf
-        }
+        if(it.value.getClass()!=java.util.LinkedHashMap) it.value = leaf
         path.pop()
       }
     }
@@ -101,17 +116,12 @@ class Tools {
       // -> execute the closure
       leaf = node
       leafPath = path
+      key = path[-1]
       clos()
     }
   }
 
-
-  // pretty print a tree
-  /*
-  def printTree = { tree ->
-    println new groovy.json.JsonBuilder(tree).toPrettyString()
-  }
-  */
+  // print a tree's branches, with optional printout of closure 'clos'
   def printTree(tree,clos={""}) { exeLeaves(tree,{println "$leafPath "+clos()}) }
 
     

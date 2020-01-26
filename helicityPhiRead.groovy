@@ -12,6 +12,7 @@ import org.jlab.clas.physics.Vector3
 import groovy.json.JsonOutput
 import java.lang.Math.*
 import Tools // (make sure `.` is in $CLASSPATH)
+Tools T = new Tools()
 
 // OPTIONS
 def segmentSize = 10000 // number of events in each segment
@@ -28,65 +29,64 @@ def runnum = inHipo.tokenize('.')[-2].tokenize('_')[-1].toInteger()
 
 
 // property lists
-def propT = [ 
-  'pip':'pi+',
-  'pim':'pi-', 
-  'hp':'hel+',
-  'hm':'hel-',
-  'hu':'hel?'
-]
 def partList = [ 'pip', 'pim' ]
 def helList = [ 'hp', 'hm' ]
 def heluList = [ 'hp', 'hm', 'hu' ]
 
 
 // build tree 'histTree', for storing histograms
-/*
-histTree:
-|
-- sinPhi : <sinPhi> distribution
-| - particle : pi+/pi-
-|   - helicity : +/-
-|
-- helic: helicity distribution
-|
-- kinDist: kinematic distributions
-  - Q2dist
-  - Wdist
-  - zdist
-  | - particle : pi+/pi-
-  - phiHdist
-    - particle : pi+/pi-
-*/
-Tools T = new Tools()
 def histTree = [:]
-histTree['helic'] = [:]
-T.buildTree(histTree.helic,'sinPhi',[partList,helList],{new H1F()})
-T.buildTree(histTree.helic,'dist',[],{new H1F()})
+
+T.buildTree(histTree,'helic',[
+  ['sinPhi'],
+  partList,
+  helList
+],{ new H1F() })
+
+T.buildTree(histTree,'helic',[
+  ['dist']
+],{ new H1F() })
+
+T.buildTree(histTree,'DIS',[
+  ['Q2','W']
+],{ new H1F() })
+
+T.buildTree(histTree,"DIS",[
+  ['Q2VsW']
+],{ new H2F() })
+
+T.buildTree(histTree,"inclusive",[
+  partList,
+  ['z','phiH']
+],{ new H1F() })
+
 println("---\nhistTree:"); 
 T.printTree(histTree,{T.leaf.getClass()});
 println("---")
 
 
-// define "overall" histograms (q2, z, phiH, etc.)
-// - the ones pertaining to pions are maps to histograms, e.g., zdist['pip'] for pi+ z
-def nbins = 50
-def q2dist = new H1F("q2dist","Q2 distribution",nbins,0,12)
-def Wdist = new H1F("Wdist","W distribution",nbins,0,6)
-def q2vsW = new H2F("q2vsW","Q2 vs. W",nbins,0,6,nbins,0,12)
-def zdist = partList.collectEntries{ [ (it) :
-  new H1F("zdist_${it}",propT[it]+" z distribution",nbins,0,1) ] }
-def phiHdist = partList.collectEntries{ [ (it) :
-  new H1F("phiHdist_${it}",propT[it]+" phiH distribution",nbins,-3.15,3.15) ] }
-
-
 // subroutine to build a histogram
-def buildHist = { histName, propList, runn, nb, lb, ub ->
-  new H1F(
-    "${histName}_" + propList.join('_') + "_${runn}",
-    "${histName} " + propList.collect{propT[it]}.join(' ') + " run=$runn",
-    nb,lb,ub
-  )
+def buildHist(histName, histTitle, propList, runn, nb, lb, ub, nb2=0, lb2=0, ub2=0) {
+
+  def propT = [ 
+    'pip':'pi+',
+    'pim':'pi-', 
+    'hp':'hel+',
+    'hm':'hel-',
+    'hu':'hel?'
+  ]
+
+  def pn = propList.join('_')
+  def pt = propList.collect{ propT.containsKey(it) ? propT[it] : it }.join(' ')
+  if(propList.size()>0) { pn+='_'; pt+=' ' }
+
+  def sn = propList.size()>0 ? '_':''
+  def st = propList.size()>0 ? ' ':''
+  def hn = "${histName}_${pn}${runn}"
+  def ht = "${histTitle} ${pt}:: run=${runn}"
+
+  if(nb2==0) return new H1F(hn,ht,nb,lb,ub)
+  else return new H2F(hn,ht,nb,lb,ub,nb2,lb2,ub2)
 }
 
 
@@ -112,6 +112,7 @@ def reader
 def evCount
 def segment
 def segmentTmp = -1
+def nbins
 
 
 // lorentz vectors
@@ -160,8 +161,8 @@ def fillHistos = { list, partN ->
 
         // fill histograms
         histTree['helic']['sinPhi'][partN][helStr].fill(Math.sin(phiH))
-        zdist[partN].fill(z)
-        phiHdist[partN].fill(phiH)
+        histTree['inclusive'][partN]['z'].fill(z)
+        histTree['inclusive'][partN]['phiH'].fill(phiH)
 
         // tell event counter that this event has at least one particle added to histos
         countEvent = true
@@ -189,12 +190,12 @@ def writeHistos = {
   // note that the average event number is appended to the name
   T.exeLeaves( histTree, {
     histN = T.leaf.getName() + "_${eventNumAve}_${eventNumDev}"
-    histT = T.leaf.getTitle() + " vs. segment's average eventNum>"
+    histT = T.leaf.getTitle() + " segment=${eventNumAve}"
     T.leaf.setName(histN)
     T.leaf.setTitle(histT)
     outHipo.addDataSet(T.leaf) 
   })
-  println "write histograms:"; T.printTree(histTree,{T.leaf.getName()})
+  //println "write histograms:"; T.printTree(histTree,{T.leaf.getName()})
 }
 
 
@@ -229,13 +230,28 @@ while(reader.hasEvent()) {
       if(segmentTmp>=0) writeHistos()
 
       // define new histograms
-      T.exeLeaves( histTree.helic, {
-        if(T.leafPath.contains('sinPhi'))
-          T.leaf = buildHist('helic',T.leafPath,runnum,100,-1,1) 
-        else if(T.leafPath.contains('dist'))
-          T.leaf = buildHist('helic',T.leafPath,runnum,3,-1,2)
+      nbins = 50
+      T.exeLeaves( histTree.helic.sinPhi, {
+        T.leaf = buildHist('helic_sinPhi','sinPhiH',T.leafPath,runnum,nbins,-1,1) 
       })
-      println "build histograms:"; T.printTree(histTree,{T.leaf.getName()})
+      histTree.helic.dist = buildHist('helic_dist','helicity distribution',[],runnum,3,-1,2)
+      histTree.DIS.Q2 = buildHist('DIS_Q2','Q^2 distribution',[],runnum,nbins,0,12)
+      histTree.DIS.W = buildHist('DIS_W','W distribution',[],runnum,nbins,0,6)
+      histTree.DIS.Q2VsW = buildHist('DIS_Q2VsW','Q^2 vs W',[],runnum,nbins,0,6,nbins,0,12)
+      T.exeLeaves( histTree.inclusive, {
+        def lbound=0
+        def ubound=0
+        if(T.key=='z') { lbound=0; lbound=1 }
+        else if(T.key=='phiH') { lbound=-3.15; ubound=3.15 }
+        T.leaf = buildHist('inclusive','',T.leafPath,runnum,nbins,lbound,ubound)
+      })
+
+      // print the histogram names and titles
+      if(segmentTmp==-1) {
+        println "---\nhistogram names and titles:"
+        T.printTree(histTree,{ T.leaf.getName() +" ::: "+ T.leaf.getTitle() })
+        println "---"
+      }
 
       // update tmp number
       segmentTmp = segment
@@ -299,9 +315,9 @@ while(reader.hasEvent()) {
           if(countEvent) {
 
             // fill event-level histograms
-            q2dist.fill(q2)
-            Wdist.fill(W)
-            q2vsW.fill(W,q2)
+            histTree.DIS.Q2.fill(q2)
+            histTree.DIS.W.fill(W)
+            histTree.DIS.Q2VsW.fill(W,q2)
 
             // increment event counter
             evCount++
@@ -326,17 +342,6 @@ writeHistos()
 // close reader
 reader = null
 System.gc()
-
-
-// add overall histos to outHipo
-outHipo.mkdir("/histos")
-outHipo.cd("/histos")
-outHipo.addDataSet(q2dist)
-outHipo.addDataSet(Wdist)
-outHipo.addDataSet(q2vsW)
-zdist.each{outHipo.addDataSet(it.value)}
-phiHdist.each{outHipo.addDataSet(it.value)}
-
 
 // write outHipo file
 outHipoN = "outhipo/sinphi_${runnum}.hipo"

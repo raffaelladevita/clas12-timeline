@@ -28,6 +28,7 @@ qaCutter.groovy
 
 helicityPhiRead.groovy
 -> outhipo/sinphi_${runnum}.hipo
+// make sure that `.` is in `$CLASSPATH`
 
    |
    V

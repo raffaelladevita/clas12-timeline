@@ -2,9 +2,11 @@ import org.jlab.groot.data.TDirectory
 import org.jlab.groot.data.GraphErrors
 import org.jlab.groot.data.H1F
 import java.lang.Math.*
+import Tools
+Tools T = new Tools()
 
 
-// get list of sinphi hipo files
+// get list of input hipo files
 def inDir = "outhipo"
 def inDirObj = new File(inDir)
 def inList = []
@@ -15,77 +17,86 @@ inDirObj.traverse( type: groovy.io.FileType.FILES, nameFilter: inFilter ) {
 inList.sort()
 inList.each { println it }
 
+// input hipo files contain a set of distributions for each segment
+// this program accumulates these segments' distributions into 'monitor' distributions:
+// - let 'X' denote a kinematic variable, plotted as one of these distributions
+// - moninotors include: 
+//   - average X vs. segment number
+//   - distribution of average X
+//   - 2D distribution of X vs. segment number
 
-// subroutine to build a graph of <sinPhi> vs. xnum, where xnum is a file number 
-// or a segment ("time slice") of events
-def buildGraph = { tObj ->
-  def grN = tObj.getName().tokenize('_').subList(0,3).join('_')
-  grN = grN.replaceAll(/_hp$/,"")
-  grN = grN.replaceAll(/_hm$/,":hm")
-  def grT = tObj.getTitle()
-  grT = grT.replaceAll(/ filenum.*$/," vs. file number")
-  grT = grT.replaceAll(/sinPhi.*vs./,"average sinPhiH vs.")
+// subroutine to transform an object name to a monitor name
+def objToMonName = { name ->
+  // strip segment number (and standard dev)
+  def tok = name.tokenize('_')
+  name = tok[0..-2].join('_')
+  // plot helicity states together
+  if(name.contains('_hp_')) name.replaceAll('_hp_','')
+  else if(name.contains('_hm_')) {
+    name.replaceAll('_hm_','')
+    name += ":hm"
+  }
+  return name
+}
+
+// subroutine to transform an object title into a monitori title
+def objToMonTitle = { title ->
+  title = title.replaceAll(/ segment=.*$/,'')
+  return title
+}
+
+// subroutine to build monitor 'average X vs. segment number'
+def buildMonAveGr = { tObj ->
+  def grN = objToMonName(tObj.getName())
+  def grT = objToMonTitle(tObj.getTitle())
+  grN = "averageGr_" + grN
+  grT = "average " + grT
+  grT.replaceAll('::','vs. segment number ::')
   def gr = new GraphErrors(grN)
   gr.setTitle(grT)
   if(grN.contains(":hm")) { gr.setMarkerColor(2); gr.setLineColor(2); }
-  else { gr.setMarkerColor(4); gr.setLineColor(4); }
   return gr
 }
 
 
 //-----------------------------------------
-// fill the <sinPhi> vs. xnum graphs
+// fill the monitors
 //-----------------------------------------
 
-/*
-graphTree:
-runnum
-│
-└ particle (pi+,pi-)
-  │
-  ├ helicity+ : <sinphi> vs. xnum
-  └ helicity- : <sinphi> vs. xnum
-*/
-def graphTree = [:]
+def monTree = [:]
 
 def inTdir = new TDirectory()
 def objList
 def part,hel
-def runnum,xnum
+def runnum,segnum
 def tok
 def obj
-def graph
 
 // loop over sinphi hipo files
 inList.each { inFile ->
   inTdir.readFile(inFile)
   objList = inTdir.getCompositeObjectList(inTdir)
   objList.each { objN ->
-    if(objN.contains("/sinPhi_")) {
+    if(objN.contains("/helic_sinPhi_")) {
       obj = inTdir.getObject(objN)
 
-      // tokenize histogram name to get runnum, xnum, particle type, and helicity
+      // tokenize histogram name to get runnum, segnum, particle type, and helicity
       tok = objN.tokenize('/')[-1].tokenize('_')
-      part = tok[1]
-      hel = tok[2]
-      runnum = tok[3].toInteger()
-      xnum = new BigInteger(tok[4])
-      xnumDev = tok.size()==6 ? new BigInteger(tok[5]) : 0
+      part = tok[2]
+      hel = tok[3]
+      runnum = tok[4].toInteger()
+      segnum = new BigInteger(tok[-2])
+      segnumDev = new BigInteger(tok[-1])
 
-      // initialize graph, if it hasn't been
-      if(graphTree[runnum]==null) graphTree.put(runnum,[:])
-      if(graphTree[runnum][part]==null) graphTree[runnum].put(part,[:])
-      if(graphTree[runnum][part][hel]==null) {
-        graphTree[runnum][part].put(hel,buildGraph(obj))
-      }
-      graph = graphTree[runnum][part][hel]
+      // initialize average <X> monitor, if it hasn't been
+      T.addLeaf(monTree[runnum,'helic','sinPhi',part,hel],{buildMonAveGr(obj)})
 
-      // add <sinPhi> to the graph
+      // add <X> point to the monitor
       if(obj.integral()>0) {
-        graph.addPoint(
-          xnum,
+          monTree[runnum]['helic']['sinPhi'][part][hel].addPoint(
+          segnum,
           obj.getMean(),
-          xnumDev,
+          segnumDev,
           1.0/Math.sqrt(obj.getIntegral())
         )
       }
@@ -107,7 +118,7 @@ def buildTimeline = { tPart,tHel ->
   def g
   def cnt
   def avg
-  graphTree.each { tRun,bRun ->
+  monTree.each { tRun,bRun ->
     avg = 0
     g = bRun[tPart][tHel]
     cnt = g.getDataSize(0)
@@ -127,7 +138,7 @@ particle (pi+,pi-)
 // build timelineTree by taking the last run's particle & helicity branches and 
 // copying that tree structure
 def timelineTree = [:]
-graphTree[runnum].each{ kPart,bPart ->
+monTree[runnum].each{ kPart,bPart ->
   timelineTree.put(kPart,[:])
   bPart.each{ kHel,gr ->
     timelineTree[kPart].put(kHel,buildTimeline(kPart,kHel))
@@ -137,7 +148,7 @@ graphTree[runnum].each{ kPart,bPart ->
 
 // output everything to a hipo file
 def outHipo = new TDirectory()
-graphTree.each { kRun,bRun ->
+monTree.each { kRun,bRun ->
   outHipo.mkdir("/${kRun}")
   outHipo.cd("/${kRun}")
   bRun.each{ kPart,bPart ->

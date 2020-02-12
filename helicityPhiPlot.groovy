@@ -28,14 +28,16 @@ inList.each { println it }
 // subroutine to transform an object name to a monitor name
 def objToMonName = { name ->
   // strip segment number (and standard dev)
+  println name
   def tok = name.tokenize('_')
-  name = tok[0..-2].join('_')
+  name = tok[0..-3].join('_')
   // plot helicity states together
-  if(name.contains('_hp_')) name.replaceAll('_hp_','')
+  if(name.contains('_hp_')) name = name.replaceAll('_hp_','_')
   else if(name.contains('_hm_')) {
-    name.replaceAll('_hm_','')
+    name = name.replaceAll('_hm_','_')
     name += ":hm"
   }
+  println name
   return name
 }
 
@@ -137,61 +139,34 @@ inList.each { inFile ->
 // build timelines
 //---------------------
 
-// subroutine to fill a timeline
-def buildTimeline = { tPart,tHel ->
-  def tl = new GraphErrors("${tPart}_${tHel}")
-  tl.setTitle("average sinPhiH vs. runnum")
-  def g
-  def cnt
-  def avg
-  monTree.each { tRun,bRun ->
-    avg = 0
-    g = bRun[tPart][tHel]['aveGr'] // TODO -- generalize
-    cnt = g.getDataSize(0)
-    cnt.times { i -> avg += g.getDataY(i) / cnt }
-    tl.addPoint(tRun,avg,0,0)
-  }
-  return tl
-}
-
-/*
-timelineTree:
-particle (pi+,pi-)
- │
- ├ helicity+ : <sinphi> vs. runnum
- └ helicity- : <sinphi> vs. runnum
-*/
-// build timelineTree by taking the last run's particle & helicity branches and 
-// copying that tree structure
+// loop through 'aveDist' monitors: for each one, add its mean to the timeline
 def timelineTree = [:]
-monTree[runnum].each{ kPart,bPart ->
-  timelineTree.put(kPart,[:])
-  bPart.each{ kHel,gr ->
-    timelineTree[kPart].put(kHel,buildTimeline(kPart,kHel))
+T.exeLeaves(monTree,{
+  if(T.key=='aveDist') {
+    // initialise new timeline graph, if not yet initialised
+    def tlPath = T.leafPath[1..-2]
+    T.addLeaf(timelineTree,tlPath,{
+      def tlN = tlPath.join('_')
+      def tl = new GraphErrors(tlN)
+    })
+    // add this run's <X> to the timeline
+    def tlRun = T.leafPath[0]
+    aveX = T.leaf.getMean()
+    T.getLeaf(timelineTree,tlPath).addPoint(tlRun,aveX,0,0)
   }
-}
+})
+    
 
-
-// output everything to a hipo file // TODO -- generalize this
+// output everything to a hipo file
 def outHipo = new TDirectory()
-monTree.each { kRun,bRun ->
-  outHipo.mkdir("/${kRun}")
-  outHipo.cd("/${kRun}")
-  bRun.each{ kPart,bPart ->
-    bPart.each{ kHel,gr ->
-      outHipo.addDataSet(gr['aveGr'])
-      outHipo.addDataSet(gr['aveDist'])
-    }
-  }
+monTree.each { run,tree ->
+  outHipo.mkdir("/${run}")
+  outHipo.cd("/${run}")
+  T.exeLeaves(tree,{outHipo.addDataSet(T.leaf)})
 }
-
 outHipo.mkdir("/timelines")
 outHipo.cd("/timelines")
-timelineTree.each{ kPart,bPart ->
-  bPart.each{ kHel,t ->
-    outHipo.addDataSet(t)
-  }
-}
+T.exeLeaves(timelineTree,{outHipo.addDataSet(T.leaf)})
 
 def outHipoN = "outhipo/helicityPhi.hipo"
 File outHipoFile = new File(outHipoN)

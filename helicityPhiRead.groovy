@@ -24,8 +24,12 @@ if(args.length>=1) inHipo = args[0]
 println "inHipo=$inHipo"
 
 // get runnum
-def runnum = inHipo.tokenize('.')[-2].tokenize('_')[-1].toInteger()
-
+def runnum
+if(inHipo.contains('postprocess'))
+  runnum = inHipo.tokenize('.')[-2].tokenize('/')[-1].toInteger()
+else
+  runnum = inHipo.tokenize('.')[-2].tokenize('_')[-1].toInteger()
+println "runnum=$runnum"
 
 
 // property lists

@@ -76,20 +76,24 @@ class Tools {
     return node
   }
 
-  // add a leaf to a tree, specified by closure 'clos'; if the branches listed in 'path'
-  // don't exist, create them
+  // add a leaf to a tree, specified by closure 'clos'
+  // - if the branches listed in 'path' don't exist, create them
+  // - if the leaf exists, do nothing
   def addLeaf ( tree,path,clos ) {
     def pathNode = path[0]
     if(tree[pathNode]==null) {
       if(path.size()==1 && !tree.containsKey(pathNode)) {
-        tree.put(pathNode,clos())
+        tree.put(pathNode,clos()) // add the leaf, and exit
       }
       else if(path.size()>1) {
-        tree.put(pathNode,[:])
+        tree.put(pathNode,[:]) // add the branch node from 'path', and recurse
         addLeaf(tree[pathNode],path[1..-1],clos)
       }
     }
-    else addLeaf(tree[pathNode],path[1..-1],clos)
+    else {
+      if(path.size()>1) addLeaf(tree[pathNode],path[1..-1],clos)
+      else return // this leaf exists, do nothing and exit
+    }
   }
 
 

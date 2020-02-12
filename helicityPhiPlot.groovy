@@ -39,13 +39,17 @@ def objToMonName = { name ->
   return name
 }
 
-// subroutine to transform an object title into a monitori title
+// subroutine to transform an object title into a monitor title
 def objToMonTitle = { title ->
   title = title.replaceAll(/ segment=.*$/,'')
   return title
 }
 
-// subroutine to build monitor 'average X vs. segment number'
+//---------------------------------
+// monitor builders
+//---------------------------------
+
+// build monitor 'average X vs. segment number'
 def buildMonAveGr = { tObj ->
   def grN = objToMonName(tObj.getName())
   def grT = objToMonTitle(tObj.getTitle())
@@ -57,6 +61,19 @@ def buildMonAveGr = { tObj ->
   if(grN.contains(":hm")) { gr.setMarkerColor(2); gr.setLineColor(2); }
   return gr
 }
+
+// build monitor 'average X' distribution
+def buildMonAveDist = { tObj,nb,lb,ub ->
+  def histN = objToMonName(tObj.getName())
+  def histT = objToMonTitle(tObj.getTitle())
+  histN = "averageDist_" + histN
+  histT = "average " + histT
+  histT.replaceAll('::','distribution ::')
+  def hist = new H1F(histN,histT,nb,lb,ub)
+  if(histN.contains(":hm")) { hist.setLineColor(2); }
+  return hist
+}
+
 
 
 //-----------------------------------------
@@ -71,6 +88,7 @@ def part,hel
 def runnum,segnum
 def tok
 def obj
+def aveX
 
 // loop over sinphi hipo files
 inList.each { inFile ->
@@ -88,17 +106,25 @@ inList.each { inFile ->
       segnum = new BigInteger(tok[-2])
       segnumDev = new BigInteger(tok[-1])
 
-      // initialize average <X> monitor, if it hasn't been
-      T.addLeaf(monTree[runnum,'helic','sinPhi',part,hel],{buildMonAveGr(obj)})
+      // initialize average monitors
+      T.addLeaf(monTree,[runnum,'helic','sinPhi',part,hel,'aveGr'],{
+        buildMonAveGr(obj)
+      })
+      T.addLeaf(monTree,[runnum,'helic','sinPhi',part,hel,'aveDist'],{
+        buildMonAveDist(obj,100,-1,1)
+      })
 
       // add <X> point to the monitor
       if(obj.integral()>0) {
-          monTree[runnum]['helic']['sinPhi'][part][hel].addPoint(
+        aveX = obj.getMean()
+        monTree[runnum]['helic']['sinPhi'][part][hel]['aveGr'].addPoint(
           segnum,
-          obj.getMean(),
+          aveX,
           segnumDev,
           1.0/Math.sqrt(obj.getIntegral())
         )
+        monTree[runnum]['helic']['sinPhi'][part][hel]['aveDist'].fill(aveX)
+
       }
     }
   }
@@ -120,7 +146,7 @@ def buildTimeline = { tPart,tHel ->
   def avg
   monTree.each { tRun,bRun ->
     avg = 0
-    g = bRun[tPart][tHel]
+    g = bRun[tPart][tHel]['aveGr'] // TODO -- generalize
     cnt = g.getDataSize(0)
     cnt.times { i -> avg += g.getDataY(i) / cnt }
     tl.addPoint(tRun,avg,0,0)
@@ -146,14 +172,15 @@ monTree[runnum].each{ kPart,bPart ->
 }
 
 
-// output everything to a hipo file
+// output everything to a hipo file // TODO -- generalize this
 def outHipo = new TDirectory()
 monTree.each { kRun,bRun ->
   outHipo.mkdir("/${kRun}")
   outHipo.cd("/${kRun}")
   bRun.each{ kPart,bPart ->
     bPart.each{ kHel,gr ->
-      outHipo.addDataSet(gr)
+      outHipo.addDataSet(gr['aveGr'])
+      outHipo.addDataSet(gr['aveDist'])
     }
   }
 }

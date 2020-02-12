@@ -1,13 +1,14 @@
 /* create hipo file with plots of N, F, N/F, etc. vs. file number, for each run
  * - this starts to build the structure of the 'timeline' hipo file
- * - faraday cup charge, from fcdata.json
  */
 
 import org.jlab.groot.data.TDirectory
 import org.jlab.groot.data.GraphErrors
 
 //----------------------------------------------------------------------------------
-// ARGUMENTS: none
+// ARGUMENTS:
+def dataset = 'fall18'
+if(args.length>=1) dataset = args[0]
 //----------------------------------------------------------------------------------
 
 // define vars and subroutines
@@ -38,7 +39,7 @@ def grA, grN, grF, grT
 
 // define output hipo file
 def outHipo = new TDirectory()
-def outHipoN = "outhipo/plots.hipo"
+def outHipoN = "outhipo.${dataset}/plots.hipo"
 def writeHipo = { o -> o.each{ outHipo.addDataSet(it) } }
 def writePlots = { run ->
   println "write run $run"
@@ -51,7 +52,7 @@ def writePlots = { run ->
 }
 
 // open data_table.dat
-def dataFile = new File("outdat/data_table.dat")
+def dataFile = new File("outdat.${dataset}/data_table.dat")
 def runnumTmp = 0
 if(!(dataFile.exists())) throw new Exception("data_table.dat not found")
 dataFile.eachLine { line ->

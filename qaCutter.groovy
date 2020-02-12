@@ -5,7 +5,9 @@ import org.jlab.groot.math.F1D
 import groovy.json.JsonOutput
 
 //----------------------------------------------------------------------------------
-// ARGUMENTS: none
+// ARGUMENTS:
+def dataset = 'fall18'
+if(args.length>=1) dataset = args[0]
 //----------------------------------------------------------------------------------
 
 // vars and subroutines
@@ -18,8 +20,8 @@ def jPrint = { name,object -> new File(name).write(JsonOutput.toJson(object)) }
 
 
 // read epochs list file
-def epochFile = new File("epochs.txt")
-if(!(epochFile.exists())) throw new Exception("epochs.txt not found")
+def epochFile = new File("epochs.${dataset}.txt")
+if(!(epochFile.exists())) throw new Exception("epochs.${dataset}.txt not found")
 def getEpoch = { r,s ->
   //return 1 // (for testing single-epoch mode)
   def lb,ub
@@ -35,7 +37,7 @@ def getEpoch = { r,s ->
 
 // open hipo file
 def inTdir = new TDirectory()
-inTdir.readFile("outhipo/plots.hipo")
+inTdir.readFile("outhipo.${dataset}/plots.hipo")
 def inList = inTdir.getCompositeObjectList(inTdir)
 
 // define 'ratioTree', a tree with the following structure
@@ -131,7 +133,7 @@ sectors.each { s ->
     cutTree[sectorIt][epochIt]['cutHi'] = cutHi
   }
 }
-jPrint("cuts.json",cutTree) // output cutTree to JSON
+jPrint("cuts.${dataset}.json",cutTree) // output cutTree to JSON
 //println pPrint(cutTree)
 
 
@@ -197,9 +199,9 @@ def outHipoEpochs = new TDirectory()
 
 // define good and bad file lists
 def qaTree = [:] // [runnum][filenum][sector] -> "good" or "bad"
-def goodFile = new File("outdat/goodFiles.dat")
+def goodFile = new File("outdat.${dataset}/goodFiles.dat")
 def goodFileWriter = goodFile.newWriter(false)
-def badFile = new File("outdat/badFiles.dat")
+def badFile = new File("outdat.${dataset}/badFiles.dat")
 def badFileWriter = badFile.newWriter(false)
 
 
@@ -383,12 +385,12 @@ outHipoEpochs.addDataSet(epochTL)
 // write hipo files to disk
 def outHipoN 
 
-outHipoN = "outhipo/QA_timeline.hipo"
+outHipoN = "outhipo.${dataset}/QA_timeline.hipo"
 File outHipoRunsFile = new File(outHipoN)
 if(outHipoRunsFile.exists()) outHipoRunsFile.delete()
 outHipoRuns.writeFile(outHipoN)
 
-outHipoN = "outhipo/QA_timeline_epochs.hipo"
+outHipoN = "outhipo.${dataset}/QA_timeline_epochs.hipo"
 File outHipoEpochsFile = new File(outHipoN)
 if(outHipoEpochsFile.exists()) outHipoEpochsFile.delete()
 outHipoEpochs.writeFile(outHipoN)
@@ -400,7 +402,7 @@ qaTree.each { qaRun, qaRunTree ->
   qaRunTree.sort()
 }
 qaTree.sort()
-new File("outdat/qaTree.json").write(JsonOutput.toJson(qaTree))
+new File("outdat.${dataset}/qaTree.json").write(JsonOutput.toJson(qaTree))
 
 // write goodFile and badFile: lists of good and bad files
 def nbad

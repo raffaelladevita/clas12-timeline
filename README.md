@@ -26,8 +26,6 @@ for now see diagram.txt instead
     * the `monsub` directory specifies where the `monplots*.hipo` files are located;
       default `monsub` directory is `../monsub` (also see
       `/volatile/clas12/kenjo/monsub/`)
-    * if `outputPNG` is set to 1 (default is 0), then canvases will be drawn and output
-      as `png` files to `outpng/`
 
 * `loop_qaElec.sh`
   * this runs `qaElec.groovy` over all hipo files in the specified `monsub` directory; 

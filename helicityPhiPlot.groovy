@@ -91,6 +91,7 @@ def runnum,segnum
 def tok
 def obj
 def aveX
+def aveXerr
 
 // loop over sinphi hipo files
 inList.each { inFile ->
@@ -113,17 +114,19 @@ inList.each { inFile ->
         buildMonAveGr(obj)
       })
       T.addLeaf(monTree,[runnum,'helic','sinPhi',part,hel,'aveDist'],{
-        buildMonAveDist(obj,100,-1,1)
+        buildMonAveDist(obj,100,-0.25,0.25)
       })
 
       // add <X> point to the monitor
       if(obj.integral()>0) {
         aveX = obj.getMean()
+        //aveXerr = 1.0/Math.sqrt(obj.getIntegral()
+        aveXerr = 0
         monTree[runnum]['helic']['sinPhi'][part][hel]['aveGr'].addPoint(
           segnum,
           aveX,
           segnumDev,
-          1.0/Math.sqrt(obj.getIntegral())
+          aveXerr
         )
         monTree[runnum]['helic']['sinPhi'][part][hel]['aveDist'].fill(aveX)
 

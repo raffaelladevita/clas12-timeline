@@ -1,6 +1,6 @@
 // called by mkTree.sh
 //
-void readTree() {
+void readTree(TString dataset="fall18") {
 
   // open root file
   gStyle->SetOptStat(0);
@@ -19,7 +19,7 @@ void readTree() {
   TLine * eLine[2][maxN];
   int n=0;
   TTree * etr = new TTree("etr","etr");
-  etr->ReadFile("epochs.txt","lb/I:ub/I");
+  etr->ReadFile(TString("epochs."+dataset+".txt"),"lb/I:ub/I");
   Int_t e[2];
   int color[2] = {kGreen+1,kRed};
   etr->SetBranchAddress("lb",&e[0]);
@@ -35,14 +35,42 @@ void readTree() {
   };
 
 
+  // get bounds for histograms
+  Int_t minRun = 1000000;
+  Int_t maxRun = 0;
+  Float_t minNF = 100000;
+  Float_t maxNF = 0;
+  Float_t minF = 100000;
+  Float_t maxF = 0;
+  Int_t runnum;
+  Float_t ntrig,fcstart,fcstop,F,NF;
+  tr->SetBranchAddress("runnum",&runnum);
+  tr->SetBranchAddress("ntrig",&ntrig);
+  tr->SetBranchAddress("fcstart",&fcstart);
+  tr->SetBranchAddress("fcstop",&fcstop);
+  for(int x=0; x<tr->GetEntries(); x++) {
+    tr->GetEntry(x);
+    F = fcstop - fcstart;
+    NF = ntrig / F;
+    minRun = runnum < minRun ? runnum : minRun;
+    maxRun = runnum > maxRun ? runnum : maxRun;
+    minNF = NF < minNF ? NF : minNF;
+    maxNF = NF > maxNF ? NF : maxNF;
+    minF = F < minF ? F : minF;
+    maxF = F > maxF ? F : maxF;
+  };
+
+
   // draw everything
   TCanvas * c[6];
   TString cN,cut,rundrawNF,rundrawF;
   for(int s=0; s<6; s++) {
     cN = Form("sector%d",s+1);
     cut = Form("sector==%d",s+1);
-    rundrawNF = Form("ntrig/(fcstop-fcstart):runnum>>rNF%d(300,5000,5300,200,0,5)",s+1);
-    rundrawF = Form("fcstop-fcstart:runnum>>rF%d(300,5000,5300,300,0,2700)",s+1);
+    rundrawNF = Form("ntrig/(fcstop-fcstart):runnum>>rNF%d(%d,%d,%d,%d,%f,%f)",
+      s+1, maxRun-minRun, minRun, maxRun, 200, minNF, maxNF );
+    rundrawF = Form("fcstop-fcstart:runnum>>rF%d(%d,%d,%d,%d,%f,%f)",
+      s+1, maxRun-minRun, minRun, maxRun, 300, minF, maxF );
     c[s] = new TCanvas(cN,cN,800,800);
     c[s]->Divide(2,2);
     for(int p=1; p<=4; p++) c[s]->GetPad(p)->SetGrid(0,1);

@@ -1,7 +1,10 @@
 #!/bin/bash
 # build root tree
 
-datfile="outdat/data_table.dat"
+dataset="fall18"
+if [ $# -eq 1 ]; then dataset=$1; fi
+
+datfile="outdat.${dataset}/data_table.dat"
 
 > num.tmp
 n=$(echo "`cat $datfile|wc -l`/6"|bc)
@@ -10,5 +13,5 @@ for i in `seq 1 $n`; do
 done
 paste -d' ' num.tmp $datfile > tree.tmp
 
-root -l readTree.C
+root -l readTree.C'("'$dataset'")'
 rm {num,tree}.tmp

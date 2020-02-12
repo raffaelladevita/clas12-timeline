@@ -1,6 +1,12 @@
-start with monsub files &  fcdata.json
-readData.groovy
--> outdat/data_table.dat
+'dataset' is a name given to the data set to be analyzed; it
+appears as a suffix to several file names & directories
+
+mkdir outdat.$dataset
+mkdir outhipo.$dataset
+
+start with monsub files & fcdata.$dataset.json
+readData.groovy (recommend redirecting stderr somewhere, to watch for errors)
+-> outdat.$dataset/data_table.dat
 
    |               \
    |                \
@@ -9,8 +15,8 @@ readData.groovy
 
 mkTree.sh               plotFiller.groovy
 -> tree.root
-define epoch lines       -> outhipo/plots.hipo
--> epoch.txt
+define epoch lines       -> outhipo.$dataset/plots.hipo
+-> epoch.$dataset.txt
 
    |                  /
    |                 /
@@ -21,8 +27,8 @@ qaCutter.groovy
 - concatenate plots into 'epoch plots' with x axis set to runnum + filenum/5000
 - for each epoch plot, calculate IQR cuts
 - for each run plot, apply cuts and filter out outliers
--> outhipo/QA_timeline.hipo
--> outhipo/QA_timeline_epochs.hipo
+-> outhipo.$dataset/QA_timeline.hipo
+-> outhipo.$dataset/QA_timeline_epochs.hipo
 
 =====================================
 

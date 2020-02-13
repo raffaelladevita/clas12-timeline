@@ -99,6 +99,9 @@ def monTree = [:]
 def inTdir = new TDirectory()
 def objList
 def part,hel
+def var
+def varNB
+def varLB,varUB
 def runnum,segnum
 def tok
 def obj
@@ -216,6 +219,33 @@ inList.each { inFile ->
     }
 
 
+    // DIS kinematics monitor
+    //---------------------------------
+    if(objN.contains("/DIS_")) {
+      if(!objN.contains("Q2VsW")) {
+        var = tok[1]
+
+        T.addLeaf(monTree,[runnum,'DIS',var,'aveGr'],{buildMonAveGr(obj)})
+        T.addLeaf(monTree,[runnum,'DIS',var,'aveDist'],{
+          varNB = 100
+          if(var=="Q2") { varLB=0; varUB=12; }
+          else if(var=="W") { varLB=0; varUB=6; }
+          else { varLB=0; varUB=1; }
+          buildMonAveDist(obj,varNB,varLB,varUB)
+        })
+
+        // add <var> point to the monitors
+        if(obj.integral()>0) {
+          aveX = obj.getMean()
+          aveXerr = 0 // 1.0/Math.sqrt(obj.getIntegral()
+          monTree[runnum]['DIS'][var]['aveGr'].addPoint(
+            segnum, aveX, segnumDev, aveXerr )
+          monTree[runnum]['DIS'][var]['aveDist'].fill(aveX)
+        }
+      }
+    }
+
+
   }
 
   inFile = null // "close" the file
@@ -239,6 +269,7 @@ T.exeLeaves(monTree,{
       if(T.key=='aveDist') tlT = tlT.tokenize(' ')[0..1].join(' ')
       else if(T.key=='heldefDist') tlT = "defined helicity fraction"
       else if(T.key=='rellumDist') tlT = "relative luminosity"
+      if(tlPath.contains('DIS')) tlT = "average DIS kinematics"
       tlT += " vs. run number"
       def tl = new GraphErrors(tlN)
       tl.setTitle(tlT)
@@ -292,3 +323,4 @@ def hipoWrite = { hipoName, filterList ->
 hipoWrite("sinPhi",['helic','sinPhi'])
 hipoWrite("defined_helicity_fraction",['helic','dist','heldef'])
 hipoWrite("relative_luminosity",['helic','dist','rellum'])
+hipoWrite("DIS_kinematics",['DIS'])

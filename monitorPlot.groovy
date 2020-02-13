@@ -104,7 +104,7 @@ def tok
 def obj
 def aveX
 def aveXerr
-def helDef,helUndef,defFrac
+def helP,helM,helDef,helUndef,helFrac,rellum
 
 // loop over sinphi hipo files
 inList.each { inFile ->
@@ -148,20 +148,20 @@ inList.each { inFile ->
     if(objN.contains("/helic_dist_")) {
 
       // fraction of events with a defined helicity
-      T.addLeaf(monTree,[runnum,'helic','dist','definedFracNumer'],{0})
-      T.addLeaf(monTree,[runnum,'helic','dist','definedFracDenom'],{0})
-      T.addLeaf(monTree,[runnum,'helic','dist','definedFracGr'],{
+      T.addLeaf(monTree,[runnum,'helic','dist','heldef','heldefNumer'],{0})
+      T.addLeaf(monTree,[runnum,'helic','dist','heldef','heldefDenom'],{0})
+      T.addLeaf(monTree,[runnum,'helic','dist','heldef','heldefGr'],{
         def g = buildMonAveGr(obj)
-        def gN = g.getName().replaceAll(/^aveGr_/,'definedFracGr_')
+        def gN = g.getName().replaceAll(/^aveGr_/,'heldefGr_')
         def gT = g.getTitle().replaceAll(
           /^.*::/,'defined helicity fraction vs. segment number ::')
         g.setName(gN)
         g.setTitle(gT)
         return g
       })
-      T.addLeaf(monTree,[runnum,'helic','dist','definedFracDist'],{
+      T.addLeaf(monTree,[runnum,'helic','dist','heldef','heldefDist'],{
         def h = buildMonAveDist(obj,50,0,1)
-        def hN = h.getName().replaceAll(/^aveDist_/,'definedFracDist_')
+        def hN = h.getName().replaceAll(/^aveDist_/,'heldefDist_')
         def hT = h.getTitle().replaceAll(
           /^.*::/,'defined helicity fraction distribution ::')
         h.setName(hN)
@@ -174,11 +174,43 @@ inList.each { inFile ->
         def numer = helDef
         def denom = helDef + helUndef
         helFrac = numer / denom
-        monTree[runnum]['helic']['dist']['definedFracGr'].addPoint(
+        monTree[runnum]['helic']['dist']['heldef']['heldefGr'].addPoint(
           segnum, helFrac, segnumDev, 0 )
-        monTree[runnum]['helic']['dist']['definedFracDist'].fill(helFrac)
-        monTree[runnum]['helic']['dist']['definedFracNumer'] += numer
-        monTree[runnum]['helic']['dist']['definedFracDenom'] += denom
+        monTree[runnum]['helic']['dist']['heldef']['heldefDist'].fill(helFrac)
+        monTree[runnum]['helic']['dist']['heldef']['heldefNumer'] += numer
+        monTree[runnum]['helic']['dist']['heldef']['heldefDenom'] += denom
+      }
+
+      // relative luminosity
+      T.addLeaf(monTree,[runnum,'helic','dist','rellum','rellumNumer'],{0})
+      T.addLeaf(monTree,[runnum,'helic','dist','rellum','rellumDenom'],{0})
+      T.addLeaf(monTree,[runnum,'helic','dist','rellum','rellumGr'],{
+        def g = buildMonAveGr(obj)
+        def gN = g.getName().replaceAll(/^aveGr_/,'rellumGr_')
+        def gT = g.getTitle().replaceAll(
+          /^.*::/,'relative luminosity vs. segment number ::')
+        g.setName(gN)
+        g.setTitle(gT)
+        return g
+      })
+      T.addLeaf(monTree,[runnum,'helic','dist','rellum','rellumDist'],{
+        def h = buildMonAveDist(obj,50,0.9,1.1)
+        def hN = h.getName().replaceAll(/^aveDist_/,'rellumDist_')
+        def hT = h.getTitle().replaceAll(
+          /^.*::/,'relative luminosity distribution ::')
+        h.setName(hN)
+        h.setTitle(hT)
+        return h
+      })
+      if(obj.integral()>0) {
+        helP = obj.getBinContent(0) // positive helicity is 'helicity==-1' in banks
+        helM = obj.getBinContent(2) // negative helicity is 'helicity==+1' in banks
+        rellum = helM>0 ? helP / helM : 0
+        monTree[runnum]['helic']['dist']['rellum']['rellumGr'].addPoint(
+          segnum, rellum, segnumDev, 0 )
+        monTree[runnum]['helic']['dist']['rellum']['rellumDist'].fill(rellum)
+        monTree[runnum]['helic']['dist']['rellum']['rellumNumer'] += helP
+        monTree[runnum]['helic']['dist']['rellum']['rellumDenom'] += helM
       }
 
     }
@@ -197,7 +229,7 @@ inList.each { inFile ->
 // loop through 'aveDist' monitors: for each one, add its mean to the timeline
 def timelineTree = [:]
 T.exeLeaves(monTree,{
-  if(T.key=='aveDist' || T.key=='definedFracGr') {
+  if(T.key.contains('Dist')) {
     // initialise new timeline graph, if not yet initialised
     def tlRun = T.leafPath[0]
     def tlPath = T.leafPath[1..-2]
@@ -205,7 +237,8 @@ T.exeLeaves(monTree,{
       def tlN = tlPath.join('_')
       def tlT = T.leaf.getTitle().replaceAll(/::.*$/,'')
       if(T.key=='aveDist') tlT = tlT.tokenize(' ')[0..1].join(' ')
-      else if(T.key=='definedFracGr') tlT = "defined helicity fraction"
+      else if(T.key=='heldefDist') tlT = "defined helicity fraction"
+      else if(T.key=='rellumDist') tlT = "relative luminosity"
       tlT += " vs. run number"
       def tl = new GraphErrors(tlN)
       tl.setTitle(tlT)
@@ -217,12 +250,12 @@ T.exeLeaves(monTree,{
       T.getLeaf(timelineTree,tlPath).addPoint(tlRun,aveX,0,0)
     }
     // or if it's a helicity distribution monitor, add the run's overall fractions
-    if(T.key=='definedFracGr') {
-      T.getLeaf(timelineTree,tlPath).addPoint(
-        tlRun,
-        monTree[tlRun]['helic']['dist']['definedFracNumer'] /
-        monTree[tlRun]['helic']['dist']['definedFracDenom'],
-        0,0)
+    if(T.key=='heldefDist' ||  T.key=='rellumDist') {
+      def ndKey = T.key.replaceAll('Dist','')
+      def numer = monTree[tlRun]['helic']['dist'][ndKey]["${ndKey}Numer"]
+      def denom = monTree[tlRun]['helic']['dist'][ndKey]["${ndKey}Denom"]
+      def frac = denom>0 ? numer/denom : 0
+      T.getLeaf(timelineTree,tlPath).addPoint(tlRun,frac,0,0)
     }
   }
 })
@@ -257,7 +290,5 @@ def hipoWrite = { hipoName, filterList ->
 
 // write objects to hipo files
 hipoWrite("sinPhi",['helic','sinPhi'])
-hipoWrite("defined_helicity_fraction",['helic','dist'])
-
-
-
+hipoWrite("defined_helicity_fraction",['helic','dist','heldef'])
+hipoWrite("relative_luminosity",['helic','dist','rellum'])

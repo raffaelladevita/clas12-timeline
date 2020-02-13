@@ -1,5 +1,7 @@
-// fill distributions of sin(phiH) for pions, etc.
-// -note: search for 'CUT' to find which cuts are applied
+// a more general monitor, for things like <sinPhiH> or helicity
+// - this reads DST files or skim files
+// - can be run on slurm
+// - note: search for 'CUT' to find which cuts are applied
 
 import org.jlab.io.hipo.HipoDataSource
 import org.jlab.clas.physics.Particle
@@ -348,7 +350,7 @@ reader = null
 System.gc()
 
 // write outHipo file
-outHipoN = "outhipo/sinphi_${runnum}.hipo"
+outHipoN = "outmon/monitor_${runnum}.hipo"
 File outHipoFile = new File(outHipoN)
 if(outHipoFile.exists()) outHipoFile.delete()
 outHipo.writeFile(outHipoN)

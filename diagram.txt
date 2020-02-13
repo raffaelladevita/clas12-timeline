@@ -32,11 +32,11 @@ qaCutter.groovy
 
 =====================================
 
-helicityPhiRead.groovy
--> outhipo/sinphi_${runnum}.hipo
+monitorRead.groovy
+-> outmon/monitor_${runnum}.hipo
 // make sure that `.` is in `$CLASSPATH`
 
    |
    V
 
-helicityPhiPlot.groovy
+monitorPlot.groovy

@@ -245,6 +245,28 @@ inList.each { inFile ->
       }
     }
 
+    // pion kinematics monitor
+    //----------------------------
+    if(objN.contains("/inclusive_")) {
+      part = tok[1]
+      var = tok[2]
+      T.addLeaf(monTree,[runnum,'inclusive',part,var,'aveGr'],{buildMonAveGr(obj)})
+      T.addLeaf(monTree,[runnum,'inclusive',part,var,'aveDist'],{
+        varNB = 100
+        if(var=="phiH") { varLB=-3.1415; varUB=3.1415; }
+        else if(var=="z") { varLB=0; varUB=1; }
+        else { varLB=0; varUB=1; }
+        buildMonAveDist(obj,varNB,varLB,varUB)
+      })
+      if(obj.integral()>0) {
+        aveX = obj.getMean()
+        aveXerr = 0
+        monTree[runnum]['inclusive'][part][var]['aveGr'].addPoint(
+          segnum, aveX, segnumDev, aveXerr )
+        monTree[runnum]['inclusive'][part][var]['aveDist'].fill(aveX)
+      }
+    }
+
 
   }
 
@@ -270,6 +292,7 @@ T.exeLeaves(monTree,{
       else if(T.key=='heldefDist') tlT = "defined helicity fraction"
       else if(T.key=='rellumDist') tlT = "relative luminosity"
       if(tlPath.contains('DIS')) tlT = "average DIS kinematics"
+      if(tlPath.contains('inclusive')) tlT = "inclusive pion kinematics"
       tlT += " vs. run number"
       def tl = new GraphErrors(tlN)
       tl.setTitle(tlT)
@@ -324,3 +347,4 @@ hipoWrite("sinPhi",['helic','sinPhi'])
 hipoWrite("defined_helicity_fraction",['helic','dist','heldef'])
 hipoWrite("relative_luminosity",['helic','dist','rellum'])
 hipoWrite("DIS_kinematics",['DIS'])
+hipoWrite("pion_kinematics",['inclusive'])

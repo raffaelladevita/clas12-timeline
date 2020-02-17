@@ -19,19 +19,42 @@ Tools T = new Tools()
 // OPTIONS
 def segmentSize = 10000 // number of events in each segment
 def EBEAM = 10.6 // beam energy (shouldn't be hard-coded... TODO)
+def inHipoType = "dst" // options: "dst", "skim"
 
 
 // ARGUMENTS
 def inHipo = "skim/skim4_5052.hipo" // directory of DST files, or a single SKIM file
 if(args.length>=1) inHipo = args[0]
-println "inHipo=$inHipo"
+
+
+// get hipo file names
+def inHipoList = []
+if(inHipoType=="dst") {
+  def inHipoDirObj = new File(inHipo)
+  def inHipoFilter = inHipoFilter = ~/dst_.*\.hipo/
+  inHipoDirObj.traverse( type: groovy.io.FileType.FILES, nameFilter: inHipoFilter ) {
+    if(it.size()>0) inHipoList << inHipo+"/"+it.getName()
+  }
+  inHipoList.sort()
+}
+else if(inHipoType=="skim") { inHipoList << inHipo }
+else {
+  System.err << "ERROR: unknown inHipoType setting\n"
+  return
+}
+
 
 // get runnum
 def runnum
-if(inHipo.contains('postprocess'))
-  runnum = inHipo.tokenize('.')[-2].tokenize('/')[-1].toInteger()
-else
-  runnum = inHipo.tokenize('.')[-2].tokenize('_')[-1].toInteger()
+if(inHipoType=="skim") {
+  if(inHipo.contains('postprocess'))
+    runnum = inHipo.tokenize('.')[-2].tokenize('/')[-1].toInteger()
+  else
+    runnum = inHipo.tokenize('.')[-2].tokenize('_')[-1].toInteger()
+}
+else if(inHipoType=="dst") {
+  runnum = inHipo.tokenize('/')[-1].toInteger()
+}
 println "runnum=$runnum"
 
 
@@ -108,8 +131,8 @@ def pimList = []
 def electron
 def eventNum
 def eventNumList = []
-def eventNumAve
-def eventNumDev
+def segmentNum
+def segmentDev
 def helicity
 def helStr
 def helDefined
@@ -173,7 +196,9 @@ def fillHistos = { list, partN ->
       if(phiH>-10000) {
 
         // fill histograms
-        histTree['helic']['sinPhi'][partN][helStr].fill(Math.sin(phiH))
+        if(helDefined) {
+          histTree['helic']['sinPhi'][partN][helStr].fill(Math.sin(phiH))
+        }
         histTree['inclusive'][partN]['p'].fill(p)
         histTree['inclusive'][partN]['pT'].fill(pT)
         histTree['inclusive'][partN]['z'].fill(z)
@@ -194,19 +219,30 @@ outHipo.mkdir("/$runnum")
 outHipo.cd("/$runnum")
 def histN,histT
 def writeHistos = {
-  // get average event number; then clear list of events
-  eventNumAve = Math.round( eventNumList.sum() / eventNumList.size() )
-  eventNumDev = Math.round(Math.sqrt( 
-   eventNumList.collect{ n -> Math.pow((n-eventNumAve),2) }.sum() / 
-   (eventNumList.size()-1)
-  ))
-  println "eventNumAve=$eventNumAve  eventNumDev=$eventNumDev"
-  eventNumList.clear()
+  // get segment number
+  if(inHipoType=="skim") {
+    // segment number is average event number; include standard deviation
+    // of event number as well
+    segmentNum = Math.round( eventNumList.sum() / eventNumList.size() )
+    segmentDev = Math.round(Math.sqrt( 
+     eventNumList.collect{ n -> Math.pow((n-segmentNum),2) }.sum() / 
+     (eventNumList.size()-1)
+    ))
+    println "eventNumAve=$segmentNum  eventNumDev=$segmentDev"
+    eventNumList.clear()
+  }
+  else if(inHipoType=="dst") {
+    // segment number is the DST 5-file number; standard devation is irrelevant here
+    // and set to 0 for compatibility with downstream code
+    segmentNum = segmentTmp
+    segmentDev = 0
+  }
+
   // loop through histTree, adding histos to the hipo file;
   // note that the average event number is appended to the name
   T.exeLeaves( histTree, {
-    histN = T.leaf.getName() + "_${eventNumAve}_${eventNumDev}"
-    histT = T.leaf.getTitle() + " segment=${eventNumAve}"
+    histN = T.leaf.getName() + "_${segmentNum}_${segmentDev}"
+    histT = T.leaf.getTitle() + " segment=${segmentNum}"
     T.leaf.setName(histN)
     T.leaf.setTitle(histT)
     outHipo.addDataSet(T.leaf) 
@@ -219,159 +255,168 @@ def writeHistos = {
 // event loop
 //----------------------
 evCount = 0
-reader = new HipoDataSource()
-reader.open(inHipo)
-while(reader.hasEvent()) {
-  //if(evCount>100000) break // limiter
-  event = reader.getNextEvent()
+inHipoList.each { inHipoFile ->
+  reader = new HipoDataSource()
+  reader.open(inHipoFile)
+  while(reader.hasEvent()) {
+    //if(evCount>100000) break // limiter
+    event = reader.getNextEvent()
 
-  if(event.hasBank("REC::Particle") &&
-     event.hasBank("REC::Event") &&
-     event.hasBank("RUN::config") ){
+    if(event.hasBank("REC::Particle") &&
+       event.hasBank("REC::Event") &&
+       event.hasBank("RUN::config") ){
 
-    // get banks
-    particleBank = event.getBank("REC::Particle")
-    eventBank = event.getBank("REC::Event")
-    configBank = event.getBank("RUN::config")
+      // get banks
+      particleBank = event.getBank("REC::Particle")
+      eventBank = event.getBank("REC::Event")
+      configBank = event.getBank("RUN::config")
 
 
-    // get segment number
-    segment = (evCount/segmentSize).toInteger()
-
-    // if segment number changed, write out filled histos 
-    // and/or create new histos
-    if(segment!=segmentTmp) {
-
-      // if this isn't the first segment, write out filled histograms
-      if(segmentTmp>=0) writeHistos()
-
-      // define new histograms
-      nbins = 50
-      T.exeLeaves( histTree.helic.sinPhi, {
-        T.leaf = buildHist('helic_sinPhi','sinPhiH',T.leafPath,runnum,nbins,-1,1) 
-      })
-      histTree.helic.dist = buildHist('helic_dist','helicity',[],runnum,3,-1,2)
-      histTree.DIS.Q2 = buildHist('DIS_Q2','Q^2',[],runnum,nbins,0,12)
-      histTree.DIS.W = buildHist('DIS_W','W',[],runnum,nbins,0,6)
-      histTree.DIS.x = buildHist('DIS_x','x',[],runnum,nbins,0,1)
-      histTree.DIS.y = buildHist('DIS_y','y',[],runnum,nbins,0,1)
-      histTree.DIS.Q2VsW = buildHist('DIS_Q2VsW','Q^2 vs W',[],runnum,nbins,0,6,nbins,0,12)
-
-      T.exeLeaves( histTree.inclusive, {
-        def lbound=0
-        def ubound=0
-        if(T.key=='p') { lbound=0; ubound=10 }
-        else if(T.key=='pT') { lbound=0; ubound=4 }
-        else if(T.key=='z') { lbound=0; ubound=1 }
-        else if(T.key=='theta') { lbound=0; ubound=Math.toRadians(90.0) }
-        else if(T.key=='phiH') { lbound=-3.15; ubound=3.15 }
-        T.leaf = buildHist('inclusive','',T.leafPath,runnum,nbins,lbound,ubound)
-      })
-
-      // print the histogram names and titles
-      if(segmentTmp==-1) {
-        println "---\nhistogram names and titles:"
-        T.printTree(histTree,{ T.leaf.getName() +" ::: "+ T.leaf.getTitle() })
-        println "---"
+      // get segment number
+      if(inHipoType=="skim") {
+        segment = (evCount/segmentSize).toInteger()
+      }
+      else if(inHipoType=="dst") {
+        segment = inHipoFile.tokenize('.')[-2].tokenize('-')[0].toInteger()
       }
 
-      // update tmp number
-      segmentTmp = segment
-    }
 
-    // get helicity and fill helicity distribution
-    helicity = eventBank.getByte('helicity',0)
-    histTree.helic.dist.fill(helicity)
-    helDefined = true
-    switch(helicity) {
-      case 1:
-        helStr = 'hm'
-        break
-      case -1:
-        helStr = 'hp'
-        break
-      default:
-        helDefined = false
-        //helStr = 'hp' // override
-        break
-    }
+      // if segment number changed, write out filled histos 
+      // and/or create new histos
+      if(segment!=segmentTmp) {
 
-    // proceed if helicity is defined
-    if(helDefined) {
+        // if this isn't the first segment, write out filled histograms
+        if(segmentTmp>=0) writeHistos()
 
-      // get list of PIDs, with list index corresponding to bank row
-      pidList = (0..<particleBank.rows()).collect{ particleBank.getInt('pid',it) }
-      //println "pidList = $pidList"
+        // define new histograms
+        nbins = 50
+        T.exeLeaves( histTree.helic.sinPhi, {
+          T.leaf = buildHist('helic_sinPhi','sinPhiH',T.leafPath,runnum,nbins,-1,1) 
+        })
+        histTree.helic.dist = buildHist('helic_dist','helicity',[],runnum,3,-1,2)
+        histTree.DIS.Q2 = buildHist('DIS_Q2','Q^2',[],runnum,nbins,0,12)
+        histTree.DIS.W = buildHist('DIS_W','W',[],runnum,nbins,0,6)
+        histTree.DIS.x = buildHist('DIS_x','x',[],runnum,nbins,0,1)
+        histTree.DIS.y = buildHist('DIS_y','y',[],runnum,nbins,0,1)
+        histTree.DIS.Q2VsW = buildHist('DIS_Q2VsW','Q^2 vs W',[],runnum,nbins,0,6,nbins,0,12)
 
-      // CUT: find scattered electron: highest-E electron such that 2 < E < 11
-      electron = findParticles(11).findAll{ it.e()>2 && it.e()<11 }.max{it.e()}
-      if(electron) {
+        T.exeLeaves( histTree.inclusive, {
+          def lbound=0
+          def ubound=0
+          if(T.key=='p') { lbound=0; ubound=10 }
+          else if(T.key=='pT') { lbound=0; ubound=4 }
+          else if(T.key=='z') { lbound=0; ubound=1 }
+          else if(T.key=='theta') { lbound=0; ubound=Math.toRadians(90.0) }
+          else if(T.key=='phiH') { lbound=-3.15; ubound=3.15 }
+          T.leaf = buildHist('inclusive','',T.leafPath,runnum,nbins,lbound,ubound)
+        })
 
-        // calculate Q2
-        vecQ.copy(vecBeam)
-        vecEle.copy(electron.vector())
-        vecQ.sub(vecEle) 
-        Q2 = -1*vecQ.mass2()
+        // print the histogram names and titles
+        if(segmentTmp==-1) {
+          println "---\nhistogram names and titles:"
+          T.printTree(histTree,{ T.leaf.getName() +" ::: "+ T.leaf.getTitle() })
+          println "---"
+        }
 
-        // calculate W
-        vecW.copy(vecBeam)
-        vecW.add(vecTarget)
-        vecW.sub(vecEle)
-        W = vecW.mass()
+        // update tmp number
+        segmentTmp = segment
+      }
 
-        // calculate x and y
-        nu = vecBeam.e() - vecEle.e()
-        x = Q2 / ( 2 * 0.938272 * nu )
-        y = nu / EBEAM
+      // get helicity and fill helicity distribution
+      helicity = eventBank.getByte('helicity',0)
+      histTree.helic.dist.fill(helicity)
+      helDefined = true
+      switch(helicity) {
+        case 1:
+          helStr = 'hm'
+          break
+        case -1:
+          helStr = 'hp'
+          break
+        default:
+          helDefined = false
+          //helStr = 'hp' // override
+          break
+      }
+
+      // CUT: proceed if helicity is defined, unless we are reading a DST file, wherein
+      //      helicity is not defined
+      if(helDefined || inHipoType=="dst") {
+
+        // get list of PIDs, with list index corresponding to bank row
+        pidList = (0..<particleBank.rows()).collect{ particleBank.getInt('pid',it) }
+        //println "pidList = $pidList"
+
+        // CUT: find scattered electron: highest-E electron such that 2 < E < 11
+        electron = findParticles(11).findAll{ it.e()>2 && it.e()<11 }.max{it.e()}
+        if(electron) {
+
+          // calculate Q2
+          vecQ.copy(vecBeam)
+          vecEle.copy(electron.vector())
+          vecQ.sub(vecEle) 
+          Q2 = -1*vecQ.mass2()
+
+          // calculate W
+          vecW.copy(vecBeam)
+          vecW.add(vecTarget)
+          vecW.sub(vecEle)
+          W = vecW.mass()
+
+          // calculate x and y
+          nu = vecBeam.e() - vecEle.e()
+          x = Q2 / ( 2 * 0.938272 * nu )
+          y = nu / EBEAM
 
 
-        // CUT: Q2 and W and y
-        if( Q2>1 && W>2 && y<0.8) {
+          // CUT: Q2 and W and y
+          if( Q2>1 && W>2 && y<0.8) {
 
-          // get lists of pions
-          pipList = findParticles(211)
-          pimList = findParticles(-211)
+            // get lists of pions
+            pipList = findParticles(211)
+            pimList = findParticles(-211)
 
-          // calculate pion kinematics and fill histograms
-          // countEvent will be set to true if a pion is added to the histos 
-          countEvent = false
-          if(helDefined) {
+            // calculate pion kinematics and fill histograms
+            // countEvent will be set to true if a pion is added to the histos 
+            countEvent = false
             fillHistos(pipList,'pip')
             fillHistos(pimList,'pim')
-          }
 
-          if(countEvent) {
+            if(countEvent) {
 
-            // fill event-level histograms
-            histTree.DIS.Q2.fill(Q2)
-            histTree.DIS.W.fill(W)
-            histTree.DIS.x.fill(x)
-            histTree.DIS.y.fill(y)
-            histTree.DIS.Q2VsW.fill(W,Q2)
+              // fill event-level histograms
+              histTree.DIS.Q2.fill(Q2)
+              histTree.DIS.W.fill(W)
+              histTree.DIS.x.fill(x)
+              histTree.DIS.y.fill(y)
+              histTree.DIS.Q2VsW.fill(W,Q2)
 
-            // increment event counter
-            evCount++
-            if(evCount % 100000 == 0) println "found $evCount events which contain a pion"
+              // increment event counter
+              evCount++
+              if(evCount % 100000 == 0) println "found $evCount events which contain a pion"
 
-            // add eventNum to the list of this segment's event numbers
-            eventNum = BigInteger.valueOf(configBank.getInt('event',0))
-            eventNumList.add(eventNum)
+              // add eventNum to the list of this segment's event numbers
+              if(inHipoType=="skim") {
+                eventNum = BigInteger.valueOf(configBank.getInt('event',0))
+                eventNumList.add(eventNum)
+              }
+            }
           }
         }
       }
     }
-  }
 
-} // end event loop
-reader.close()
+  } // end event loop
+  reader.close()
 
-// write histograms to hipo file, and then set them to null for garbage collection
-writeHistos()
+  // write histograms to hipo file, and then set them to null for garbage collection
+  segmentTmp = segment
+  writeHistos()
 
-
-// close reader
-reader = null
-System.gc()
+  // close reader
+  reader = null
+  System.gc()
+}
 
 // write outHipo file
 outHipoN = "outmon/monitor_${runnum}.hipo"

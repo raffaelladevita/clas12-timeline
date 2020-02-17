@@ -90,7 +90,7 @@ def buildHist(histName, histTitle, propList, runn, nb, lb, ub, nb2=0, lb2=0, ub2
   def sn = propList.size()>0 ? '_':''
   def st = propList.size()>0 ? ' ':''
   def hn = "${histName}_${pn}${runn}"
-  def ht = "${histTitle} ${pt}:: run=${runn}"
+  def ht = "${pt} ${histTitle}:: run=${runn}"
 
   if(nb2==0) return new H1F(hn,ht,nb,lb,ub)
   else return new H2F(hn,ht,nb,lb,ub,nb2,lb2,ub2)
@@ -250,11 +250,11 @@ while(reader.hasEvent()) {
       T.exeLeaves( histTree.helic.sinPhi, {
         T.leaf = buildHist('helic_sinPhi','sinPhiH',T.leafPath,runnum,nbins,-1,1) 
       })
-      histTree.helic.dist = buildHist('helic_dist','helicity distribution',[],runnum,3,-1,2)
-      histTree.DIS.Q2 = buildHist('DIS_Q2','Q^2 distribution',[],runnum,nbins,0,12)
-      histTree.DIS.W = buildHist('DIS_W','W distribution',[],runnum,nbins,0,6)
-      histTree.DIS.x = buildHist('DIS_x','x distribution',[],runnum,nbins,0,1)
-      histTree.DIS.y = buildHist('DIS_y','y distribution',[],runnum,nbins,0,1)
+      histTree.helic.dist = buildHist('helic_dist','helicity',[],runnum,3,-1,2)
+      histTree.DIS.Q2 = buildHist('DIS_Q2','Q^2',[],runnum,nbins,0,12)
+      histTree.DIS.W = buildHist('DIS_W','W',[],runnum,nbins,0,6)
+      histTree.DIS.x = buildHist('DIS_x','x',[],runnum,nbins,0,1)
+      histTree.DIS.y = buildHist('DIS_y','y',[],runnum,nbins,0,1)
       histTree.DIS.Q2VsW = buildHist('DIS_Q2VsW','Q^2 vs W',[],runnum,nbins,0,6,nbins,0,12)
 
       T.exeLeaves( histTree.inclusive, {

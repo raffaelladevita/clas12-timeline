@@ -33,12 +33,6 @@ def objToMonName = { name ->
   // strip segment number (and standard dev)
   def tok = name.tokenize('_')
   name = tok[0..-3].join('_')
-  // plot helicity states together
-  if(name.contains('_hp_')) name = name.replaceAll('_hp_','_')
-  else if(name.contains('_hm_')) {
-    name = name.replaceAll('_hm_','_')
-    name += ":hm"
-  }
   return name
 }
 
@@ -65,13 +59,13 @@ def appendLegend = { t ->
 def buildMonAveGr = { tObj ->
   def grN = objToMonName(tObj.getName())
   def grT = objToMonTitle(tObj.getTitle())
-  grN = "aveGr_" + grN
+  grN = grN + "_aveGr"
   grT = "average " + grT
-  grT = grT.replaceAll('::','vs. segment number ::')
+  grT = grT.replaceAll('::',' vs. segment number ::')
   grT = appendLegend(grT)
   def gr = new GraphErrors(grN)
   gr.setTitle(grT)
-  if(grN.contains(":hm")) { gr.setMarkerColor(2); gr.setLineColor(2); }
+  if(grN.contains("_hm_")) { gr.setMarkerColor(2); gr.setLineColor(2); }
   return gr
 }
 
@@ -79,12 +73,12 @@ def buildMonAveGr = { tObj ->
 def buildMonAveDist = { tObj,nb,lb,ub ->
   def histN = objToMonName(tObj.getName())
   def histT = objToMonTitle(tObj.getTitle())
-  histN = "aveDist_" + histN
+  histN = histN + "_aveDist"
   histT = "average " + histT
-  histT = histT.replaceAll('::','distribution ::')
+  histT = histT.replaceAll('::',' distribution ::')
   histT = appendLegend(histT)
   def hist = new H1F(histN,histT,nb,lb,ub)
-  if(histN.contains(":hm")) { hist.setLineColor(2); }
+  if(histN.contains("_hm_")) { hist.setLineColor(2); }
   return hist
 }
 
@@ -116,7 +110,7 @@ inList.each { inFile ->
   objList.each { objN ->
     obj = inTdir.getObject(objN)
 
-    // tokenize object name name to get runnum, segment number & deviation
+    // tokenize object name to get runnum, segment number & deviation
     tok = objN.tokenize('/')[-1].tokenize('_')
     runnum = tok[-3].toInteger()
     segnum = new BigInteger(tok[-2])
@@ -155,18 +149,18 @@ inList.each { inFile ->
       T.addLeaf(monTree,[runnum,'helic','dist','heldef','heldefDenom'],{0})
       T.addLeaf(monTree,[runnum,'helic','dist','heldef','heldefGr'],{
         def g = buildMonAveGr(obj)
-        def gN = g.getName().replaceAll(/^aveGr_/,'heldefGr_')
+        def gN = g.getName().replaceAll(/_aveGr$/,'_heldefGr')
         def gT = g.getTitle().replaceAll(
-          /^.*::/,'defined helicity fraction vs. segment number ::')
+          /^.*::/,'average defined helicity fraction vs. segment number ::')
         g.setName(gN)
         g.setTitle(gT)
         return g
       })
       T.addLeaf(monTree,[runnum,'helic','dist','heldef','heldefDist'],{
         def h = buildMonAveDist(obj,50,0,1)
-        def hN = h.getName().replaceAll(/^aveDist_/,'heldefDist_')
+        def hN = h.getName().replaceAll(/_aveDist$/,'_heldefDist')
         def hT = h.getTitle().replaceAll(
-          /^.*::/,'defined helicity fraction distribution ::')
+          /^.*::/,'average defined helicity fraction distribution ::')
         h.setName(hN)
         h.setTitle(hT)
         return h
@@ -189,18 +183,18 @@ inList.each { inFile ->
       T.addLeaf(monTree,[runnum,'helic','dist','rellum','rellumDenom'],{0})
       T.addLeaf(monTree,[runnum,'helic','dist','rellum','rellumGr'],{
         def g = buildMonAveGr(obj)
-        def gN = g.getName().replaceAll(/^aveGr_/,'rellumGr_')
+        def gN = g.getName().replaceAll(/_aveGr$/,'_rellumGr')
         def gT = g.getTitle().replaceAll(
-          /^.*::/,'relative luminosity vs. segment number ::')
+          /^.*::/,'average relative luminosity vs. segment number ::')
         g.setName(gN)
         g.setTitle(gT)
         return g
       })
       T.addLeaf(monTree,[runnum,'helic','dist','rellum','rellumDist'],{
         def h = buildMonAveDist(obj,50,0.9,1.1)
-        def hN = h.getName().replaceAll(/^aveDist_/,'rellumDist_')
+        def hN = h.getName().replaceAll(/_aveDist$/,'_rellumDist')
         def hT = h.getTitle().replaceAll(
-          /^.*::/,'relative luminosity distribution ::')
+          /^.*::/,'average relative luminosity distribution ::')
         h.setName(hN)
         h.setTitle(hT)
         return h
@@ -253,9 +247,13 @@ inList.each { inFile ->
       T.addLeaf(monTree,[runnum,'inclusive',part,var,'aveGr'],{buildMonAveGr(obj)})
       T.addLeaf(monTree,[runnum,'inclusive',part,var,'aveDist'],{
         varNB = 100
-        if(var=="phiH") { varLB=-3.1415; varUB=3.1415; }
-        else if(var=="z") { varLB=0; varUB=1; }
-        else { varLB=0; varUB=1; }
+        varLB = 0
+        varUB = 0
+        if(var=='p') { varLB=0; varUB=10 }
+        else if(var=='pT') { varLB=0; varUB=4 }
+        else if(var=='z') { varLB=0; varUB=1 }
+        else if(var=='theta') { varLB=0; varUB=Math.toRadians(90.0) }
+        else if(var=='phiH') { varLB=-3.15; varUB=3.15 }
         buildMonAveDist(obj,varNB,varLB,varUB)
       })
       if(obj.integral()>0) {
@@ -287,13 +285,19 @@ T.exeLeaves(monTree,{
     def tlPath = T.leafPath[1..-2]
     T.addLeaf(timelineTree,tlPath,{
       def tlN = tlPath.join('_')
-      def tlT = T.leaf.getTitle().replaceAll(/::.*$/,'')
-      if(T.key=='aveDist') tlT = tlT.tokenize(' ')[0..1].join(' ')
-      else if(T.key=='heldefDist') tlT = "defined helicity fraction"
-      else if(T.key=='rellumDist') tlT = "relative luminosity"
-      if(tlPath.contains('DIS')) tlT = "average DIS kinematics"
-      if(tlPath.contains('inclusive')) tlT = "inclusive pion kinematics"
-      tlT += " vs. run number"
+      def tlT
+      if(tlPath.contains('helic')) {
+        if(tlPath.contains('sinPhi')) tlT = "sinPhiH"
+        else if(T.key=='heldefDist') tlT = "defined helicity fraction"
+        else if(T.key=='rellumDist') tlT = "relative luminosity"
+        else tlT = "unknown"
+      }
+      if(tlPath.contains('DIS')) tlT = "DIS kinematics"
+      if(tlPath.contains('inclusive')) {
+        if(tlPath.contains('pip')) tlT = "inclusive pi+ kinematics"
+        if(tlPath.contains('pim')) tlT = "inclusive pi- kinematics"
+      }
+      tlT = "average ${tlT} vs. run number"
       def tl = new GraphErrors(tlN)
       tl.setTitle(tlT)
       return tl
@@ -326,8 +330,19 @@ def hipoWrite = { hipoName, filterList ->
   monTree.each { run,tree ->
     outHipo.mkdir("/${run}")
     outHipo.cd("/${run}")
+    // add plots to /$run directory; plots defined for + and - helicities
+    // will be renamed such that the front end plots them together
     T.exeLeaves(tree,{
-      if(checkFilter(T.leafPath,filterList,T.key)) outHipo.addDataSet(T.leaf)
+      if(checkFilter(T.leafPath,filterList,T.key)) {
+        def name = T.leaf.getName()
+        if(name.contains('_hp_')) name = name.replaceAll('_hp_','_')
+        else if(name.contains('_hm_')) {
+          name = name.replaceAll('_hm_','_')
+          name += ":hm"
+        }
+        T.leaf.setName(name)
+        outHipo.addDataSet(T.leaf)
+      }
     })
   }
   outHipo.mkdir("/timelines")
@@ -343,8 +358,9 @@ def hipoWrite = { hipoName, filterList ->
 }
 
 // write objects to hipo files
-hipoWrite("sinPhi",['helic','sinPhi'])
-hipoWrite("defined_helicity_fraction",['helic','dist','heldef'])
+hipoWrite("helicity_sinPhi",['helic','sinPhi'])
+hipoWrite("helicity_defined_fraction",['helic','dist','heldef'])
 hipoWrite("relative_luminosity",['helic','dist','rellum'])
 hipoWrite("DIS_kinematics",['DIS'])
-hipoWrite("pion_kinematics",['inclusive'])
+hipoWrite("pip_kinematics",['inclusive','pip'])
+hipoWrite("pim_kinematics",['inclusive','pim'])

@@ -385,12 +385,12 @@ outHipoEpochs.addDataSet(epochTL)
 // write hipo files to disk
 def outHipoN 
 
-outHipoN = "outhipo.${dataset}/QA_timeline.hipo"
+outHipoN = "outhipo.${dataset}/electron_trigger.hipo"
 File outHipoRunsFile = new File(outHipoN)
 if(outHipoRunsFile.exists()) outHipoRunsFile.delete()
 outHipoRuns.writeFile(outHipoN)
 
-outHipoN = "outhipo.${dataset}/QA_timeline_epochs.hipo"
+outHipoN = "outhipo.${dataset}/electron_trigger_epochs.hipo"
 File outHipoEpochsFile = new File(outHipoN)
 if(outHipoEpochsFile.exists()) outHipoEpochsFile.delete()
 outHipoEpochs.writeFile(outHipoN)

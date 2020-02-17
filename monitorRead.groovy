@@ -18,6 +18,7 @@ Tools T = new Tools()
 
 // OPTIONS
 def segmentSize = 10000 // number of events in each segment
+def EBEAM = 10.6 // beam energy (shouldn't be hard-coded... TODO)
 
 
 // ARGUMENTS
@@ -54,7 +55,7 @@ T.buildTree(histTree,'helic',[
 ],{ new H1F() })
 
 T.buildTree(histTree,'DIS',[
-  ['Q2','W']
+  ['Q2','W','x','y']
 ],{ new H1F() })
 
 T.buildTree(histTree,"DIS",[
@@ -63,7 +64,7 @@ T.buildTree(histTree,"DIS",[
 
 T.buildTree(histTree,"inclusive",[
   partList,
-  ['z','phiH']
+  ['p','pT','z','theta','phiH']
 ],{ new H1F() })
 
 println("---\nhistTree:"); 
@@ -122,7 +123,7 @@ def nbins
 
 
 // lorentz vectors
-def vecBeam = new LorentzVector(0, 0, 10.6, 10.6)
+def vecBeam = new LorentzVector(0, 0, EBEAM, EBEAM)
 def vecTarget = new LorentzVector(0, 0, 0, 0.938)
 def vecEle = new LorentzVector()
 def vecH = new LorentzVector()
@@ -145,11 +146,12 @@ def findParticles = { pid ->
 
 
 // subroutine to calculate hadron (pion) kinematics, and fill histograms
-// note: needs to have some kinematics defined (vecQ,q2,W), and helStr
-def q2
+// note: needs to have some kinematics defined (vecQ,Q2,W), and helStr
+def Q2
 def W
-def z
-def phiH
+def nu
+def x,y,z
+def p,pT,theta,phiH
 def countEvent
 def fillHistos = { list, partN ->
   list.each { part ->
@@ -161,13 +163,21 @@ def fillHistos = { list, partN ->
     // CUT: particle z
     if(z>0.3 && z<1) {
 
-      // calculate phiH
+      // calculate momenta, theta, phiH
+      p = vecH.p()
+      pT = Math.hypot( vecH.px(), vecH.py() )
+      theta = vecH.theta()
       phiH = T.planeAngle( vecQ.vect(), vecEle.vect(), vecQ.vect(), vecH.vect() )
+
+      // CUT: if phiH is defined
       if(phiH>-10000) {
 
         // fill histograms
         histTree['helic']['sinPhi'][partN][helStr].fill(Math.sin(phiH))
+        histTree['inclusive'][partN]['p'].fill(p)
+        histTree['inclusive'][partN]['pT'].fill(pT)
         histTree['inclusive'][partN]['z'].fill(z)
+        histTree['inclusive'][partN]['theta'].fill(theta)
         histTree['inclusive'][partN]['phiH'].fill(phiH)
 
         // tell event counter that this event has at least one particle added to histos
@@ -243,11 +253,17 @@ while(reader.hasEvent()) {
       histTree.helic.dist = buildHist('helic_dist','helicity distribution',[],runnum,3,-1,2)
       histTree.DIS.Q2 = buildHist('DIS_Q2','Q^2 distribution',[],runnum,nbins,0,12)
       histTree.DIS.W = buildHist('DIS_W','W distribution',[],runnum,nbins,0,6)
+      histTree.DIS.x = buildHist('DIS_x','x distribution',[],runnum,nbins,0,1)
+      histTree.DIS.y = buildHist('DIS_y','y distribution',[],runnum,nbins,0,1)
       histTree.DIS.Q2VsW = buildHist('DIS_Q2VsW','Q^2 vs W',[],runnum,nbins,0,6,nbins,0,12)
+
       T.exeLeaves( histTree.inclusive, {
         def lbound=0
         def ubound=0
-        if(T.key=='z') { lbound=0; lbound=1 }
+        if(T.key=='p') { lbound=0; ubound=10 }
+        else if(T.key=='pT') { lbound=0; ubound=4 }
+        else if(T.key=='z') { lbound=0; ubound=1 }
+        else if(T.key=='theta') { lbound=0; ubound=Math.toRadians(90.0) }
         else if(T.key=='phiH') { lbound=-3.15; ubound=3.15 }
         T.leaf = buildHist('inclusive','',T.leafPath,runnum,nbins,lbound,ubound)
       })
@@ -295,7 +311,7 @@ while(reader.hasEvent()) {
         vecQ.copy(vecBeam)
         vecEle.copy(electron.vector())
         vecQ.sub(vecEle) 
-        q2 = -1*vecQ.mass2()
+        Q2 = -1*vecQ.mass2()
 
         // calculate W
         vecW.copy(vecBeam)
@@ -303,8 +319,14 @@ while(reader.hasEvent()) {
         vecW.sub(vecEle)
         W = vecW.mass()
 
-        // CUT: q2 and W
-        if( q2>1 && W>2 ) {
+        // calculate x and y
+        nu = vecBeam.e() - vecEle.e()
+        x = Q2 / ( 2 * 0.938272 * nu )
+        y = nu / EBEAM
+
+
+        // CUT: Q2 and W
+        if( Q2>1 && W>2 && y<0.8) {
 
           // get lists of pions
           pipList = findParticles(211)
@@ -321,9 +343,11 @@ while(reader.hasEvent()) {
           if(countEvent) {
 
             // fill event-level histograms
-            histTree.DIS.Q2.fill(q2)
+            histTree.DIS.Q2.fill(Q2)
             histTree.DIS.W.fill(W)
-            histTree.DIS.Q2VsW.fill(W,q2)
+            histTree.DIS.x.fill(x)
+            histTree.DIS.y.fill(y)
+            histTree.DIS.Q2VsW.fill(W,Q2)
 
             // increment event counter
             evCount++

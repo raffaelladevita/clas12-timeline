@@ -325,7 +325,7 @@ while(reader.hasEvent()) {
         y = nu / EBEAM
 
 
-        // CUT: Q2 and W
+        // CUT: Q2 and W and y
         if( Q2>1 && W>2 && y<0.8) {
 
           // get lists of pions

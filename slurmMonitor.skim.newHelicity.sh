@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=clasqa_helicityPhi
+#SBATCH --job-name=clasqa_monitor
 #SBATCH --account=clas12
 #SBATCH --partition=production
 
@@ -15,4 +15,4 @@
 
 dataList=(/lustre/expphy/volatile/clas12_old/rg-a/production/postprocess/merged/*)
 
-srun groovy helicityPhiRead.groovy ${dataList[$SLURM_ARRAY_TASK_ID]}
+srun groovy monitorRead.groovy ${dataList[$SLURM_ARRAY_TASK_ID]}

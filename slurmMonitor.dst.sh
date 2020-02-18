@@ -7,7 +7,7 @@
 #SBATCH --mem-per-cpu=6000
 #SBATCH --time=1:30:00
 
-#SBATCH --array=1-11
+#SBATCH --array=0-10
 #SBATCH --ntasks=1
 
 #SBATCH --output=/farm_out/%u/%x-%j-%N.out

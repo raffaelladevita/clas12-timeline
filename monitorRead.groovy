@@ -286,7 +286,7 @@ inHipoList.each { inHipoFile ->
       if(segment!=segmentTmp) {
 
         // if this isn't the first segment, write out filled histograms
-        if(segmentTmp>=0) writeHistos()
+        if(segmentTmp>=0 && inHipoType=="skim") writeHistos()
 
         // define new histograms
         nbins = 50

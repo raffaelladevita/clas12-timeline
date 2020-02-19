@@ -39,6 +39,7 @@ def grA, grN, grF, grT
 
 // define output hipo file
 def outHipo = new TDirectory()
+"mkdir -p outhipo.${dataset}".execute()
 def outHipoN = "outhipo.${dataset}/plots.hipo"
 def writeHipo = { o -> o.each{ outHipo.addDataSet(it) } }
 def writePlots = { run ->

@@ -15,7 +15,7 @@ def dataset = 'fall18'
 def garbageCollect = false
 if(args.length>=1) dataset = args[0]
 if(args.length>=2) garbageCollect = args[1].toInteger() == 1
-def monsubDir = "../monsub.${dataset}"
+def monsubDir = "monsub.${dataset}"
 //----------------------------------------------------------------------------------
 
 
@@ -60,6 +60,7 @@ def sectors = 0..<6
 def sec = { int i -> i+1 }
 
 // define output data_table.dat file
+"mkdir -p outdat.${dataset}".execute()
 def datfile = new File("outdat.${dataset}/data_table.dat")
 def datfileWriter = datfile.newWriter(false)
 

@@ -9,3 +9,5 @@ logfiles/*.err
 farmout/*
 .nfs*
 dst
+monsub*/*
+.~lock*

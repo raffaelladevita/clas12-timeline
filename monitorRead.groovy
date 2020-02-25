@@ -19,7 +19,7 @@ Tools T = new Tools()
 // OPTIONS
 def segmentSize = 10000 // number of events in each segment
 def EBEAM = 10.6 // beam energy (shouldn't be hard-coded... TODO)
-def inHipoType = "dst" // options: "dst", "skim"
+def inHipoType = "skim" // options: "dst", "skim"
 
 
 // ARGUMENTS

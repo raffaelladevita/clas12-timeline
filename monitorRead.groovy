@@ -25,13 +25,14 @@ def inHipoType = "skim" // options: "dst", "skim"
 // ARGUMENTS
 def inHipo = "skim/skim4_5052.hipo" // directory of DST files, or a single SKIM file
 if(args.length>=1) inHipo = args[0]
+if(args.length>=2) inHipoType = args[1]
 
 
 // get hipo file names
 def inHipoList = []
 if(inHipoType=="dst") {
   def inHipoDirObj = new File(inHipo)
-  def inHipoFilter = inHipoFilter = ~/dst_.*\.hipo/
+  def inHipoFilter = inHipoFilter = ~/.*\.hipo/
   inHipoDirObj.traverse( type: groovy.io.FileType.FILES, nameFilter: inHipoFilter ) {
     if(it.size()>0) inHipoList << inHipo+"/"+it.getName()
   }

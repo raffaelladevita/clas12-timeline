@@ -1,9 +1,0 @@
-5036 - sectors 1,2,6 step down a bit toward end of run
-5127 - sector 5 went out toward the end of the run
-5138 - sectors 1,2,4,5,6 have significantly low N/F for all files
-5160 - sectors 1,2,6 have several step-downs toward the end of run
-5165 - sectors 1,2,6 step down toward end of run
-5181 - sectors 2,3,6 went out toward the end of the run
-5182 - all sectors step down for 3 of the last 4 files
-5190 - sector 2 N/F is lower than that of temporally-adjacent runs
-5196 to 5199 - a lot of sproradic outliers (maybe look at FC data?)

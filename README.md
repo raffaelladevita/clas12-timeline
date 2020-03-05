@@ -223,3 +223,6 @@ Data monitoring tools for CLAS run QA
   * argument `prefix` tells all timeline hipo files will be
     prepended with that argument, which is helpful to keep the online hipo files
 
+* `indexPage.groovy`
+  * generate `ListOfTimelines.json` file, for hipo files in the online directory's
+    subirectories

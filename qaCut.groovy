@@ -258,10 +258,45 @@ def buildHisto = { graph,nbins,binmin,binmax ->
   graph.getDataSize(0).times { i -> hist.fill(graph.getDataY(i)) }
   return hist
 }
-  
+
+
+// subroutines for calculating means and variances of lists
+def listMean = { valList, wgtList ->
+  def numer = 0.0
+  def denom = 0.0
+  valList.eachWithIndex { val,i ->
+    numer += wgtList[i] * val
+    denom += wgtList[i]
+  }
+  return denom>0 ? numer/denom : 0
+}
+def listCovar = { Alist, Blist, wgtList, muA, muB ->
+  def numer = 0.0
+  def denom = 0.0
+  Alist.size().times { i ->
+    numer += wgtList[i] * (Alist[i]-muA) * (Blist[i]-muB)
+    denom += wgtList[i]
+  }
+  return denom>0 ? numer/denom : 0
+}
+def listVar = { valList, wgtList, mu ->
+  return listCovar(valList,valList,wgtList,mu,mu)
+}
 
   
-// loop over grA graphs, apply the QA cuts, and fill 'good' and 'bad' graphs
+// subroutine to convert a graph into a list of values
+def listA, listN, listF, listT, listOne, listWgt
+def graph2list = { graph ->
+  def lst = []
+  graph.getDataSize(0).times { i -> lst.add(graph.getDataY(i)) }
+  return lst
+}
+  
+// loop over runs, apply the QA cuts, and fill 'good' and 'bad' graphs
+def muN, muF
+def varN, varF
+def totN, totF
+def reluncN, reluncF
 def ratio
 def histA_good, histA_bad
 inList.each { obj ->
@@ -272,11 +307,42 @@ inList.each { obj ->
     epoch = getEpoch(runnum,sector)
     if(!qaTree.containsKey(runnum)) qaTree[runnum] = [:]
 
-    // split graphs into good and bad
+    // get all the graphs and convert to value lists
     grA = inTdir.getObject(obj)
     grN = inTdir.getObject(obj.replaceAll("grA","grN"))
     grF = inTdir.getObject(obj.replaceAll("grA","grF"))
     grT = inTdir.getObject(obj.replaceAll("grA","grT"))
+    listA = graph2list(grA)
+    listN = graph2list(grN)
+    listF = graph2list(grF)
+    listT = graph2list(grT)
+    listOne = []
+    listA.size().times{listOne<<1}
+
+    // decide whether to enable livetime weighting
+    listWgt = listOne // disable
+    //listWgt = listT // enable
+
+    // get total, mean, and variance of N and F
+    totN = listN.sum()
+    totF = listF.sum()
+    muN = listMean(listN,listWgt)
+    muF = listMean(listF,listWgt)
+    varN = listVar(listN,listWgt,muN)
+    varF = listVar(listF,listWgt,muF)
+    covarNF = listCovar(listN,listF,listWgt,muN,muF)
+
+    // calculate relative uncertainties of N and F
+    reluncN = Math.sqrt(varN) / muN
+    reluncF = Math.sqrt(varF) / muF
+
+
+
+    //println "totN  muN  reluncN  =  $totN  $muN  $reluncN"
+    println "totF  muF  reluncF  =  $totF  $muF  $reluncF"
+
+
+    // split graphs into good and bad
     (grA_good,grA_bad) = splitGraph(grA)
     (grN_good,grN_bad) = splitGraph(grN)
     (grF_good,grF_bad) = splitGraph(grF)

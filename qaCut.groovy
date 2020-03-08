@@ -369,8 +369,8 @@ inList.each { obj ->
     listA.size().times{listOne<<1}
 
     // decide whether to enable livetime weighting
-    //listWgt = listOne // disable
-    listWgt = listT // enable
+    listWgt = listOne // disable
+    //listWgt = listT // enable
 
     // get total, mean, and variance of N and F
     totN = listN.sum()

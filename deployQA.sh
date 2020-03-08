@@ -13,6 +13,7 @@ subdir=$2
 wwwdir="/group/clas/www/clas12mon/html/hipo/${USER}"
 pushd outhipo.${dataset}
 for file in `ls *.hipo | grep -v "plots.hipo"`; do
+  mkdir -p ${wwwdir}/${subdir}
   cp -v $file ${wwwdir}/${subdir}/${file}
 done
 popd

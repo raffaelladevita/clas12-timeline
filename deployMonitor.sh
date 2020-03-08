@@ -13,6 +13,7 @@ wwwdir="/group/clas/www/clas12mon/html/hipo/${USER}"
 mondir="outmon"
 pushd $mondir
 for file in `ls *.hipo | grep -v "monitor_"`; do
+  mkdir -p ${wwwdir}/${subdir}
   cp -v $file ${wwwdir}/${subdir}/${file}
 done
 popd

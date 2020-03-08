@@ -143,6 +143,7 @@ def grA,grA_good,grA_bad
 def grN,grN_good,grN_bad
 def grF,grF_good,grF_bad
 def grT,grT_good,grT_bad
+def histA_good, histA_bad
 def nGood,nBad
 def nGoodTotal = 0
 def nBadTotal = 0
@@ -163,6 +164,7 @@ def splitGraph = { g ->
   gB.setMarkerColor(2)
   return [gG,gB]
 }
+  
 
 
 // define 'epoch plots', which are time-ordered concatenations of all the plots, 
@@ -196,6 +198,10 @@ sectors.each { s ->
 // define output hipo files and outliers list
 def outHipoRuns = new TDirectory()
 def outHipoEpochs = new TDirectory()
+def outHipoA = new TDirectory()
+def outHipoSigmaN = new TDirectory()
+def outHipoSigmaF = new TDirectory()
+def outHipoRhoNF = new TDirectory()
 
 // define good and bad file lists
 def qaTree = [:] // [runnum][filenum][sector] -> "good" or "bad"
@@ -207,17 +213,45 @@ def badFileWriter = badFile.newWriter(false)
 
 
 // define timeline graphs
-def TL = sectors.collect { s ->
+def TLqa = sectors.collect { s ->
   def g = new GraphErrors("sector_"+sec(s))
   g.setTitle("Electron Trigger QA Pass Fraction")
   g.setTitleY("QA pass fraction")
   g.setTitleX("run number")
   return g
 }
-def epochTL = new GraphErrors("epoch_sectors")
-epochTL.setTitle("choose a sector")
-epochTL.setTitleX("sector")
-sectors.each{ epochTL.addPoint(sec(it),1.0,0,0) }
+def TLqaEpochs = new GraphErrors("epoch_sectors")
+TLqaEpochs.setTitle("choose a sector")
+TLqaEpochs.setTitleX("sector")
+sectors.each{ TLqaEpochs.addPoint(sec(it),1.0,0,0) }
+def TLA = sectors.collect { s ->
+  def g = new GraphErrors("A_sector_"+sec(s))
+  g.setTitle("Number of Electron Triggers N / Faraday Cup Charge F")
+  g.setTitleY("N/F")
+  g.setTitleX("run number")
+  return g
+}
+def TLsigmaN = sectors.collect { s ->
+  def g = new GraphErrors("sigmaN_sector_"+sec(s))
+  g.setTitle("relative uncertainty sigmaN/aveN vs. run number")
+  g.setTitleY("sigmaN/aveN")
+  g.setTitleX("run number")
+  return g
+}
+def TLsigmaF = sectors.collect { s ->
+  def g = new GraphErrors("sigmaF_sector_"+sec(s))
+  g.setTitle("relative uncertainty sigmaF/aveF vs. run number")
+  g.setTitleY("sigmaF/aveF")
+  g.setTitleX("run number")
+  return g
+}
+def TLrhoNF = sectors.collect { s ->
+  def g = new GraphErrors("rhoNF_sector_"+sec(s))
+  g.setTitle("Pearson correlation coefficient rho_{NF} vs. run number")
+  g.setTitleY("rho_{NF}")
+  g.setTitleX("run number")
+  return g
+}
 
     
 // other subroutines
@@ -234,6 +268,21 @@ def addEpochPlotPoint = { plotOut,plotIn,i,r ->
   plotOut.addPoint(n,plotIn.getDataY(i),0,0)
 }
 def writeHipo = { hipo,outList -> outList.each{ hipo.addDataSet(it) } }
+def addGraphsToHipo = { hipoFile ->
+  hipoFile.mkdir("/${runnum}")
+  hipoFile.cd("/${runnum}")
+  writeHipo(
+    hipoFile,
+    [
+      grA_good,grA_bad,
+      grN_good,grN_bad,
+      grF_good,grF_bad,
+      grT_good,grT_bad,
+      histA_good,histA_bad,
+      lineMedian, lineCutLo, lineCutHi
+    ]
+  )
+}
 
 
 // subroutine for projecting a graph onto the y-axis as a histogram
@@ -294,11 +343,11 @@ def graph2list = { graph ->
   
 // loop over runs, apply the QA cuts, and fill 'good' and 'bad' graphs
 def muN, muF
-def varN, varF
-def totN, totF
+def varN, varF 
+def totN, totF, totA
 def reluncN, reluncF
 def ratio
-def histA_good, histA_bad
+def valN,valF,valA
 inList.each { obj ->
   if(obj.contains("/grA_")) {
 
@@ -320,27 +369,41 @@ inList.each { obj ->
     listA.size().times{listOne<<1}
 
     // decide whether to enable livetime weighting
-    listWgt = listOne // disable
-    //listWgt = listT // enable
+    //listWgt = listOne // disable
+    listWgt = listT // enable
 
     // get total, mean, and variance of N and F
     totN = listN.sum()
     totF = listF.sum()
+    totA = totN/totF
     muN = listMean(listN,listWgt)
     muF = listMean(listF,listWgt)
     varN = listVar(listN,listWgt,muN)
     varF = listVar(listF,listWgt,muF)
-    covarNF = listCovar(listN,listF,listWgt,muN,muF)
 
-    // calculate relative uncertainties of N and F
+    // calculate Pearson correlation coefficient
+    covarNF = listCovar(listN,listF,listWgt,muN,muF)
+    corrNF = covarNF / (varN*varF)
+
+    // calculate uncertainties of N and F relative to the mean
     reluncN = Math.sqrt(varN) / muN
     reluncF = Math.sqrt(varF) / muF
 
-
-
-    //println "totN  muN  reluncN  =  $totN  $muN  $reluncN"
-    println "totF  muF  reluncF  =  $totF  $muF  $reluncF"
-
+    // assign Poisson statistics error bars to graphs of N, F, and N/F
+    // - note that N/F error uses Pearson correlation determined from the full run's 
+    //   covariance(N,F)
+    grA.getDataSize(0).times { i ->
+      valN = grN.getDataY(i)
+      valF = grF.getDataY(i)
+      grN.setError(i,0,Math.sqrt(valN))
+      grF.setError(i,0,Math.sqrt(valF))
+      grA.setError(i,0,
+        (valN/valF) * Math.sqrt(
+          1/valN + 1/valF - 2 * corrNF * Math.sqrt(valN*valF) / (valN*valF)
+        )
+      )
+    }
+        
 
     // split graphs into good and bad
     (grA_good,grA_bad) = splitGraph(grA)
@@ -390,30 +453,26 @@ inList.each { obj ->
     lineCutHi = buildLine(grA,"cutHi",cutTree[sector][epoch]['cutHi'])
 
     // write graphs to hipo file
-    outHipoRuns.mkdir("/${runnum}")
-    outHipoRuns.cd("/${runnum}")
-    writeHipo(
-      outHipoRuns,
-      [
-        grA_good,grA_bad,
-        grN_good,grN_bad,
-        grF_good,grF_bad,
-        grT_good,grT_bad,
-        histA_good,histA_bad,
-        lineMedian, lineCutLo, lineCutHi
-      ]
-    )
+    addGraphsToHipo(outHipoRuns)
+    addGraphsToHipo(outHipoA)
+    addGraphsToHipo(outHipoSigmaN)
+    addGraphsToHipo(outHipoSigmaF)
+    addGraphsToHipo(outHipoRhoNF)
 
-    // add QA passing fraction to timeline graph
+    // fill timeline points
     nGood = grA_good.getDataSize(0)
     nBad = grA_bad.getDataSize(0)
     nGoodTotal += nGood
     nBadTotal += nBad
-    TL[sector-1].addPoint(
+    TLqa[sector-1].addPoint(
       runnum,
       nGood+nBad>0 ? nGood/(nGood+nBad) : 0,
       0,0
     )
+    TLA[sector-1].addPoint(runnum,totA,0,0)
+    TLsigmaN[sector-1].addPoint(runnum,reluncN,0,0)
+    TLsigmaF[sector-1].addPoint(runnum,reluncF,0,0)
+    TLrhoNF[sector-1].addPoint(runnum,corrNF,0,0)
   }
 }
 
@@ -443,23 +502,56 @@ sectors.each { s ->
 // write timelines to output hipo file
 outHipoRuns.mkdir("/timelines")
 outHipoRuns.cd("/timelines")
-TL.each { outHipoRuns.addDataSet(it) }
+TLqa.each { outHipoRuns.addDataSet(it) }
 outHipoEpochs.mkdir("/timelines")
 outHipoEpochs.cd("/timelines")
-outHipoEpochs.addDataSet(epochTL)
+outHipoEpochs.addDataSet(TLqaEpochs)
+outHipoA.mkdir("/timelines")
+outHipoA.cd("/timelines")
+TLA.each { outHipoA.addDataSet(it) }
+outHipoSigmaN.mkdir("/timelines")
+outHipoSigmaN.cd("/timelines")
+TLsigmaN.each { outHipoSigmaN.addDataSet(it) }
+outHipoSigmaF.mkdir("/timelines")
+outHipoSigmaF.cd("/timelines")
+TLsigmaF.each { outHipoSigmaF.addDataSet(it) }
+outHipoRhoNF.mkdir("/timelines")
+outHipoRhoNF.cd("/timelines")
+TLrhoNF.each { outHipoRhoNF.addDataSet(it) }
+
 
 // write hipo files to disk
 def outHipoN 
 
-outHipoN = "outhipo.${dataset}/electron_trigger.hipo"
+outHipoN = "outhipo.${dataset}/QA_electron_trigger.hipo"
 File outHipoRunsFile = new File(outHipoN)
 if(outHipoRunsFile.exists()) outHipoRunsFile.delete()
 outHipoRuns.writeFile(outHipoN)
 
-outHipoN = "outhipo.${dataset}/electron_trigger_epochs.hipo"
+outHipoN = "outhipo.${dataset}/QA_electron_trigger_epochs.hipo"
 File outHipoEpochsFile = new File(outHipoN)
 if(outHipoEpochsFile.exists()) outHipoEpochsFile.delete()
 outHipoEpochs.writeFile(outHipoN)
+
+outHipoN = "outhipo.${dataset}/normalized_electron_trigger.hipo"
+File outHipoAfile = new File(outHipoN)
+if(outHipoAfile.exists()) outHipoAfile.delete()
+outHipoA.writeFile(outHipoN)
+
+outHipoN = "outhipo.${dataset}/sigma_N.hipo"
+File outHipoSigmaNfile = new File(outHipoN)
+if(outHipoSigmaNfile.exists()) outHipoSigmaNfile.delete()
+outHipoSigmaN.writeFile(outHipoN)
+
+outHipoN = "outhipo.${dataset}/sigma_F.hipo"
+File outHipoSigmaFfile = new File(outHipoN)
+if(outHipoSigmaFfile.exists()) outHipoSigmaFfile.delete()
+outHipoSigmaF.writeFile(outHipoN)
+
+outHipoN = "outhipo.${dataset}/rho_NF.hipo"
+File outHipoRhoNFfile = new File(outHipoN)
+if(outHipoRhoNFfile.exists()) outHipoRhoNFfile.delete()
+outHipoRhoNF.writeFile(outHipoN)
 
 
 // sort qaTree and output to json file

@@ -3,6 +3,7 @@
 *.root
 *.png
 *.tmp
+*.bat
 */*.dat*
 logfiles/*.out
 logfiles/*.err

@@ -9,6 +9,15 @@ Data monitoring tools for CLAS run QA
   [docDiagram.pdf](docDiagram.pdf) shows a flowcharts of the scripts and I/O
 
 
+## PASS1 Workflow
+* DST monitor:
+  * `rm farmout/clasqa*`: clean slurm log files
+  * `exeMonitor.pass1.sh`: runs `monitorRead.groovy` on DSTs using slurm
+  * wait for slurm jobs to finish
+  * `groovy monitorPlot.groovy`: builds timelines
+  * `deploy.sh pass1`: upload timelines to webserver
+
+
 ## Electron Trigger and Faraday Cup Monitor
 * This monitor tracks the electron trigger count, normalized by the Faraday cup charge
 * The variable `${dataset}` will be used throughout as a name specifying the data set to

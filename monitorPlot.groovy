@@ -101,7 +101,8 @@ def tok
 def obj
 def aveX
 def aveXerr
-def helP,helM,helDef,helUndef,helFrac,rellum
+def ent
+def helP,helM,helDef,helUndef,helFrac,helFracErr,rellum,rellumErr
 
 // loop over sinphi hipo files
 inList.each { inFile ->
@@ -130,9 +131,10 @@ inList.each { inFile ->
       })
 
       // add <sinPhi> point to the monitors
-      if(obj.integral()>0) {
+      ent = obj.integral()
+      if(ent>0) {
         aveX = obj.getMean()
-        aveXerr = 0 // 1.0/Math.sqrt(obj.getIntegral()
+        aveXerr = obj.getRMS() / Math.sqrt(ent)
         monTree[runnum]['helic']['sinPhi'][part][hel]['aveGr'].addPoint(
           segnum, aveX, segnumDev, aveXerr )
         monTree[runnum]['helic']['sinPhi'][part][hel]['aveDist'].fill(aveX)
@@ -165,14 +167,16 @@ inList.each { inFile ->
         h.setTitle(hT)
         return h
       })
-      if(obj.integral()>0) {
+      ent = obj.integral()
+      if(ent>0) {
         helDef = obj.getBinContent(0) + obj.getBinContent(2)
         helUndef = obj.getBinContent(1)
         def numer = helDef
         def denom = helDef + helUndef
         helFrac = numer / denom
+        helFracErr = helFrac * Math.sqrt( 1.0/numer + 1.0/denom )
         monTree[runnum]['helic']['dist']['heldef']['heldefGr'].addPoint(
-          segnum, helFrac, segnumDev, 0 )
+          segnum, helFrac, segnumDev, helFracErr )
         monTree[runnum]['helic']['dist']['heldef']['heldefDist'].fill(helFrac)
         monTree[runnum]['helic']['dist']['heldef']['heldefNumer'] += numer
         monTree[runnum]['helic']['dist']['heldef']['heldefDenom'] += denom
@@ -203,8 +207,9 @@ inList.each { inFile ->
         helP = obj.getBinContent(0) // positive helicity is 'helicity==-1' in banks
         helM = obj.getBinContent(2) // negative helicity is 'helicity==+1' in banks
         rellum = helM>0 ? helP / helM : 0
+        rellumErr = rellum>0 ? rellum * Math.sqrt( 1.0/helP + 1.0/helM ) : 0
         monTree[runnum]['helic']['dist']['rellum']['rellumGr'].addPoint(
-          segnum, rellum, segnumDev, 0 )
+          segnum, rellum, segnumDev, rellumErr )
         monTree[runnum]['helic']['dist']['rellum']['rellumDist'].fill(rellum)
         monTree[runnum]['helic']['dist']['rellum']['rellumNumer'] += helP
         monTree[runnum]['helic']['dist']['rellum']['rellumDenom'] += helM
@@ -229,9 +234,10 @@ inList.each { inFile ->
         })
 
         // add <var> point to the monitors
-        if(obj.integral()>0) {
+        ent = obj.integral()
+        if(ent>0) {
           aveX = obj.getMean()
-          aveXerr = 0 // 1.0/Math.sqrt(obj.getIntegral()
+          aveXerr = obj.getRMS() / Math.sqrt(ent)
           monTree[runnum]['DIS'][var]['aveGr'].addPoint(
             segnum, aveX, segnumDev, aveXerr )
           monTree[runnum]['DIS'][var]['aveDist'].fill(aveX)
@@ -256,9 +262,10 @@ inList.each { inFile ->
         else if(var=='phiH') { varLB=-3.15; varUB=3.15 }
         buildMonAveDist(obj,varNB,varLB,varUB)
       })
-      if(obj.integral()>0) {
+      ent = obj.integral()
+      if(ent>0) {
         aveX = obj.getMean()
-        aveXerr = 0
+        aveXerr = obj.getRMS() / Math.sqrt(ent)
         monTree[runnum]['inclusive'][part][var]['aveGr'].addPoint(
           segnum, aveX, segnumDev, aveXerr )
         monTree[runnum]['inclusive'][part][var]['aveDist'].fill(aveX)
@@ -305,7 +312,8 @@ T.exeLeaves(monTree,{
     // add this run's <X> to the timeline
     if(T.key=='aveDist') {
       aveX = T.leaf.getMean()
-      T.getLeaf(timelineTree,tlPath).addPoint(tlRun,aveX,0,0)
+      aveXerr = T.leaf.getRMS() / Math.sqrt(T.leaf.integral())
+      T.getLeaf(timelineTree,tlPath).addPoint(tlRun,aveX,0,aveXerr)
     }
     // or if it's a helicity distribution monitor, add the run's overall fractions
     if(T.key=='heldefDist' ||  T.key=='rellumDist') {

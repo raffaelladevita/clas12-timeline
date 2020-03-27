@@ -5,6 +5,7 @@
 *.tmp
 *.bat
 */*.dat*
+qaTree.json
 logfiles/*.out
 logfiles/*.err
 farmout/*

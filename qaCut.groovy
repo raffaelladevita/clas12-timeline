@@ -6,7 +6,7 @@ import groovy.json.JsonOutput
 
 //----------------------------------------------------------------------------------
 // ARGUMENTS:
-def dataset = 'fall18'
+def dataset = 'pass1'
 if(args.length>=1) dataset = args[0]
 //----------------------------------------------------------------------------------
 
@@ -37,7 +37,7 @@ def getEpoch = { r,s ->
 
 // open hipo file
 def inTdir = new TDirectory()
-inTdir.readFile("outhipo.${dataset}/plots.hipo")
+inTdir.readFile("outmon/monitorElec.hipo")
 def inList = inTdir.getCompositeObjectList(inTdir)
 
 // define 'ratioTree', a tree with the following structure
@@ -196,9 +196,11 @@ sectors.each { s ->
 
 
 // define output hipo files and outliers list
-def outHipoRuns = new TDirectory()
+def outHipoQA = new TDirectory()
 def outHipoEpochs = new TDirectory()
 def outHipoA = new TDirectory()
+def outHipoN = new TDirectory()
+def outHipoF = new TDirectory()
 def outHipoSigmaN = new TDirectory()
 def outHipoSigmaF = new TDirectory()
 def outHipoRhoNF = new TDirectory()
@@ -213,45 +215,26 @@ def badFileWriter = badFile.newWriter(false)
 
 
 // define timeline graphs
-def TLqa = sectors.collect { s ->
-  def g = new GraphErrors("sector_"+sec(s))
-  g.setTitle("Electron Trigger QA Pass Fraction")
-  g.setTitleY("QA pass fraction")
-  g.setTitleX("run number")
-  return g
+def defineTimeline = { title,ytitle,name ->
+  sectors.collect { s ->
+    def g = new GraphErrors("${name}_sector_"+sec(s))
+    g.setTitle("${title} vs. run number")
+    g.setTitleY(ytitle)
+    g.setTitleX("run number")
+    return g
+  }
 }
+def TLqa = defineTimeline("Electron Trigger QA Pass Fraction","QA Pass Fraction","QA")
+def TLA = defineTimeline("Number of Electron Triggers N / Faraday Cup Charge F","N/F","A")
+def TLN = defineTimeline("Number of Electron Triggers N","N","N")
+def TLF = defineTimeline("Faraday Cup Charge F","F","F")
+def TLsigmaN = defineTimeline("Electron Yield sigmaN / aveN","sigmaN/aveN","sigmaN")
+def TLsigmaF = defineTimeline("Faraday Cup Charge sigmaF / aveF","sigmaF/aveF","sigmaF")
+def TLrhoNF = defineTimeline("Correlation Coefficient rho_{NF}","rho_{NF}","rhoNF")
 def TLqaEpochs = new GraphErrors("epoch_sectors")
 TLqaEpochs.setTitle("choose a sector")
 TLqaEpochs.setTitleX("sector")
 sectors.each{ TLqaEpochs.addPoint(sec(it),1.0,0,0) }
-def TLA = sectors.collect { s ->
-  def g = new GraphErrors("A_sector_"+sec(s))
-  g.setTitle("Number of Electron Triggers N / Faraday Cup Charge F")
-  g.setTitleY("N/F")
-  g.setTitleX("run number")
-  return g
-}
-def TLsigmaN = sectors.collect { s ->
-  def g = new GraphErrors("sigmaN_sector_"+sec(s))
-  g.setTitle("relative uncertainty sigmaN/aveN vs. run number")
-  g.setTitleY("sigmaN/aveN")
-  g.setTitleX("run number")
-  return g
-}
-def TLsigmaF = sectors.collect { s ->
-  def g = new GraphErrors("sigmaF_sector_"+sec(s))
-  g.setTitle("relative uncertainty sigmaF/aveF vs. run number")
-  g.setTitleY("sigmaF/aveF")
-  g.setTitleX("run number")
-  return g
-}
-def TLrhoNF = sectors.collect { s ->
-  def g = new GraphErrors("rhoNF_sector_"+sec(s))
-  g.setTitle("Pearson correlation coefficient rho_{NF} vs. run number")
-  g.setTitleY("rho_{NF}")
-  g.setTitleX("run number")
-  return g
-}
 
     
 // other subroutines
@@ -453,8 +436,10 @@ inList.each { obj ->
     lineCutHi = buildLine(grA,"cutHi",cutTree[sector][epoch]['cutHi'])
 
     // write graphs to hipo file
-    addGraphsToHipo(outHipoRuns)
+    addGraphsToHipo(outHipoQA)
     addGraphsToHipo(outHipoA)
+    addGraphsToHipo(outHipoN)
+    addGraphsToHipo(outHipoF)
     addGraphsToHipo(outHipoSigmaN)
     addGraphsToHipo(outHipoSigmaF)
     addGraphsToHipo(outHipoRhoNF)
@@ -470,6 +455,8 @@ inList.each { obj ->
       0,0
     )
     TLA[sector-1].addPoint(runnum,totA,0,0)
+    TLN[sector-1].addPoint(runnum,totN,0,0)
+    TLF[sector-1].addPoint(runnum,totF,0,0)
     TLsigmaN[sector-1].addPoint(runnum,reluncN,0,0)
     TLsigmaF[sector-1].addPoint(runnum,reluncF,0,0)
     TLrhoNF[sector-1].addPoint(runnum,corrNF,0,0)
@@ -499,59 +486,32 @@ sectors.each { s ->
 
 
 
-// write timelines to output hipo file
-outHipoRuns.mkdir("/timelines")
-outHipoRuns.cd("/timelines")
-TLqa.each { outHipoRuns.addDataSet(it) }
+// write timelines to output hipo files
+def writeTimeline = { tdir,timeline,title ->
+  tdir.mkdir("/timelines")
+  tdir.cd("/timelines")
+  timeline.each { tdir.addDataSet(it) }
+  def outHipoName = "outmon/${title}.hipo"
+  File outHipoFile = new File(outHipoName)
+  if(outHipoFile.exists()) outHipoFile.delete()
+  tdir.writeFile(outHipoName)
+}
+writeTimeline(outHipoQA,TLqa,"electron_yield_QA")
+writeTimeline(outHipoA,TLA,"electron_yield_normalized_values")
+//writeTimeline(outHipoN,TLN,"electron_yield_values")
+//writeTimeline(outHipoF,TLF,"faraday_cup_values")
+writeTimeline(outHipoSigmaN,TLsigmaN,"electron_yield_stddev")
+writeTimeline(outHipoSigmaF,TLsigmaF,"faraday_cup_stddev")
+writeTimeline(outHipoRhoNF,TLrhoNF,"faraday_cup_vs_electron_yield_correlation")
+
 outHipoEpochs.mkdir("/timelines")
 outHipoEpochs.cd("/timelines")
 outHipoEpochs.addDataSet(TLqaEpochs)
-outHipoA.mkdir("/timelines")
-outHipoA.cd("/timelines")
-TLA.each { outHipoA.addDataSet(it) }
-outHipoSigmaN.mkdir("/timelines")
-outHipoSigmaN.cd("/timelines")
-TLsigmaN.each { outHipoSigmaN.addDataSet(it) }
-outHipoSigmaF.mkdir("/timelines")
-outHipoSigmaF.cd("/timelines")
-TLsigmaF.each { outHipoSigmaF.addDataSet(it) }
-outHipoRhoNF.mkdir("/timelines")
-outHipoRhoNF.cd("/timelines")
-TLrhoNF.each { outHipoRhoNF.addDataSet(it) }
-
-
-// write hipo files to disk
-def outHipoN 
-
-outHipoN = "outhipo.${dataset}/QA_electron_trigger.hipo"
-File outHipoRunsFile = new File(outHipoN)
-if(outHipoRunsFile.exists()) outHipoRunsFile.delete()
-outHipoRuns.writeFile(outHipoN)
-
-outHipoN = "outhipo.${dataset}/QA_electron_trigger_epochs.hipo"
-File outHipoEpochsFile = new File(outHipoN)
+outHipoName = "outmon/electron_yield_QA_epoch_view.hipo"
+File outHipoEpochsFile = new File(outHipoName)
 if(outHipoEpochsFile.exists()) outHipoEpochsFile.delete()
-outHipoEpochs.writeFile(outHipoN)
+outHipoEpochs.writeFile(outHipoName)
 
-outHipoN = "outhipo.${dataset}/normalized_electron_trigger.hipo"
-File outHipoAfile = new File(outHipoN)
-if(outHipoAfile.exists()) outHipoAfile.delete()
-outHipoA.writeFile(outHipoN)
-
-outHipoN = "outhipo.${dataset}/sigma_N.hipo"
-File outHipoSigmaNfile = new File(outHipoN)
-if(outHipoSigmaNfile.exists()) outHipoSigmaNfile.delete()
-outHipoSigmaN.writeFile(outHipoN)
-
-outHipoN = "outhipo.${dataset}/sigma_F.hipo"
-File outHipoSigmaFfile = new File(outHipoN)
-if(outHipoSigmaFfile.exists()) outHipoSigmaFfile.delete()
-outHipoSigmaF.writeFile(outHipoN)
-
-outHipoN = "outhipo.${dataset}/rho_NF.hipo"
-File outHipoRhoNFfile = new File(outHipoN)
-if(outHipoRhoNFfile.exists()) outHipoRhoNFfile.delete()
-outHipoRhoNF.writeFile(outHipoN)
 
 
 // sort qaTree and output to json file

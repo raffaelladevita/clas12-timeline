@@ -10,12 +10,14 @@ Data monitoring tools for CLAS run QA
 
 
 ## PASS1 Workflow
-* DST monitor:
-  * `rm farmout/clasqa*`: clean slurm log files
-  * `exeMonitor.pass1.sh`: runs `monitorRead.groovy` on DSTs using slurm
-  * wait for slurm jobs to finish
-  * `groovy monitorPlot.groovy`: builds timelines
-  * `deploy.sh pass1`: upload timelines to webserver
+* `rm farmout/clasqa*`: clean slurm log files
+* `exeSlurm.pass1.sh`: runs `monitorRead.groovy` on DSTs using slurm
+* wait for slurm jobs to finish
+* `exeTimeline.pass1.sh`:
+  * runs `monitorPlot.groovy`
+  * runs `qaPlot.groovy`
+  * runs `qaCut.groovy`
+  * copies timelines to webserver
 
 
 ## Electron Trigger and Faraday Cup Monitor
@@ -48,7 +50,8 @@ Data monitoring tools for CLAS run QA
     of electrons for each sector; one hipo file corresponds to one 5-file
   * Reads `fcdata.${dataset}.json` to obtain the FC data, both ungated and gated, for
     the corresponding run and 5-file
-  * Outputs `outdat.${dataset}.hipo`, which is a data table with the following columns:
+  * Outputs `outdat.${dataset}/data_table.dat`, which is a data table with the following
+    columns:
     * run number
     * 5-file number
     * sector
@@ -82,7 +85,7 @@ Data monitoring tools for CLAS run QA
         manually, but could be automated in a future release
 
 * `groovy qaPlot.groovy $dataset` 
-  * reads `outdat.${dataset}.hipo` and generates `outhipo.${dataset}/plots.hipo`
+  * reads `outdat.${dataset}/data_table.dat` and generates `outmon/monitorElec.hipo`
     * within this hipo file, there is one directory for each run, containing several
       plots:
       * `grA*`: N/F vs. file number (the `A` notation is so it appears first in the
@@ -92,7 +95,7 @@ Data monitoring tools for CLAS run QA
       * `grT*`: livetime vs. file number
 
 * `groovy qaCut.groovy $dataset`
-  * reads `outhipo.${dataset}/plots.hipo`, along with `epochs.${dataset}.txt`, to build
+  * reads `outmon/monitorElec.hipo`, along with `epochs.${dataset}.txt`, to build
     timelines for the online monitor
   * the runs are organized into epochs, wherein each:
     * calculate N/F quartiles
@@ -107,14 +110,14 @@ Data monitoring tools for CLAS run QA
         'bad'; othrewise it is marked as 'good'
         * the run number and file number are printed to the files
           `outdat.${dataset}/goodFiles.dat` and `outdat.${dataset}/badFiles.dat`
-  * two timelines are generated (which can be uploaded to the webserver):
-    * `outhipo.${dataset}/electron_trigger.hipo`
+  * timelines are generated (which can be uploaded to the webserver):
+    * QA timeline
       * timeline is the 'pass fraction': the fraction of files in a run which pass QA
         cuts
       * 6 timelines are plotted simultaneously: one for each sector
       * click any point to show the corresponding graphs and histograms of N/F, N, F,
         and livetime
-    * `outhipo.${dataset}/electron_trigger_epochs.hipo`
+    * QA timeline "epoch view"
       * this is a timeline used to evaluate how the QA cuts look overall, for each epoch
       * the timeline is just a list of the 6 sectors; clicking on one of them will show
         plots of N/F, N, F, and livetime, for each epoch
@@ -125,6 +128,8 @@ Data monitoring tools for CLAS run QA
         * if there are any significant 'jumps' in the N/F value, the cut lines may be
           appear to be too wide: this indicates an epoch boundary line needs to be drawn
           at the step in N/F
+    * Several other timelines are generated as well, such as standard deviation of 
+      the number of electrons
 
 
 
@@ -184,6 +189,12 @@ Data monitoring tools for CLAS run QA
     run, along with all the plots of quantities, versus segment number
     * if reading skim files, the points will have horizontal error bars,
       corresponding to the event number standard deviation described above
+  * also outputs tables to `outdat/data_table_${runnum}.dat`, which are similar to what
+    is output by `qaRead.groovy`: they contain the number of trigger electrons for each
+    sector, as well as the Faraday cup info
+    * in order to use these tables, you must concatenate them to
+      `outdat.${dataset}/data_table.dat`, and follow the `qaPlot.groovy` and
+      `qaCut.groovy` procedure
 
 * `groovy monitorPlot.groovy`
   * this will read `outmon/monitor*.hipo` files and produce several timelines
@@ -215,23 +226,15 @@ Data monitoring tools for CLAS run QA
 
 
 ## Supplementary Scripts
-* `upload.sh __hipoFile(s)__`
-  * upload a file to the timeline webserver, via `scp`
-  * you may need to alter the webserver location
-
-* `deployMonitor.sh __prefix__`
+* `deployTimelines.sh __subdirectory__`
   * reads `outmon` directory for timeline `hipo` files and copies them to the online
-    timeline webserver (you may need to edit the path)
-  * if you specify optional argument `prefix`, all timeline hipo files will be
-    prepended with that argument, which is helpful to keep the online hipo files
-    organized (a useful argument is 'test' :) )
-
-* `deployQA.sh __dataset__  __prefix__`
-  * reads `outhipo.${dataset}/` files for the QA timeline hipo files, and copies
-    them to the timeline webserver (you may need to edit the path)
-  * argument `prefix` tells all timeline hipo files will be
-    prepended with that argument, which is helpful to keep the online hipo files
+    timeline webserver (you may need to edit the path), into the specified subdirectory
 
 * `indexPage.groovy`
   * generate `ListOfTimelines.json` file, for hipo files in the online directory's
     subirectories
+
+* `upload.sh __hipoFile(s)__`
+  * upload a file to the timeline webserver, via `scp`
+  * you may need to alter the webserver location
+

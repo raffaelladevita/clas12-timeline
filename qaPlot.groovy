@@ -7,7 +7,7 @@ import org.jlab.groot.data.GraphErrors
 
 //----------------------------------------------------------------------------------
 // ARGUMENTS:
-def dataset = 'fall18'
+def dataset = 'pass1'
 if(args.length>=1) dataset = args[0]
 //----------------------------------------------------------------------------------
 
@@ -39,8 +39,8 @@ def grA, grN, grF, grT
 
 // define output hipo file
 def outHipo = new TDirectory()
-"mkdir -p outhipo.${dataset}".execute()
-def outHipoN = "outhipo.${dataset}/plots.hipo"
+"mkdir -p outmon".execute()
+def outHipoN = "outmon/monitorElec.hipo"
 def writeHipo = { o -> o.each{ outHipo.addDataSet(it) } }
 def writePlots = { run ->
   println "write run $run"
@@ -85,8 +85,8 @@ dataFile.eachLine { line ->
   // calculations
   fcCharge = fcStop - fcStart
   ufcCharge = ufcStop - ufcStart
-  if(fcCharge<=0) errPrint("fcCharge = ${fcCharge} <= 0")
-  if(ufcCharge<=0) errPrint("ufcCharge = ${ufcCharge} <= 0")
+  //if(fcCharge<=0) errPrint("fcCharge = ${fcCharge} <= 0")
+  //if(ufcCharge<=0) errPrint("ufcCharge = ${ufcCharge} <= 0")
   trigRat = fcCharge!=0 ? ntrig/fcCharge : 0
   liveTime = ufcCharge!=0 ? fcCharge/ufcCharge : 0
 

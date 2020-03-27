@@ -67,7 +67,7 @@ def slurp
 def fcFile
 def fcMapRun
 if(inHipoType=="dst") {
-  fcFileName = "fcdata.v30.json"
+  fcFileName = "fcdata.json"
   slurp = new JsonSlurper()
   fcFile = new File(fcFileName)
   fcMapRun = slurp.parse(fcFile).groupBy{ it.run }.get(runnum)
@@ -325,6 +325,9 @@ def writeHistos = {
       datfileWriter << [ runnum, segmentNum, sec+1, nElec[sec] ].join(' ') << ' '
       datfileWriter << [ fcStart, fcStop, ufcStart, ufcStop ].join(' ') << '\n'
     }
+
+    // reset number of trigger electrons counter
+    nElec = sectors.collect{0}
   }
 }
 

@@ -11,6 +11,8 @@ import org.jlab.groot.data.H2F
 import org.jlab.groot.data.TDirectory
 import org.jlab.clas.physics.LorentzVector
 import org.jlab.clas.physics.Vector3
+import org.jlab.detector.base.DetectorType
+import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
 import java.lang.Math.*
 import Tools // (make sure `.` is in $CLASSPATH)
@@ -57,6 +59,23 @@ else if(inHipoType=="dst") {
   runnum = inHipo.tokenize('/')[-1].toInteger()
 }
 println "runnum=$runnum"
+
+
+// if reading a DST file, load Faraday cup json file, and prepare output table
+def fcFileName
+def slurp
+def fcFile
+def fcMapRun
+if(inHipoType=="dst") {
+  fcFileName = "fcdata.v30.json"
+  slurp = new JsonSlurper()
+  fcFile = new File(fcFileName)
+  fcMapRun = slurp.parse(fcFile).groupBy{ it.run }.get(runnum)
+}
+"mkdir -p outdat".execute()
+def datfile = new File("outdat/data_table_${runnum}.dat")
+def datfileWriter = datfile.newWriter(false)
+
 
 
 // property lists
@@ -127,9 +146,11 @@ def pidList = []
 def particleBank
 def configBank
 def eventBank
+def calBank
 def pipList = []
 def pimList = []
-def electron
+def eleList = []
+def disElectron
 def eventNum
 def eventNumList = []
 def segmentNum
@@ -144,7 +165,9 @@ def evCount
 def segment
 def segmentTmp = -1
 def nbins
-
+def sectors = 0..<6
+def nElec = sectors.collect{0}
+def ecalId = DetectorType.ECAL.getDetectorId()
 
 // lorentz vectors
 def vecBeam = new LorentzVector(0, 0, EBEAM, EBEAM)
@@ -155,6 +178,18 @@ def vecQ = new LorentzVector()
 def vecW = new LorentzVector()
 
 
+// subroutine to increment the number of trigger electrons
+def countTriggerElectrons = { eleRows ->
+  def eleInd = eleRows.find{ particleBank.getShort('status',it)<0 }
+  def eleSec = (0..calBank.rows()).collect{
+    ( calBank.getShort('pindex',it).toInteger() == eleInd &&
+      calBank.getByte('detector',it).toInteger() == ecalId ) ?
+      calBank.getByte('sector',it).toInteger() : null
+  }.find()
+  if(eleInd!=null && eleSec!=null) nElec[eleSec-1]++
+}
+
+
 // subroutine which returns a list of Particle objects of a certain PID
 def findParticles = { pid ->
 
@@ -162,11 +197,15 @@ def findParticles = { pid ->
   def rowList = pidList.findIndexValues{ it == pid }.collect{it as Integer}
   //println "pid=$pid  found in rows $rowList"
 
+  // if looking for electrons, also count the number of trigger electrons
+  if(pid==11) countTriggerElectrons(rowList)
+
   // return list of Particle objects
   return rowList.collect { row ->
     new Particle(pid,*['px','py','pz'].collect{particleBank.getFloat(it,row)})
   }
 }
+
 
 
 // subroutine to calculate hadron (pion) kinematics, and fill histograms
@@ -249,7 +288,46 @@ def writeHistos = {
     outHipo.addDataSet(T.leaf) 
   })
   //println "write histograms:"; T.printTree(histTree,{T.leaf.getName()})
+
+  // write number of electrons / FC, if reading dst file
+  if(inHipoType=="dst") {
+    // get faraday cup data
+    def fcMapRunFiles
+    def fcVals
+    def ufcVals
+    def fcStart, fcStop
+    def ufcStart, ufcStop
+    if(fcMapRun) fcMapRunFiles = fcMapRun.groupBy{ it.fnum }.get(segmentNum)
+    if(fcMapRunFiles) {
+      // "gated" and "ungated" were switched in hipo files...
+      fcVals=fcMapRunFiles.find()."data"."fcup" // actually gated
+      ufcVals=fcMapRunFiles.find()."data"."fcupgated" // actually ungated
+    }
+    if(fcVals && ufcVals) {
+      fcStart = fcVals."min"
+      fcStop = fcVals."max"
+      ufcStart = ufcVals."min"
+      ufcStop = ufcVals."max"
+    }
+    else {
+      System.err << "faraday cup values not found, assigning zero\n"
+      fcStart = 0
+      fcStop = 0
+      ufcStart = 0
+      ufcStop = 0
+    }
+    if(fcStart>fcStop || ufcStart>ufcStop) {
+      System.err << "WARNING: faraday cup start > stop\n"
+    }
+
+    // write to datfile
+    sectors.each{ sec ->
+      datfileWriter << [ runnum, segmentNum, sec+1, nElec[sec] ].join(' ') << ' '
+      datfileWriter << [ fcStart, fcStop, ufcStart, ufcStop ].join(' ') << '\n'
+    }
+  }
 }
+
 
 
 //----------------------
@@ -265,12 +343,18 @@ inHipoList.each { inHipoFile ->
 
     if(event.hasBank("REC::Particle") &&
        event.hasBank("REC::Event") &&
-       event.hasBank("RUN::config") ){
+       event.hasBank("RUN::config") &&
+       event.hasBank("REC::Calorimeter") ){
 
       // get banks
       particleBank = event.getBank("REC::Particle")
       eventBank = event.getBank("REC::Event")
       configBank = event.getBank("RUN::config")
+      calBank = event.getBank("REC::Calorimeter")
+
+      // get list of PIDs, with list index corresponding to bank row
+      pidList = (0..<particleBank.rows()).collect{ particleBank.getInt('pid',it) }
+      //println "pidList = $pidList"
 
 
       // get segment number
@@ -281,12 +365,13 @@ inHipoList.each { inHipoFile ->
         segment = inHipoFile.tokenize('.')[-2].tokenize('-')[0].toInteger()
       }
 
-
       // if segment number changed, write out filled histos 
       // and/or create new histos
       if(segment!=segmentTmp) {
 
-        // if this isn't the first segment, write out filled histograms
+        // if this isn't the first segment, and if we are reading a skim file,
+        // write out filled histograms; note that if reading a dst file, this
+        // subroutine is instead called at the end of the event loop
         if(segmentTmp>=0 && inHipoType=="skim") writeHistos()
 
         // define new histograms
@@ -340,21 +425,23 @@ inHipoList.each { inHipoFile ->
           break
       }
 
+
+      // get electron list, and increment the number of trigger electrons
+      eleList = findParticles(11)
+
+
       // CUT: proceed if helicity is defined, unless we are reading a DST file, wherein
       //      helicity is not defined
       if(helDefined || inHipoType=="dst") {
 
-        // get list of PIDs, with list index corresponding to bank row
-        pidList = (0..<particleBank.rows()).collect{ particleBank.getInt('pid',it) }
-        //println "pidList = $pidList"
 
         // CUT: find scattered electron: highest-E electron such that 2 < E < 11
-        electron = findParticles(11).findAll{ it.e()>2 && it.e()<11 }.max{it.e()}
-        if(electron) {
+        disElectron = eleList.findAll{ it.e()>2 && it.e()<11 }.max{it.e()}
+        if(disElectron) {
 
           // calculate Q2
           vecQ.copy(vecBeam)
-          vecEle.copy(electron.vector())
+          vecEle.copy(disElectron.vector())
           vecQ.sub(vecEle) 
           Q2 = -1*vecQ.mass2()
 
@@ -417,10 +504,11 @@ inHipoList.each { inHipoFile ->
   // close reader
   reader = null
   System.gc()
-}
+} // end loop over hipo files
 
 // write outHipo file
 outHipoN = "outmon/monitor_${runnum}.hipo"
 File outHipoFile = new File(outHipoN)
 if(outHipoFile.exists()) outHipoFile.delete()
 outHipo.writeFile(outHipoN)
+if(inHipoType=="dst") datfileWriter.close()

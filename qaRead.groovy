@@ -85,7 +85,7 @@ fileList.each{ fileN ->
   // if runnum changed, obtain this run's faraday cup data
   if(runnum!=runnumTmp) {
     fcMapRun = slurp.parse(fcFile).groupBy{ it.run }.get(runnum)
-      if(!fcMapRun) throw new Exception("run ${runnum} not found in "+fcFileName);
+    if(!fcMapRun) throw new Exception("run ${runnum} not found in "+fcFileName);
     runnumTmp = runnum
   }
 

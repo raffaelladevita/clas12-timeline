@@ -180,13 +180,18 @@ def vecW = new LorentzVector()
 
 // subroutine to increment the number of trigger electrons
 def countTriggerElectrons = { eleRows ->
-  def eleInd = eleRows.find{ particleBank.getShort('status',it)<0 }
-  def eleSec = (0..calBank.rows()).collect{
-    ( calBank.getShort('pindex',it).toInteger() == eleInd &&
-      calBank.getByte('detector',it).toInteger() == ecalId ) ?
-      calBank.getByte('sector',it).toInteger() : null
-  }.find()
-  if(eleInd!=null && eleSec!=null) nElec[eleSec-1]++
+  def eleInd = eleRows.find{ 
+    particleBank.getShort('status',it) < 0 &&
+    Math.abs(particleBank.getFloat('chi2pid',it)) < 3
+  }
+  if(eleInd!=null) {
+    def eleSec = (0..calBank.rows()).collect{
+      ( calBank.getShort('pindex',it).toInteger() == eleInd &&
+        calBank.getByte('detector',it).toInteger() == ecalId ) ?
+        calBank.getByte('sector',it).toInteger() : null
+    }.find()
+    if(eleSec!=null) nElec[eleSec-1]++
+  }
 }
 
 

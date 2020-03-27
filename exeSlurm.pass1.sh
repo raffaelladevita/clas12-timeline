@@ -5,6 +5,10 @@ datadir="/home/dilks/j/dm/pass1"
 slurm=slurm.pass1.dst.bat
 > $slurm
 
+rm -v farmout/clasqa*
+rm -v outdat/*.dat
+rm -v outmon/*.hipo
+
 function app { echo "$1" >> $slurm; }
 
 nruns=$(ls -d ${datadir}/*/ | wc -l)

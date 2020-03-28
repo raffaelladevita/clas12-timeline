@@ -4,6 +4,8 @@
 import org.jlab.groot.data.TDirectory
 import org.jlab.groot.data.GraphErrors
 import org.jlab.groot.data.H1F
+import org.jlab.groot.fitter.DataFitter
+import org.jlab.groot.math.F1D
 import java.lang.Math.*
 import Tools
 Tools T = new Tools()
@@ -82,6 +84,32 @@ def buildMonAveDist = { tObj,nb,lb,ub ->
   return hist
 }
 
+// build asymGrid: a coarse distribution of sinPhi, used for calculating the asymmetry
+def buildAsymGrid = { tObj,nb ->
+  def histN = objToMonName(tObj.getName())
+  def histT = objToMonTitle(tObj.getTitle())
+  histN = histN + "_asymGrid"
+  histT = histT.replaceAll('::',' distribution ::')
+  histT = appendLegend(histT)
+  def hist = new H1F(histN,histT,nb,-1,1)
+  if(histN.contains("_hm_")) { hist.setLineColor(2); }
+  return hist
+}
+
+// build asymGraph: a graph of the asymmetry, which will be used for the fit
+// - it is the difference between asymGrid for hel+ and asymGrid for hel-
+def buildAsymGraph = { tObj ->
+  def grN = objToMonName(tObj.getName())
+  if(grN.contains('_hp_'))      grN = grN.replaceAll('_hp_','_')
+  else if(grN.contains('_hm_')) grN = grN.replaceAll('_hm_','_')
+  grN = grN.replaceAll('sinPhi','asym')
+  grN = grN + "_asymGraph"
+  def grT = objToMonTitle(tObj.getTitle())
+  grT = grT.replaceAll(/hel.*::/,'asymmetry vs. sin(phiH) ::')
+  def gr = new GraphErrors(grN)
+  gr.setTitle(grT)
+  return gr
+}
 
 
 //-----------------------------------------
@@ -123,6 +151,7 @@ inList.each { inFile ->
       part = tok[2]
       hel = tok[3]
 
+      // instantiate <sinPhi> graph and sinPhi dist (if not yet instantiated)
       T.addLeaf(monTree,[runnum,'helic','sinPhi',part,hel,'aveGr'],{
         buildMonAveGr(obj)
       })
@@ -130,7 +159,18 @@ inList.each { inFile ->
         buildMonAveDist(obj,100,-0.25,0.25)
       })
 
-      // add <sinPhi> point to the monitors
+      // instantiate sinPhi dists binned for an asymmetry, denoted "asymGrid" (if not
+      // yet instantiated)
+      // also instantiate graph used for asymmetry fit, denoted "asymGraph"
+      T.addLeaf(monTree,[runnum,'helic','sinPhi',part,hel,'asymGrid'],{
+        buildAsymGrid(obj,8)
+      })
+      T.addLeaf(monTree,[runnum,'helic','asym',part,'asymGraph'],{
+        buildAsymGraph(obj)
+      })
+
+      // add <sinPhi> point to the monitors, and rebinned sinPhi distribution to
+      // asymGrids
       ent = obj.integral()
       if(ent>0) {
         aveX = obj.getMean()
@@ -138,7 +178,12 @@ inList.each { inFile ->
         monTree[runnum]['helic']['sinPhi'][part][hel]['aveGr'].addPoint(
           segnum, aveX, segnumDev, aveXerr )
         monTree[runnum]['helic']['sinPhi'][part][hel]['aveDist'].fill(aveX)
-
+        // add rebinned <sinPhi> distribution to asymGrid
+        obj.getAxis().getNBins().times { bin ->
+          def counts = obj.getBinContent(bin)
+          def value = obj.getAxis().getBinCenter(bin)
+          monTree[runnum]['helic']['sinPhi'][part][hel]['asymGrid'].fill(value,counts)
+        }
       }
     }
 
@@ -273,10 +318,35 @@ inList.each { inFile ->
     }
 
 
-  }
+  } // eo loop over objects in the file (run)
+
+  
+  // fit asymmetry
+  T.exeLeaves(monTree[runnum]['helic']['asym'],{
+    def particle = T.leafPath[0]
+    def grP = T.getLeaf(monTree,[runnum,'helic','sinPhi',particle,'hp','asymGrid'])
+    def grM = T.getLeaf(monTree,[runnum,'helic','sinPhi',particle,'hm','asymGrid'])
+    grP.getAxis().getNBins().times { bin ->
+      def yp = grP.getBinContent(bin)
+      def ym = grM.getBinContent(bin)
+      def xval = grP.getAxis().getBinCenter(bin)
+      T.leaf.addPoint(xval,(yp-ym)/(yp+ym),0,1.0/Math.sqrt(yp+ym))
+    }
+    def fitFuncN = T.leaf.getName() + ":fit"
+    fitFuncN.replaceAll('hp_asymGrid','fitFunc')
+    def amp = 0
+    def fitFunc = new F1D(fitFuncN,"[amp]*x",-1,1)
+    fitFunc.setParameter(0,amp)
+    DataFitter.fit(fitFunc,T.leaf,"")
+    def fitValue = fitFunc.parameter(0).value()
+    def fitError = fitFunc.parameter(0).error()
+    T.addLeaf(monTree,[runnum,'helic','asym',particle,'asymValue'],{fitValue})
+    T.addLeaf(monTree,[runnum,'helic','asym',particle,'asymError'],{fitError})
+    T.addLeaf(monTree,[runnum,'helic','asym',particle,'asymFit'],{fitFunc})
+  })
 
   inFile = null // "close" the file
-}
+} // eo loop over each file (run)
 
 
 //---------------------
@@ -286,7 +356,7 @@ inList.each { inFile ->
 // loop through 'aveDist' monitors: for each one, add its mean to the timeline
 def timelineTree = [:]
 T.exeLeaves(monTree,{
-  if(T.key.contains('Dist')) {
+  if(T.key.contains('Dist') || T.key.contains('asymGraph')) {
     // initialise new timeline graph, if not yet initialised
     def tlRun = T.leafPath[0]
     def tlPath = T.leafPath[1..-2]
@@ -297,6 +367,7 @@ T.exeLeaves(monTree,{
         if(tlPath.contains('sinPhi')) tlT = "sinPhiH"
         else if(T.key=='heldefDist') tlT = "defined helicity fraction"
         else if(T.key=='rellumDist') tlT = "relative luminosity"
+        else if(T.key=='asymGraph') tlT = "beam spin asymmetry: pion sin(phiH) amplitude"
         else tlT = "unknown"
       }
       if(tlPath.contains('DIS')) tlT = "DIS kinematics"
@@ -304,7 +375,8 @@ T.exeLeaves(monTree,{
         if(tlPath.contains('pip')) tlT = "inclusive pi+ kinematics"
         if(tlPath.contains('pim')) tlT = "inclusive pi- kinematics"
       }
-      tlT = "average ${tlT} vs. run number"
+      if(T.key.contains('Dist')) tlT = "average ${tlT}"
+      tlT = "${tlT} vs. run number"
       def tl = new GraphErrors(tlN)
       tl.setTitle(tlT)
       return tl
@@ -322,6 +394,14 @@ T.exeLeaves(monTree,{
       def denom = monTree[tlRun]['helic']['dist'][ndKey]["${ndKey}Denom"]
       def frac = denom>0 ? numer/denom : 0
       T.getLeaf(timelineTree,tlPath).addPoint(tlRun,frac,0,0)
+    }
+    // or if it's an asymmetry graph, add fit results to the timeline
+    if(T.key=='asymGraph') {
+      def valPath = T.leafPath[0..-2] + 'asymValue'
+      def errPath = T.leafPath[0..-2] + 'asymError'
+      T.getLeaf(timelineTree,tlPath).addPoint(
+        tlRun, T.getLeaf(monTree,valPath),
+        0, T.getLeaf(monTree,errPath))
     }
   }
 })
@@ -342,6 +422,7 @@ def hipoWrite = { hipoName, filterList ->
     // will be renamed such that the front end plots them together
     T.exeLeaves(tree,{
       if(checkFilter(T.leafPath,filterList,T.key)) {
+        if(T.key=='asymValue' || T.key=='asymError' || T.key=='asymGrid') return
         def name = T.leaf.getName()
         if(name.contains('_hp_')) name = name.replaceAll('_hp_','_')
         else if(name.contains('_hm_')) {
@@ -367,8 +448,9 @@ def hipoWrite = { hipoName, filterList ->
 
 // write objects to hipo files
 hipoWrite("helicity_sinPhi",['helic','sinPhi'])
+hipoWrite("beam_spin_asymmetry",['helic','asym'])
 hipoWrite("helicity_defined_fraction",['helic','dist','heldef'])
 hipoWrite("relative_luminosity",['helic','dist','rellum'])
-hipoWrite("DIS_kinematics",['DIS'])
+hipoWrite("q2_W_x_y",['DIS'])
 hipoWrite("pip_kinematics",['inclusive','pip'])
 hipoWrite("pim_kinematics",['inclusive','pim'])

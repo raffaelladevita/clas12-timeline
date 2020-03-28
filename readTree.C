@@ -51,7 +51,7 @@ void readTree(TString dataset="fall18") {
   for(int x=0; x<tr->GetEntries(); x++) {
     tr->GetEntry(x);
     F = fcstop - fcstart;
-    NF = ntrig / F;
+    NF = F>0 ? ntrig / F : 0;
     minRun = runnum < minRun ? runnum : minRun;
     maxRun = runnum > maxRun ? runnum : maxRun;
     minNF = NF < minNF ? NF : minNF;
@@ -66,7 +66,7 @@ void readTree(TString dataset="fall18") {
   TString cN,cut,rundrawNF,rundrawF;
   for(int s=0; s<6; s++) {
     cN = Form("sector%d",s+1);
-    cut = Form("sector==%d",s+1);
+    cut = Form("sector==%d && fcstop-fcstart>0",s+1);
     rundrawNF = Form("ntrig/(fcstop-fcstart):runnum>>rNF%d(%d,%d,%d,%d,%f,%f)",
       s+1, maxRun-minRun, minRun, maxRun, 200, minNF, maxNF );
     rundrawF = Form("fcstop-fcstart:runnum>>rF%d(%d,%d,%d,%d,%f,%f)",

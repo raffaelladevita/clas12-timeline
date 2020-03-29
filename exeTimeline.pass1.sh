@@ -8,17 +8,35 @@ for file in `ls outmon/*.hipo | grep -v "monitor"`; do
   rm -v $file
 done
 
+# setup error filter
+errlog="errors.log"
+> $errlog
+function errdiv { 
+  printf '%70s\n' | tr ' ' - >> $errlog
+  echo "$1 errors:" >> $errlog
+}
+
 # electron QA monitor
 mkdir -p outdat.pass1
 > outdat.pass1/data_table.dat
 for file in outdat/data_table*.dat; do
   cat $file >> outdat.pass1/data_table.dat
 done
-groovy qaPlot.groovy pass1
-groovy qaCut.groovy pass1
+errdiv qaPlot.groovy
+groovy qaPlot.groovy pass1 2>>$errlog
+errdiv qaCut.groovy
+groovy qaCut.groovy pass1 2>>$errlog
 
 # generalized monitor
-groovy monitorPlot.groovy
+errdiv monitorPlot.groovy
+groovy monitorPlot.groovy 2>>$errlog
 
-# copy to webserver
-deployTimelines.sh pass1
+# print errors (filtering out hipo logo contamination)
+printf '%70s\n' | tr ' ' -
+echo "TIMELINE GENERATION COMPLETE"
+grep -vE '█|═|Physics Division|^     $' errors.log
+rm $errlog
+
+printf '%70s\n' | tr ' ' -
+execute "deployTimelines.sh pass1" to upload to webserver
+

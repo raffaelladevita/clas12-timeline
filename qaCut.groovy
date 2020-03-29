@@ -105,6 +105,10 @@ inList.each { obj ->
 
 // subroutine for calculating median of a list
 def median = { d ->
+  if(d.size()==0) {
+    System.err << "WARNING: attempt to calculate median of an empty list\n"
+    return -10000
+  }
   d.sort()
   def m = d.size().intdiv(2)
   d.size() % 2 ? d[m] : (d[m-1]+d[m]) / 2
@@ -498,8 +502,8 @@ def writeTimeline = { tdir,timeline,title ->
 }
 writeTimeline(outHipoQA,TLqa,"electron_yield_QA")
 writeTimeline(outHipoA,TLA,"electron_yield_normalized_values")
-//writeTimeline(outHipoN,TLN,"electron_yield_values")
-//writeTimeline(outHipoF,TLF,"faraday_cup_values")
+writeTimeline(outHipoN,TLN,"electron_yield_values")
+writeTimeline(outHipoF,TLF,"faraday_cup_values")
 writeTimeline(outHipoSigmaN,TLsigmaN,"electron_yield_stddev")
 writeTimeline(outHipoSigmaF,TLsigmaF,"faraday_cup_stddev")
 writeTimeline(outHipoRhoNF,TLrhoNF,"faraday_cup_vs_electron_yield_correlation")

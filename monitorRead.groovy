@@ -39,6 +39,10 @@ if(inHipoType=="dst") {
     if(it.size()>0) inHipoList << inHipo+"/"+it.getName()
   }
   inHipoList.sort()
+  if(inHipoList.size()==0) {
+    System.err << "ERROR: no hipo files found in this directory\n"
+    return
+  }
 }
 else if(inHipoType=="skim") { inHipoList << inHipo }
 else {
@@ -315,7 +319,7 @@ def writeHistos = {
       ufcStop = ufcVals."max"
     }
     else {
-      System.err << "faraday cup values not found, assigning zero\n"
+      System.err << "faraday cup values not found for run=${runnum} file=${segmentnum}\n"
       fcStart = 0
       fcStop = 0
       ufcStart = 0

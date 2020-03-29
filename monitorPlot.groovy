@@ -330,7 +330,7 @@ inList.each { inFile ->
       def yp = grP.getBinContent(bin)
       def ym = grM.getBinContent(bin)
       def xval = grP.getAxis().getBinCenter(bin)
-      T.leaf.addPoint(xval,(yp-ym)/(yp+ym),0,1.0/Math.sqrt(yp+ym))
+      T.leaf.addPoint(xval,(yp-ym)/(yp+ym),0.0,1.0/Math.sqrt(yp+ym))
     }
     def fitFuncN = T.leaf.getName() + ":fit"
     fitFuncN.replaceAll('hp_asymGrid','fitFunc')
@@ -385,7 +385,7 @@ T.exeLeaves(monTree,{
     if(T.key=='aveDist') {
       aveX = T.leaf.getMean()
       aveXerr = T.leaf.getRMS() / Math.sqrt(T.leaf.integral())
-      T.getLeaf(timelineTree,tlPath).addPoint(tlRun,aveX,0,aveXerr)
+      T.getLeaf(timelineTree,tlPath).addPoint(tlRun,aveX,0.0,aveXerr)
     }
     // or if it's a helicity distribution monitor, add the run's overall fractions
     if(T.key=='heldefDist' ||  T.key=='rellumDist') {
@@ -393,7 +393,7 @@ T.exeLeaves(monTree,{
       def numer = monTree[tlRun]['helic']['dist'][ndKey]["${ndKey}Numer"]
       def denom = monTree[tlRun]['helic']['dist'][ndKey]["${ndKey}Denom"]
       def frac = denom>0 ? numer/denom : 0
-      T.getLeaf(timelineTree,tlPath).addPoint(tlRun,frac,0,0)
+      T.getLeaf(timelineTree,tlPath).addPoint(tlRun,frac,0.0,0.0)
     }
     // or if it's an asymmetry graph, add fit results to the timeline
     if(T.key=='asymGraph') {
@@ -401,7 +401,7 @@ T.exeLeaves(monTree,{
       def errPath = T.leafPath[0..-2] + 'asymError'
       T.getLeaf(timelineTree,tlPath).addPoint(
         tlRun, T.getLeaf(monTree,valPath),
-        0, T.getLeaf(monTree,errPath))
+        0.0, T.getLeaf(monTree,errPath))
     }
   }
 })

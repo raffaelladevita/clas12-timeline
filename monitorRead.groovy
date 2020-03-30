@@ -319,7 +319,7 @@ def writeHistos = {
       ufcStop = ufcVals."max"
     }
     else {
-      System.err << "faraday cup values not found for run=${runnum} file=${segmentnum}\n"
+      System.err << "faraday cup values not found for run=${runnum} file=${segmentNum}\n"
       fcStart = 0
       fcStop = 0
       ufcStart = 0

@@ -12,8 +12,9 @@ Data monitoring tools for CLAS run QA
 ## PASS1 Workflow
 * `rm farmout/clasqa*`: clean slurm log files
 * `exeSlurm.pass1.sh`: runs `monitorRead.groovy` on DSTs using slurm
-* wait for slurm jobs to finish
-* `exeTimeline.pass1.sh`:
+  * wait for slurm jobs to finish
+  * execute `errorPrint.sh` to inspect error logs
+* `exeTimeline.pass1.sh`, which does the following:
   * runs `monitorPlot.groovy`
   * runs `qaPlot.groovy`
   * runs `qaCut.groovy`

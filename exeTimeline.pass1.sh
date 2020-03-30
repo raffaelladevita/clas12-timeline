@@ -38,5 +38,5 @@ grep -vE '█|═|Physics Division|^     $' errors.log
 rm $errlog
 
 printf '%70s\n' | tr ' ' -
-execute "deployTimelines.sh pass1" to upload to webserver
+echo "execute 'deployTimelines.sh pass1' to upload to webserver"
 

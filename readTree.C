@@ -43,22 +43,39 @@ void readTree(TString dataset="fall18") {
   Float_t minF = 100000;
   Float_t maxF = 0;
   Int_t runnum;
-  Float_t ntrig,fcstart,fcstop,F,NF;
+  Float_t ntrig,fcstart,fcstop,ufcstart,ufcstop,F,NF,UF;
+  Double_t Ftot,UFtot;
+  Int_t sector;
+  Ftot=UFtot=0;
   tr->SetBranchAddress("runnum",&runnum);
   tr->SetBranchAddress("ntrig",&ntrig);
   tr->SetBranchAddress("fcstart",&fcstart);
   tr->SetBranchAddress("fcstop",&fcstop);
+  tr->SetBranchAddress("ufcstart",&ufcstart);
+  tr->SetBranchAddress("ufcstop",&ufcstop);
+  tr->SetBranchAddress("sector",&sector);
   for(int x=0; x<tr->GetEntries(); x++) {
     tr->GetEntry(x);
     F = fcstop - fcstart;
-    NF = F>0 ? ntrig / F : 0;
-    minRun = runnum < minRun ? runnum : minRun;
-    maxRun = runnum > maxRun ? runnum : maxRun;
-    minNF = NF < minNF ? NF : minNF;
-    maxNF = NF > maxNF ? NF : maxNF;
-    minF = F < minF ? F : minF;
-    maxF = F > maxF ? F : maxF;
+    UF = ufcstop - ufcstart;
+    if(F>0) {
+      NF = ntrig / F;
+      minRun = runnum < minRun ? runnum : minRun;
+      maxRun = runnum > maxRun ? runnum : maxRun;
+      minNF = NF < minNF ? NF : minNF;
+      maxNF = NF > maxNF ? NF : maxNF;
+      minF = F < minF ? F : minF;
+      maxF = F > maxF ? F : maxF;
+    };
+    if(sector==1) {
+      if(F>0) Ftot += F;
+      if(UF>0) UFtot += UF;
+    };
   };
+  printf("--------------------------------------------\n");
+  printf("total gated FC charge = %.1f mC\n",Ftot*1e-6);
+  printf("total ungated FC charge = %.1f mC\n",UFtot*1e-6);
+  printf("--------------------------------------------\n");
 
 
   // draw everything

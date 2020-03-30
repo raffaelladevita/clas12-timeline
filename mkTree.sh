@@ -1,7 +1,7 @@
 #!/bin/bash
 # build root tree
 
-dataset="fall18"
+dataset="pass1"
 if [ $# -eq 1 ]; then dataset=$1; fi
 
 datfile="outdat.${dataset}/data_table.dat"

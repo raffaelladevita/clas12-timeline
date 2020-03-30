@@ -171,7 +171,8 @@ def segmentTmp = -1
 def nbins
 def sectors = 0..<6
 def nElec = sectors.collect{0}
-def ecalId = DetectorType.ECAL.getDetectorId()
+def nElecFT = 0
+def detIdEC = DetectorType.ECAL.getDetectorId()
 
 // lorentz vectors
 def vecBeam = new LorentzVector(0, 0, EBEAM, EBEAM)
@@ -184,17 +185,40 @@ def vecW = new LorentzVector()
 
 // subroutine to increment the number of trigger electrons
 def countTriggerElectrons = { eleRows ->
-  def eleInd = eleRows.find{ 
-    particleBank.getShort('status',it) < 0 &&
+
+  // cut on chi2pid
+  // - for trigger electrons (status<0), chi2pid is defined
+  // - for forward tagger electrons (status might not be <0, chi2pid==0.0
+  def eleIndList = eleRows.findAll{
     Math.abs(particleBank.getFloat('chi2pid',it)) < 3
   }
-  if(eleInd!=null) {
-    def eleSec = (0..calBank.rows()).collect{
-      ( calBank.getShort('pindex',it).toInteger() == eleInd &&
-        calBank.getByte('detector',it).toInteger() == ecalId ) ?
-        calBank.getByte('sector',it).toInteger() : null
-    }.find()
-    if(eleSec!=null) nElec[eleSec-1]++
+
+  // loop over electrons
+  if(eleIndList.size()>0) {
+    eleIndList.each { ind ->
+
+      def status = particleBank.getShort('status',ind)
+
+      // trigger electrons
+      if(status<0) {
+        def eleSec = (0..calBank.rows()).collect{
+          ( calBank.getShort('pindex',it).toInteger() == ind &&
+            calBank.getByte('detector',it).toInteger() == detIdEC ) ?
+            calBank.getByte('sector',it).toInteger() : null
+        }.find()
+        if(eleSec!=null) nElec[eleSec-1]++
+        else {
+          System.err <<
+            "WARNING: found electron with unknown sector" <<
+            " run=${runnum}\n"
+        }
+      }
+
+      // forward tagger electrons
+      if( Math.abs(status/1000).toInteger() & 1 ) {
+        nElecFT++
+      }
+    }
   }
 }
 
@@ -319,24 +343,30 @@ def writeHistos = {
       ufcStop = ufcVals."max"
     }
     else {
-      System.err << "faraday cup values not found for run=${runnum} file=${segmentNum}\n"
+      System.err << 
+        "WARNING: faraday cup values not found for" <<
+        " run=${runnum} file=${segmentNum}\n"
       fcStart = 0
       fcStop = 0
       ufcStart = 0
       ufcStop = 0
     }
     if(fcStart>fcStop || ufcStart>ufcStop) {
-      System.err << "WARNING: faraday cup start > stop\n"
+      System.err <<
+        "WARNING: faraday cup start > stop for" <<
+        " run=${runnum} file=${segmentNum}\n"
     }
 
     // write to datfile
     sectors.each{ sec ->
-      datfileWriter << [ runnum, segmentNum, sec+1, nElec[sec] ].join(' ') << ' '
+      datfileWriter << [ runnum, segmentNum, sec+1 ].join(' ') << ' '
+      datfileWriter << [ nElec[sec], nElecFT ].join(' ') << ' '
       datfileWriter << [ fcStart, fcStop, ufcStart, ufcStop ].join(' ') << '\n'
     }
 
     // reset number of trigger electrons counter
     nElec = sectors.collect{0}
+    nElecFT = 0
   }
 }
 
@@ -410,11 +440,13 @@ inHipoList.each { inHipoFile ->
         })
 
         // print the histogram names and titles
+        /*
         if(segmentTmp==-1) {
           println "---\nhistogram names and titles:"
           T.printTree(histTree,{ T.leaf.getName() +" ::: "+ T.leaf.getTitle() })
           println "---"
         }
+        */
 
         // update tmp number
         segmentTmp = segment

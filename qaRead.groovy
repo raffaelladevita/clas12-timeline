@@ -117,9 +117,10 @@ fileList.each{ fileN ->
     // get number of electron triggers
     nTrig = { int i -> heth[i].integral() }
 
-    // output to datfile
+    // output to datfile (the zero is for the FT electron count, to maintain
+    //                    compatibility with updated downstream code)
     sectors.each{
-      datfileWriter << [ runnum, filenum, sec(it), nTrig(it) ].join(' ') << ' '
+      datfileWriter << [ runnum, filenum, sec(it), nTrig(it), 0 ].join(' ') << ' '
       datfileWriter << [ fcStart, fcStop, ufcStart, ufcStop ].join(' ') << '\n'
     }
 

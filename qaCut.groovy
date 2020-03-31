@@ -301,7 +301,7 @@ def buildHisto = { graph,nbins,binmin,binmax ->
   // set the histogram names and titles
   // assumes the graph name is 'gr._.*' (regex syntax) and names the histogram 'gr.h_.*'
   def histN = graph.getName().replaceAll(/^gr./) { graph.getName().replaceAll(/_.*$/,"h") }
-  def histT = graph.getTitle().replaceAll(/vs\..*--/,"distribution --")
+  def histT = graph.getTitle().replaceAll(/vs\. file number/,"distribution")
 
   // define histogram and set formatting
   def hist = new H1F(histN,histT,nbins,binmin,binmax)
@@ -537,14 +537,14 @@ def writeTimeline = { tdir,timeline,title ->
 electronN = "electron_" + (useFT ? "FT" : "trigger")
 writeTimeline(outHipoQA,TLqa,"${electronN}_yield_QA")
 writeTimeline(outHipoA,TLA,"${electronN}_yield_normalized_values")
-writeTimeline(outHipoN,TLN,"${electronN}_yield_values")
+//writeTimeline(outHipoN,TLN,"${electronN}_yield_values")
 writeTimeline(outHipoSigmaN,TLsigmaN,"${electronN}_yield_stddev")
 if(!useFT) {
   writeTimeline(outHipoF,TLF,"faraday_cup_values")
   writeTimeline(outHipoT,TLT,"live_time")
   writeTimeline(outHipoSigmaF,TLsigmaF,"faraday_cup_stddev")
-  writeTimeline(outHipoRhoNF,TLrhoNF,"faraday_cup_vs_electron_yield_correlation")
 }
+//writeTimeline(outHipoRhoNF,TLrhoNF,"faraday_cup_vs_${electronN}_yield_correlation")
 
 outHipoEpochs.mkdir("/timelines")
 outHipoEpochs.cd("/timelines")

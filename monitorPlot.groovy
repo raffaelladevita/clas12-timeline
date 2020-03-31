@@ -63,7 +63,7 @@ def buildMonAveGr = { tObj ->
   def grT = objToMonTitle(tObj.getTitle())
   grN = grN + "_aveGr"
   grT = "average " + grT
-  grT = grT.replaceAll(/$/,'vs. segment number')
+  grT = grT.replaceAll(/$/,' vs. segment number')
   grT = appendLegend(grT)
   def gr = new GraphErrors(grN)
   gr.setTitle(grT)
@@ -77,7 +77,7 @@ def buildMonAveDist = { tObj,nb,lb,ub ->
   def histT = objToMonTitle(tObj.getTitle())
   histN = histN + "_aveDist"
   histT = "average " + histT
-  histT = histT.replaceAll(/$/,'distribution')
+  histT = histT.replaceAll(/$/,' distribution')
   histT = appendLegend(histT)
   def hist = new H1F(histN,histT,nb,lb,ub)
   if(histN.contains("_hm_")) { hist.setLineColor(2); }
@@ -89,7 +89,7 @@ def buildAsymGrid = { tObj,nb ->
   def histN = objToMonName(tObj.getName())
   def histT = objToMonTitle(tObj.getTitle())
   histN = histN + "_asymGrid"
-  histT = histT.replaceAll(/$/,'distribution')
+  histT = histT.replaceAll(/$/,' distribution')
   histT = appendLegend(histT)
   def hist = new H1F(histN,histT,nb,-1,1)
   if(histN.contains("_hm_")) { hist.setLineColor(2); }

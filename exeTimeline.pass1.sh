@@ -13,19 +13,27 @@ errlog="errors.log"
 > $errlog
 function errdiv { 
   printf '%70s\n' | tr ' ' - >> $errlog
-  echo "$1 errors:" >> $errlog
+  echo "$* errors:" >> $errlog
 }
 
-# electron QA monitor
+# concatenate data_table
 mkdir -p outdat.pass1
 > outdat.pass1/data_table.dat
 for file in outdat/data_table*.dat; do
   cat $file >> outdat.pass1/data_table.dat
 done
+
+# trigger electrons
 errdiv qaPlot.groovy
 groovy qaPlot.groovy pass1 2>>$errlog
 errdiv qaCut.groovy
 groovy qaCut.groovy pass1 2>>$errlog
+
+# FT electrons
+errdiv qaPlot.groovy FT
+groovy qaPlot.groovy pass1 FT 2>>$errlog
+errdiv qaCut.groovy FT
+groovy qaCut.groovy pass1 FT 2>>$errlog
 
 # generalized monitor
 errdiv monitorPlot.groovy

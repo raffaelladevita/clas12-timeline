@@ -139,7 +139,7 @@ sectors.each { s ->
     cutTree[sectorIt][epochIt]['cutHi'] = cutHi
   }
 }
-jPrint("cuts.${dataset}.json",cutTree) // output cutTree to JSON
+//jPrint("cuts.${dataset}.json",cutTree) // output cutTree to JSON
 //println pPrint(cutTree)
 
 

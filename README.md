@@ -13,11 +13,14 @@ Data monitoring tools for CLAS run QA
 * `exeSlurm.pass1.sh`: runs `monitorRead.groovy` on DSTs using slurm
   * wait for slurm jobs to finish
   * execute `errorPrint.sh` to inspect error logs
+* if there are runs you do not want to include in the QA, use `truncate.sh`
+  * this is useful to cut out any runs which have not been fully cooked
 * `exeTimeline.pass1.sh`, which does the following:
   * runs `monitorPlot.groovy`
   * runs `qaPlot.groovy`
   * runs `qaCut.groovy`
   * copies timelines to webserver
+* release timeline to main directory: use `releaseTimelines.sh`
 
 
 ## Electron Trigger and Faraday Cup Monitor

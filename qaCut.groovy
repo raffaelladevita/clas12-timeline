@@ -118,7 +118,9 @@ def median = { d ->
 
 
 // establish cut lines using 'cutFactor' x IQR method, and fill cutTree
-def cutFactor = 3.0
+// - note: for the FT electrons, it seems that N/F has a long tail toward
+//   lower values, so cutLo is forced to be lower 
+def cutFactor = 4.0
 def mq,lq,uq,iqr,cutLo,cutHi
 sectors.each { s ->
   sectorIt = sec(s)
@@ -130,6 +132,8 @@ sectors.each { s ->
     iqr = uq - lq // interquartile range
     cutLo = lq - cutFactor * iqr // lower QA cut boundary
     cutHi = uq + cutFactor * iqr // upper QA cut boundary
+
+    if(useFT) cutLo = lq - 2 * cutFactor * iqr // override FT low cut to be lower
     
     cutTree[sectorIt][epochIt]['mq'] = mq
     cutTree[sectorIt][epochIt]['lq'] = lq
@@ -537,7 +541,7 @@ def writeTimeline = { tdir,timeline,title ->
 electronN = "electron_" + (useFT ? "FT" : "trigger")
 writeTimeline(outHipoQA,TLqa,"${electronN}_yield_QA")
 writeTimeline(outHipoA,TLA,"${electronN}_yield_normalized_values")
-//writeTimeline(outHipoN,TLN,"${electronN}_yield_values")
+writeTimeline(outHipoN,TLN,"${electronN}_yield_values")
 writeTimeline(outHipoSigmaN,TLsigmaN,"${electronN}_yield_stddev")
 if(!useFT) {
   writeTimeline(outHipoF,TLF,"faraday_cup_values")

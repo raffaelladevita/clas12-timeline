@@ -441,7 +441,7 @@ def hipoWrite = { hipoName, filterList ->
 // write objects to hipo files
 hipoWrite("helicity_sinPhi",['helic','sinPhi'])
 hipoWrite("beam_spin_asymmetry",['helic','asym'])
-hipoWrite("helicity_defined_fraction",['helic','dist','heldef'])
+hipoWrite("defined_helicity_fraction",['helic','dist','heldef'])
 hipoWrite("relative_luminosity",['helic','dist','rellum'])
 hipoWrite("q2_W_x_y",['DIS'])
 hipoWrite("pip_kinematics",['inclusive','pip'])

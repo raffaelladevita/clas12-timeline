@@ -89,6 +89,15 @@ void readTree(TString dataset="fall18") {
     rundrawF = Form("fcstop-fcstart:runnum>>rF%d(%d,%d,%d,%d,%f,%f)",
       s+1, maxRun-minRun, minRun, maxRun, 300, minF, maxF );
     c[s] = new TCanvas(cN,cN,800,800);
+
+    ///*
+    c[s]->SetGrid(1,1);
+    tr->Draw(rundrawNF,cut,"colz");
+    //c[s]->SetLogz();
+    for(int k=0; k<n; k++) for(int j=0; j<2; j++) eLine[j][k]->Draw("same");
+    //*/
+
+    /*
     c[s]->Divide(2,2);
     for(int p=1; p<=4; p++) c[s]->GetPad(p)->SetGrid(0,1);
     c[s]->cd(1);
@@ -103,6 +112,8 @@ void readTree(TString dataset="fall18") {
       tr->Draw(rundrawF,cut,"colz");
       c[s]->GetPad(4)->SetLogz();
       for(int k=0; k<n; k++) for(int j=0; j<2; j++) eLine[j][k]->Draw("same");
+      */
+
     c[s]->Write();
   };
   tr->Write();

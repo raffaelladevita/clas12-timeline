@@ -132,12 +132,12 @@ def buildHist(histName, histTitle, propList, runn, nb, lb, ub, nb2=0, lb2=0, ub2
 
   def pn = propList.join('_')
   def pt = propList.collect{ propT.containsKey(it) ? propT[it] : it }.join(' ')
-  if(propList.size()>0) { pn+='_'; pt+=' ' }
+  if(propList.size()>0) { pn+='_'; }
 
   def sn = propList.size()>0 ? '_':''
   def st = propList.size()>0 ? ' ':''
   def hn = "${histName}_${pn}${runn}"
-  def ht = "${pt} ${histTitle}:: run=${runn}"
+  def ht = "${pt} ${histTitle}"
 
   if(nb2==0) return new H1F(hn,ht,nb,lb,ub)
   else return new H2F(hn,ht,nb,lb,ub,nb2,lb2,ub2)
@@ -315,7 +315,7 @@ def writeHistos = {
   // note that the average event number is appended to the name
   T.exeLeaves( histTree, {
     histN = T.leaf.getName() + "_${segmentNum}_${segmentDev}"
-    histT = T.leaf.getTitle() + " segment=${segmentNum}"
+    histT = T.leaf.getTitle() + " :: segment=${segmentNum}"
     T.leaf.setName(histN)
     T.leaf.setTitle(histT)
     outHipo.addDataSet(T.leaf) 

@@ -40,7 +40,7 @@ def objToMonName = { name ->
 
 // subroutine to transform an object title into a monitor title
 def objToMonTitle = { title ->
-  title = title.replaceAll(/ segment=.*$/,'')
+  title = title.replaceAll(/::.*$/,'')
   return title
 }
 
@@ -63,7 +63,7 @@ def buildMonAveGr = { tObj ->
   def grT = objToMonTitle(tObj.getTitle())
   grN = grN + "_aveGr"
   grT = "average " + grT
-  grT = grT.replaceAll('::',' vs. segment number ::')
+  grT = grT.replaceAll(/$/,'vs. segment number')
   grT = appendLegend(grT)
   def gr = new GraphErrors(grN)
   gr.setTitle(grT)
@@ -77,7 +77,7 @@ def buildMonAveDist = { tObj,nb,lb,ub ->
   def histT = objToMonTitle(tObj.getTitle())
   histN = histN + "_aveDist"
   histT = "average " + histT
-  histT = histT.replaceAll('::',' distribution ::')
+  histT = histT.replaceAll(/$/,'distribution')
   histT = appendLegend(histT)
   def hist = new H1F(histN,histT,nb,lb,ub)
   if(histN.contains("_hm_")) { hist.setLineColor(2); }
@@ -89,7 +89,7 @@ def buildAsymGrid = { tObj,nb ->
   def histN = objToMonName(tObj.getName())
   def histT = objToMonTitle(tObj.getTitle())
   histN = histN + "_asymGrid"
-  histT = histT.replaceAll('::',' distribution ::')
+  histT = histT.replaceAll(/$/,'distribution')
   histT = appendLegend(histT)
   def hist = new H1F(histN,histT,nb,-1,1)
   if(histN.contains("_hm_")) { hist.setLineColor(2); }
@@ -105,7 +105,7 @@ def buildAsymGraph = { tObj ->
   grN = grN.replaceAll('sinPhi','asym')
   grN = grN + "_asymGraph"
   def grT = objToMonTitle(tObj.getTitle())
-  grT = grT.replaceAll(/hel.*::/,'asymmetry vs. sin(phiH) ::')
+  grT = grT.replaceAll(/hel.*$/,'asymmetry vs. sin(phiH)')
   def gr = new GraphErrors(grN)
   gr.setTitle(grT)
   return gr
@@ -197,19 +197,15 @@ inList.each { inFile ->
       T.addLeaf(monTree,[runnum,'helic','dist','heldef','heldefGr'],{
         def g = buildMonAveGr(obj)
         def gN = g.getName().replaceAll(/_aveGr$/,'_heldefGr')
-        def gT = g.getTitle().replaceAll(
-          /^.*::/,'average defined helicity fraction vs. segment number ::')
         g.setName(gN)
-        g.setTitle(gT)
+        g.setTitle('average defined helicity fraction vs. segment number')
         return g
       })
       T.addLeaf(monTree,[runnum,'helic','dist','heldef','heldefDist'],{
         def h = buildMonAveDist(obj,50,0,1)
         def hN = h.getName().replaceAll(/_aveDist$/,'_heldefDist')
-        def hT = h.getTitle().replaceAll(
-          /^.*::/,'average defined helicity fraction distribution ::')
         h.setName(hN)
-        h.setTitle(hT)
+        h.setTitle('average defined helicity fraction distribution')
         return h
       })
       ent = obj.integral()
@@ -233,19 +229,15 @@ inList.each { inFile ->
       T.addLeaf(monTree,[runnum,'helic','dist','rellum','rellumGr'],{
         def g = buildMonAveGr(obj)
         def gN = g.getName().replaceAll(/_aveGr$/,'_rellumGr')
-        def gT = g.getTitle().replaceAll(
-          /^.*::/,'average relative luminosity vs. segment number ::')
         g.setName(gN)
-        g.setTitle(gT)
+        g.setTitle('average relative luminosity vs. segment number')
         return g
       })
       T.addLeaf(monTree,[runnum,'helic','dist','rellum','rellumDist'],{
         def h = buildMonAveDist(obj,50,0.9,1.1)
         def hN = h.getName().replaceAll(/_aveDist$/,'_rellumDist')
-        def hT = h.getTitle().replaceAll(
-          /^.*::/,'average relative luminosity distribution ::')
         h.setName(hN)
-        h.setTitle(hT)
+        h.setTitle('average relative luminosity distribution')
         return h
       })
       if(obj.integral()>0) {

@@ -9,8 +9,7 @@ Data monitoring tools for CLAS run QA
   [docDiagram.pdf](docDiagram.pdf) shows a flowcharts of the scripts and I/O
 
 
-## PASS1 Workflow
-* `rm farmout/clasqa*`: clean slurm log files
+## PASS1 Procedure
 * `exeSlurm.pass1.sh`: runs `monitorRead.groovy` on DSTs using slurm
   * wait for slurm jobs to finish
   * execute `errorPrint.sh` to inspect error logs
@@ -41,8 +40,8 @@ Data monitoring tools for CLAS run QA
   * (optional: redirect `stderr` and watch for errors, in case there are still bugs)
 * `mkTree.sh $dataset`; generate `epochs.${dataset}.txt` manually (see verbose
   procedure below)
-* `groovy qaPlot.groovy $dataset` 
-* `groovy qaCut.groovy $dataset`
+* `groovy qaPlot.groovy $dataset [$useFT]` 
+* `groovy qaCut.groovy $dataset [$useFT]`
 
 
 ### Verbose procedure:
@@ -57,6 +56,7 @@ Data monitoring tools for CLAS run QA
     * 5-file number
     * sector
     * number of electron triggers (`N`)
+    * number of electrons in the forward tagger
     * DAQ-gated FC charge at beginning of 5-file (`F_i`)
     * DAQ-gated FC charge at end of 5-file (`F_f`)
     * DAQ-ungated FC charge at beginning of 5-file
@@ -85,7 +85,7 @@ Data monitoring tools for CLAS run QA
       * the decision of where to put the epoch boundary lines is currently done
         manually, but could be automated in a future release
 
-* `groovy qaPlot.groovy $dataset` 
+* `groovy qaPlot.groovy $dataset [$useFT]` 
   * reads `outdat.${dataset}/data_table.dat` and generates `outmon/monitorElec.hipo`
     * within this hipo file, there is one directory for each run, containing several
       plots:
@@ -94,10 +94,12 @@ Data monitoring tools for CLAS run QA
       * `grF*`: F vs. file number
       * `grN*`: N vs. file number
       * `grT*`: livetime vs. file number
+    * if `$useFT` is set, it will use FT electrons instead
 
-* `groovy qaCut.groovy $dataset`
+* `groovy qaCut.groovy $dataset [$useFT]`
   * reads `outmon/monitorElec.hipo`, along with `epochs.${dataset}.txt`, to build
     timelines for the online monitor
+  * if `$useFT` is set, it will use FT electrons instead
   * the runs are organized into epochs, wherein each:
     * calculate N/F quartiles
       * `mq`: middle quartile, the overall median N/F

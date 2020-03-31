@@ -7,11 +7,13 @@ import groovy.json.JsonOutput
 //----------------------------------------------------------------------------------
 // ARGUMENTS:
 def dataset = 'pass1'
+def useFT = false // if true, use FT electrons instead
 if(args.length>=1) dataset = args[0]
+if(args.length>=2) useFT = true
 //----------------------------------------------------------------------------------
 
 // vars and subroutines
-def sectors = 0..<6 
+def sectors = 0..<6
 def sec = { int i -> i+1 }
 def runnum, filenum, sector, epoch
 def gr
@@ -37,7 +39,7 @@ def getEpoch = { r,s ->
 
 // open hipo file
 def inTdir = new TDirectory()
-inTdir.readFile("outmon/monitorElec.hipo")
+inTdir.readFile("outmon/monitorElec"+(useFT?"FT":"")+".hipo")
 def inList = inTdir.getCompositeObjectList(inTdir)
 
 // define 'ratioTree', a tree with the following structure
@@ -175,7 +177,8 @@ def splitGraph = { g ->
 // and put them in the epochPlotTree
 def defineEpochPlot = { name,ytitle,s,e ->
   def g = new GraphErrors("${name}_s${s}_e${e}")
-  g.setTitle(ytitle+" vs. file index -- sector $s, epoch $e")
+  if(useFT) g.setTitle(ytitle+" vs. file index -- epoch $e")
+  else      g.setTitle(ytitle+" vs. file index -- Sector $s, epoch $e")
   g.setTitleY(ytitle)
   g.setTitleX("file index")
   return splitGraph(g) // returns list of plots ['good','bad']
@@ -184,13 +187,14 @@ def insertEpochPlot = { map,name,plots ->
   map.put(name+"_good",plots[0])
   map.put(name+"_bad",plots[1])
 }
+def electronT = useFT ? "Forward Tagger Electron" : "Trigger Electron"
 sectors.each { s ->
   sectorIt = sec(s)
   ratioTree[sectorIt].each { epochIt,ratioList ->
     insertEpochPlot(epochPlotTree[sectorIt][epochIt],
-      "grA",defineEpochPlot("grA_epoch","Electron Trigger N/F",sectorIt,epochIt))
+      "grA",defineEpochPlot("grA_epoch","${electronT} N/F",sectorIt,epochIt))
     insertEpochPlot(epochPlotTree[sectorIt][epochIt],
-      "grN",defineEpochPlot("grN_epoch","Number electron trigs N",sectorIt,epochIt))
+      "grN",defineEpochPlot("grN_epoch","Number ${electronT}s N",sectorIt,epochIt))
     insertEpochPlot(epochPlotTree[sectorIt][epochIt],
       "grF",defineEpochPlot("grF_epoch","Faraday cup charge F [nC]",sectorIt,epochIt))
     insertEpochPlot(epochPlotTree[sectorIt][epochIt],
@@ -205,15 +209,16 @@ def outHipoEpochs = new TDirectory()
 def outHipoA = new TDirectory()
 def outHipoN = new TDirectory()
 def outHipoF = new TDirectory()
+def outHipoT = new TDirectory()
 def outHipoSigmaN = new TDirectory()
 def outHipoSigmaF = new TDirectory()
 def outHipoRhoNF = new TDirectory()
 
 // define good and bad file lists
 def qaTree = [:] // [runnum][filenum][sector] -> "good" or "bad"
-def goodFile = new File("outdat.${dataset}/goodFiles.dat")
+def goodFile = new File("outdat.${dataset}/goodFiles"+(useFT?"FT":"")+".dat")
 def goodFileWriter = goodFile.newWriter(false)
-def badFile = new File("outdat.${dataset}/badFiles.dat")
+def badFile = new File("outdat.${dataset}/badFiles"+(useFT?"FT":"")+".dat")
 def badFileWriter = badFile.newWriter(false)
 
 
@@ -221,26 +226,39 @@ def badFileWriter = badFile.newWriter(false)
 // define timeline graphs
 def defineTimeline = { title,ytitle,name ->
   sectors.collect { s ->
-    def g = new GraphErrors("${name}_sector_"+sec(s))
-    g.setTitle("${title} vs. run number")
-    g.setTitleY(ytitle)
-    g.setTitleX("run number")
-    return g
-  }
+    if( !useFT || (useFT && s==0) ) {
+      def gN = useFT ? "${name}_FT" : "${name}_sector_"+sec(s)
+      def g = new GraphErrors(gN)
+      g.setTitle("${title} vs. run number")
+      g.setTitleY(ytitle)
+      g.setTitleX("run number")
+      return g
+    }
+  }.findAll()
 }
-def TLqa = defineTimeline("Electron Trigger QA Pass Fraction","QA Pass Fraction","QA")
-def TLA = defineTimeline("Number of Electron Triggers N / Faraday Cup Charge F","N/F","A")
-def TLN = defineTimeline("Number of Electron Triggers N","N","N")
+def TLqa = defineTimeline("${electronT} QA Pass Fraction","QA Pass Fraction","QA")
+def TLA = defineTimeline("Number of ${electronT}s N / Faraday Cup Charge F","N/F","A")
+def TLN = defineTimeline("Number of ${electronT}s N","N","N")
 def TLF = defineTimeline("Faraday Cup Charge F","F","F")
-def TLsigmaN = defineTimeline("Electron Yield sigmaN / aveN","sigmaN/aveN","sigmaN")
+def TLT = defineTimeline("Live Time","Live Time","LT")
+def TLsigmaN = defineTimeline("${electronT} Yield sigmaN / aveN","sigmaN/aveN","sigmaN")
 def TLsigmaF = defineTimeline("Faraday Cup Charge sigmaF / aveF","sigmaF/aveF","sigmaF")
 def TLrhoNF = defineTimeline("Correlation Coefficient rho_{NF}","rho_{NF}","rhoNF")
-def TLqaEpochs = new GraphErrors("epoch_sectors")
-TLqaEpochs.setTitle("choose a sector")
-TLqaEpochs.setTitleX("sector")
-sectors.each{ TLqaEpochs.addPoint(sec(it),1.0,0,0) }
 
-    
+def TLqaEpochs
+if(useFT) {
+  TLqaEpochs = new GraphErrors("epoch_FT")
+  TLqaEpochs.setTitle("click the point to load graphs")
+  TLqaEpochs.addPoint(1.0,1.0,0,0)
+}
+else {
+  TLqaEpochs = new GraphErrors("epoch_sectors")
+  TLqaEpochs.setTitle("choose a sector")
+  TLqaEpochs.setTitleX("sector")
+  sectors.each{ TLqaEpochs.addPoint(sec(it),1.0,0,0) }
+}
+
+
 // other subroutines
 def lineMedian, lineCutLo, lineCutHi
 def elineMedian, elineCutLo, elineCutHi
@@ -331,7 +349,7 @@ def graph2list = { graph ->
 // loop over runs, apply the QA cuts, and fill 'good' and 'bad' graphs
 def muN, muF
 def varN, varF 
-def totN, totF, totA
+def totN, totF, totA, totU, totT
 def reluncN, reluncF
 def ratio
 def valN,valF,valA
@@ -343,127 +361,138 @@ inList.each { obj ->
     epoch = getEpoch(runnum,sector)
     if(!qaTree.containsKey(runnum)) qaTree[runnum] = [:]
 
-    // get all the graphs and convert to value lists
-    grA = inTdir.getObject(obj)
-    grN = inTdir.getObject(obj.replaceAll("grA","grN"))
-    grF = inTdir.getObject(obj.replaceAll("grA","grF"))
-    grT = inTdir.getObject(obj.replaceAll("grA","grT"))
-    listA = graph2list(grA)
-    listN = graph2list(grN)
-    listF = graph2list(grF)
-    listT = graph2list(grT)
-    listOne = []
-    listA.size().times{listOne<<1}
+    // if using the FT, only loop over sector 1 (no sectors-dependence for FT)
+    if( !useFT || (useFT && sector==1)) {
 
-    // decide whether to enable livetime weighting
-    listWgt = listOne // disable
-    //listWgt = listT // enable
+      // get all the graphs and convert to value lists
+      grA = inTdir.getObject(obj)
+      grN = inTdir.getObject(obj.replaceAll("grA","grN"))
+      grF = inTdir.getObject(obj.replaceAll("grA","grF"))
+      grT = inTdir.getObject(obj.replaceAll("grA","grT"))
+      listA = graph2list(grA)
+      listN = graph2list(grN)
+      listF = graph2list(grF)
+      listT = graph2list(grT)
+      listOne = []
+      listA.size().times{listOne<<1}
 
-    // get total, mean, and variance of N and F
-    totN = listN.sum()
-    totF = listF.sum()
-    totA = totN/totF
-    muN = listMean(listN,listWgt)
-    muF = listMean(listF,listWgt)
-    varN = listVar(listN,listWgt,muN)
-    varF = listVar(listF,listWgt,muF)
+      // decide whether to enable livetime weighting
+      listWgt = listOne // disable
+      //listWgt = listT // enable
 
-    // calculate Pearson correlation coefficient
-    covarNF = listCovar(listN,listF,listWgt,muN,muF)
-    corrNF = covarNF / (varN*varF)
+      // get totals
+      totN = listN.sum()
+      totF = listF.sum()
+      totA = totN/totF
+      totU = 0
+      listF.size().times{ totU += listF[it] / listT[it] }
+      totT = totF / totU
 
-    // calculate uncertainties of N and F relative to the mean
-    reluncN = Math.sqrt(varN) / muN
-    reluncF = Math.sqrt(varF) / muF
+      // get mean, and variance of N and F
+      muN = listMean(listN,listWgt)
+      muF = listMean(listF,listWgt)
+      varN = listVar(listN,listWgt,muN)
+      varF = listVar(listF,listWgt,muF)
 
-    // assign Poisson statistics error bars to graphs of N, F, and N/F
-    // - note that N/F error uses Pearson correlation determined from the full run's 
-    //   covariance(N,F)
-    grA.getDataSize(0).times { i ->
-      valN = grN.getDataY(i)
-      valF = grF.getDataY(i)
-      grN.setError(i,0,Math.sqrt(valN))
-      grF.setError(i,0,Math.sqrt(valF))
-      grA.setError(i,0,
-        (valN/valF) * Math.sqrt(
-          1/valN + 1/valF - 2 * corrNF * Math.sqrt(valN*valF) / (valN*valF)
+      // calculate Pearson correlation coefficient
+      covarNF = listCovar(listN,listF,listWgt,muN,muF)
+      corrNF = covarNF / (varN*varF)
+
+      // calculate uncertainties of N and F relative to the mean
+      reluncN = Math.sqrt(varN) / muN
+      reluncF = Math.sqrt(varF) / muF
+
+      // assign Poisson statistics error bars to graphs of N, F, and N/F
+      // - note that N/F error uses Pearson correlation determined from the full run's 
+      //   covariance(N,F)
+      grA.getDataSize(0).times { i ->
+        valN = grN.getDataY(i)
+        valF = grF.getDataY(i)
+        grN.setError(i,0,Math.sqrt(valN))
+        grF.setError(i,0,Math.sqrt(valF))
+        grA.setError(i,0,
+          (valN/valF) * Math.sqrt(
+            1/valN + 1/valF - 2 * corrNF * Math.sqrt(valN*valF) / (valN*valF)
+          )
         )
-      )
-    }
-        
-
-    // split graphs into good and bad
-    (grA_good,grA_bad) = splitGraph(grA)
-    (grN_good,grN_bad) = splitGraph(grN)
-    (grF_good,grF_bad) = splitGraph(grF)
-    (grT_good,grT_bad) = splitGraph(grT)
-
-    // loop through points in grA and fill good and bad graphs
-    grA.getDataSize(0).times { i -> 
-
-      filenum = grA.getDataX(i).toInteger()
-      if(!qaTree[runnum].containsKey(filenum)) qaTree[runnum][filenum] = [:]
-
-      ratio = grA.getDataY(i)
-
-      if(ratio > cutTree[sector][epoch]['cutLo'] &&
-         ratio < cutTree[sector][epoch]['cutHi']) {
-        copyPoint(grA,grA_good,i)
-        copyPoint(grN,grN_good,i)
-        copyPoint(grF,grF_good,i)
-        copyPoint(grT,grT_good,i)
-        addEpochPlotPoint(epochPlotTree[sector][epoch]['grA_good'],grA,i,runnum)
-        addEpochPlotPoint(epochPlotTree[sector][epoch]['grN_good'],grN,i,runnum)
-        addEpochPlotPoint(epochPlotTree[sector][epoch]['grF_good'],grF,i,runnum)
-        addEpochPlotPoint(epochPlotTree[sector][epoch]['grT_good'],grT,i,runnum)
-        qaTree[runnum][filenum][sector] = "good"
-      } else {
-        copyPoint(grA,grA_bad,i)
-        copyPoint(grN,grN_bad,i)
-        copyPoint(grF,grF_bad,i)
-        copyPoint(grT,grT_bad,i)
-        addEpochPlotPoint(epochPlotTree[sector][epoch]['grA_bad'],grA,i,runnum)
-        addEpochPlotPoint(epochPlotTree[sector][epoch]['grN_bad'],grN,i,runnum)
-        addEpochPlotPoint(epochPlotTree[sector][epoch]['grF_bad'],grF,i,runnum)
-        addEpochPlotPoint(epochPlotTree[sector][epoch]['grT_bad'],grT,i,runnum)
-        qaTree[runnum][filenum][sector] = "bad"
       }
+          
+
+      // split graphs into good and bad
+      (grA_good,grA_bad) = splitGraph(grA)
+      (grN_good,grN_bad) = splitGraph(grN)
+      (grF_good,grF_bad) = splitGraph(grF)
+      (grT_good,grT_bad) = splitGraph(grT)
+
+      // loop through points in grA and fill good and bad graphs
+      grA.getDataSize(0).times { i -> 
+
+        filenum = grA.getDataX(i).toInteger()
+        if(!qaTree[runnum].containsKey(filenum)) qaTree[runnum][filenum] = [:]
+
+        ratio = grA.getDataY(i)
+
+        if(ratio > cutTree[sector][epoch]['cutLo'] &&
+           ratio < cutTree[sector][epoch]['cutHi']) {
+          copyPoint(grA,grA_good,i)
+          copyPoint(grN,grN_good,i)
+          copyPoint(grF,grF_good,i)
+          copyPoint(grT,grT_good,i)
+          addEpochPlotPoint(epochPlotTree[sector][epoch]['grA_good'],grA,i,runnum)
+          addEpochPlotPoint(epochPlotTree[sector][epoch]['grN_good'],grN,i,runnum)
+          addEpochPlotPoint(epochPlotTree[sector][epoch]['grF_good'],grF,i,runnum)
+          addEpochPlotPoint(epochPlotTree[sector][epoch]['grT_good'],grT,i,runnum)
+          qaTree[runnum][filenum][sector] = "good"
+        } else {
+          copyPoint(grA,grA_bad,i)
+          copyPoint(grN,grN_bad,i)
+          copyPoint(grF,grF_bad,i)
+          copyPoint(grT,grT_bad,i)
+          addEpochPlotPoint(epochPlotTree[sector][epoch]['grA_bad'],grA,i,runnum)
+          addEpochPlotPoint(epochPlotTree[sector][epoch]['grN_bad'],grN,i,runnum)
+          addEpochPlotPoint(epochPlotTree[sector][epoch]['grF_bad'],grF,i,runnum)
+          addEpochPlotPoint(epochPlotTree[sector][epoch]['grT_bad'],grT,i,runnum)
+          qaTree[runnum][filenum][sector] = "bad"
+        }
+      }
+
+      // fill histograms
+      histA_good = buildHisto(grA_good,250,minA,maxA)
+      histA_bad = buildHisto(grA_bad,250,minA,maxA)
+
+      // define lines
+      lineMedian = buildLine(grA,"median",cutTree[sector][epoch]['mq'])
+      lineCutLo = buildLine(grA,"cutLo",cutTree[sector][epoch]['cutLo'])
+      lineCutHi = buildLine(grA,"cutHi",cutTree[sector][epoch]['cutHi'])
+
+      // write graphs to hipo file
+      addGraphsToHipo(outHipoQA)
+      addGraphsToHipo(outHipoA)
+      addGraphsToHipo(outHipoN)
+      addGraphsToHipo(outHipoF)
+      addGraphsToHipo(outHipoT)
+      addGraphsToHipo(outHipoSigmaN)
+      addGraphsToHipo(outHipoSigmaF)
+      addGraphsToHipo(outHipoRhoNF)
+
+      // fill timeline points
+      nGood = grA_good.getDataSize(0)
+      nBad = grA_bad.getDataSize(0)
+      nGoodTotal += nGood
+      nBadTotal += nBad
+      TLqa[sector-1].addPoint(
+        runnum,
+        nGood+nBad>0 ? nGood/(nGood+nBad) : 0,
+        0,0
+      )
+      TLA[sector-1].addPoint(runnum,totA,0,0)
+      TLN[sector-1].addPoint(runnum,totN,0,0)
+      TLF[sector-1].addPoint(runnum,totF,0,0)
+      TLT[sector-1].addPoint(runnum,totT,0,0)
+      TLsigmaN[sector-1].addPoint(runnum,reluncN,0,0)
+      TLsigmaF[sector-1].addPoint(runnum,reluncF,0,0)
+      TLrhoNF[sector-1].addPoint(runnum,corrNF,0,0)
     }
-
-    // fill histograms
-    histA_good = buildHisto(grA_good,250,minA,maxA)
-    histA_bad = buildHisto(grA_bad,250,minA,maxA)
-
-    // define lines
-    lineMedian = buildLine(grA,"median",cutTree[sector][epoch]['mq'])
-    lineCutLo = buildLine(grA,"cutLo",cutTree[sector][epoch]['cutLo'])
-    lineCutHi = buildLine(grA,"cutHi",cutTree[sector][epoch]['cutHi'])
-
-    // write graphs to hipo file
-    addGraphsToHipo(outHipoQA)
-    addGraphsToHipo(outHipoA)
-    addGraphsToHipo(outHipoN)
-    addGraphsToHipo(outHipoF)
-    addGraphsToHipo(outHipoSigmaN)
-    addGraphsToHipo(outHipoSigmaF)
-    addGraphsToHipo(outHipoRhoNF)
-
-    // fill timeline points
-    nGood = grA_good.getDataSize(0)
-    nBad = grA_bad.getDataSize(0)
-    nGoodTotal += nGood
-    nBadTotal += nBad
-    TLqa[sector-1].addPoint(
-      runnum,
-      nGood+nBad>0 ? nGood/(nGood+nBad) : 0,
-      0,0
-    )
-    TLA[sector-1].addPoint(runnum,totA,0,0)
-    TLN[sector-1].addPoint(runnum,totN,0,0)
-    TLF[sector-1].addPoint(runnum,totF,0,0)
-    TLsigmaN[sector-1].addPoint(runnum,reluncN,0,0)
-    TLsigmaF[sector-1].addPoint(runnum,reluncF,0,0)
-    TLrhoNF[sector-1].addPoint(runnum,corrNF,0,0)
   }
 }
 
@@ -471,26 +500,30 @@ inList.each { obj ->
 // write epoch plots to hipo file
 sectors.each { s ->
   sectorIt = sec(s)
-  outHipoEpochs.mkdir("/${sectorIt}")
-  outHipoEpochs.cd("/${sectorIt}")
-  epochPlotTree[sectorIt].each { epochIt,map ->
 
-    elineMedian = buildLine(map['grA_good'],"median",cutTree[sectorIt][epochIt]['mq'])
-    elineCutLo = buildLine(map['grA_good'],"cutLo",cutTree[sectorIt][epochIt]['cutLo'])
-    elineCutHi = buildLine(map['grA_good'],"cutHi",cutTree[sectorIt][epochIt]['cutHi'])
+  if( !useFT || (useFT && sectorIt==1)) {
+    outHipoEpochs.mkdir("/${sectorIt}")
+    outHipoEpochs.cd("/${sectorIt}")
+    epochPlotTree[sectorIt].each { epochIt,map ->
 
-    histA_good = buildHisto(map['grA_good'],500,minA,maxA)
-    histA_bad = buildHisto(map['grA_bad'],500,minA,maxA)
+      elineMedian = buildLine(map['grA_good'],"median",cutTree[sectorIt][epochIt]['mq'])
+      elineCutLo = buildLine(map['grA_good'],"cutLo",cutTree[sectorIt][epochIt]['cutLo'])
+      elineCutHi = buildLine(map['grA_good'],"cutHi",cutTree[sectorIt][epochIt]['cutHi'])
 
-    writeHipo(outHipoEpochs,map.values())
-    writeHipo(outHipoEpochs,[histA_good,histA_bad])
-    writeHipo(outHipoEpochs,[elineMedian,elineCutLo,elineCutHi])
+      histA_good = buildHisto(map['grA_good'],500,minA,maxA)
+      histA_bad = buildHisto(map['grA_bad'],500,minA,maxA)
+
+      writeHipo(outHipoEpochs,map.values())
+      writeHipo(outHipoEpochs,[histA_good,histA_bad])
+      writeHipo(outHipoEpochs,[elineMedian,elineCutLo,elineCutHi])
+    }
   }
 }
 
 
 
 // write timelines to output hipo files
+def electronN
 def writeTimeline = { tdir,timeline,title ->
   tdir.mkdir("/timelines")
   tdir.cd("/timelines")
@@ -500,22 +533,26 @@ def writeTimeline = { tdir,timeline,title ->
   if(outHipoFile.exists()) outHipoFile.delete()
   tdir.writeFile(outHipoName)
 }
-writeTimeline(outHipoQA,TLqa,"electron_yield_QA")
-writeTimeline(outHipoA,TLA,"electron_yield_normalized_values")
-writeTimeline(outHipoN,TLN,"electron_yield_values")
-writeTimeline(outHipoF,TLF,"faraday_cup_values")
-writeTimeline(outHipoSigmaN,TLsigmaN,"electron_yield_stddev")
-writeTimeline(outHipoSigmaF,TLsigmaF,"faraday_cup_stddev")
-writeTimeline(outHipoRhoNF,TLrhoNF,"faraday_cup_vs_electron_yield_correlation")
+
+electronN = "electron_" + (useFT ? "FT" : "trigger")
+writeTimeline(outHipoQA,TLqa,"${electronN}_yield_QA")
+writeTimeline(outHipoA,TLA,"${electronN}_yield_normalized_values")
+writeTimeline(outHipoN,TLN,"${electronN}_yield_values")
+writeTimeline(outHipoSigmaN,TLsigmaN,"${electronN}_yield_stddev")
+if(!useFT) {
+  writeTimeline(outHipoF,TLF,"faraday_cup_values")
+  writeTimeline(outHipoT,TLT,"live_time")
+  writeTimeline(outHipoSigmaF,TLsigmaF,"faraday_cup_stddev")
+  writeTimeline(outHipoRhoNF,TLrhoNF,"faraday_cup_vs_electron_yield_correlation")
+}
 
 outHipoEpochs.mkdir("/timelines")
 outHipoEpochs.cd("/timelines")
 outHipoEpochs.addDataSet(TLqaEpochs)
-outHipoName = "outmon/electron_yield_QA_epoch_view.hipo"
+outHipoName = "outmon/${electronN}_yield_QA_epoch_view.hipo"
 File outHipoEpochsFile = new File(outHipoName)
 if(outHipoEpochsFile.exists()) outHipoEpochsFile.delete()
 outHipoEpochs.writeFile(outHipoName)
-
 
 
 // sort qaTree and output to json file
@@ -524,7 +561,7 @@ qaTree.each { qaRun, qaRunTree ->
   qaRunTree.sort()
 }
 qaTree.sort()
-new File("outdat.${dataset}/qaTree.json").write(JsonOutput.toJson(qaTree))
+new File("outdat.${dataset}/qaTree"+(useFT?"FT":"")+".json").write(JsonOutput.toJson(qaTree))
 
 // write goodFile and badFile: lists of good and bad files
 def nbad

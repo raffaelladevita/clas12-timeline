@@ -148,6 +148,7 @@ def buildHist(histName, histTitle, propList, runn, nb, lb, ub, nb2=0, lb2=0, ub2
 def event
 def pidList = []
 def particleBank
+def FTparticleBank
 def configBank
 def eventBank
 def calBank
@@ -183,26 +184,27 @@ def vecQ = new LorentzVector()
 def vecW = new LorentzVector()
 
 
-// subroutine to increment the number of trigger electrons
-def countTriggerElectrons = { eleRows ->
+// subroutine to increment the number of counted electrons
+def countTriggerElectrons = { eleRows,eleParts ->
 
-  // cut on chi2pid
-  // - for trigger electrons (status<0), chi2pid is defined
-  // - for forward tagger electrons (status might not be <0, chi2pid==0.0
-  def eleIndList = eleRows.findAll{
-    Math.abs(particleBank.getFloat('chi2pid',it)) < 3
-  }
+  // loop over electrons from REC::Particle
+  if(eleRows.size()>0) {
+    eleRows.eachWithIndex { row,ind ->
 
-  // loop over electrons
-  if(eleIndList.size()>0) {
-    eleIndList.each { ind ->
+      def status = particleBank.getShort('status',row)
+      def chi2pid = particleBank.getFloat('chi2pid',row)
 
-      def status = particleBank.getShort('status',ind)
-
-      // trigger electrons
-      if(status<0) {
+      // trigger electrons (FD or CD)
+      // - must have status<0 and FD or CD bit(s) set
+      // - must have |chi2pid|<3
+      // - must appear in ECAL, to obtain sector
+      if( status<0 &&
+          ( Math.abs(status/1000).toInteger() & 0x2 || 
+            Math.abs(status/1000).toInteger() & 0x4 ) &&
+          Math.abs(chi2pid)<3
+      ) {
         def eleSec = (0..calBank.rows()).collect{
-          ( calBank.getShort('pindex',it).toInteger() == ind &&
+          ( calBank.getShort('pindex',it).toInteger() == row &&
             calBank.getByte('detector',it).toInteger() == detIdEC ) ?
             calBank.getByte('sector',it).toInteger() : null
         }.find()
@@ -214,29 +216,45 @@ def countTriggerElectrons = { eleRows ->
         }
       }
 
-      // forward tagger electrons
-      if( Math.abs(status/1000).toInteger() & 1 ) {
-        nElecFT++
+      // FT trigger electrons
+      // - REC::Particle:status has FT bit
+      // - must also appear in RECFT::Particle with status<0 and FT bit
+      // - must have E > 300 MeV
+      if( Math.abs(status/1000).toInteger() & 0x1 ) {
+        if( FTparticleBank.rows() > row ) {
+          def FTpid = FTparticleBank.getInt('pid',row)
+          def FTstatus = FTparticleBank.getShort('status',row)
+          if( FTpid==11 && 
+              FTstatus<0 && 
+              Math.abs(status/1000).toInteger() & 0x1 &&
+              eleParts[ind].e() > 0.3
+          ) {
+            nElecFT++
+          }
+        }
+
       }
     }
   }
+
 }
 
 
 // subroutine which returns a list of Particle objects of a certain PID
 def findParticles = { pid ->
 
-  // get list of bank rows corresponding to this PID
+  // get list of bank rows and Particle objects corresponding to this PID
   def rowList = pidList.findIndexValues{ it == pid }.collect{it as Integer}
+  def particleList = rowList.collect { row ->
+    new Particle(pid,*['px','py','pz'].collect{particleBank.getFloat(it,row)})
+  }
   //println "pid=$pid  found in rows $rowList"
 
   // if looking for electrons, also count the number of trigger electrons
-  if(pid==11) countTriggerElectrons(rowList)
+  if(pid==11) countTriggerElectrons(rowList,particleList)
 
   // return list of Particle objects
-  return rowList.collect { row ->
-    new Particle(pid,*['px','py','pz'].collect{particleBank.getFloat(it,row)})
-  }
+  return particleList
 }
 
 
@@ -390,6 +408,7 @@ inHipoList.each { inHipoFile ->
 
       // get banks
       particleBank = event.getBank("REC::Particle")
+      FTparticleBank = event.getBank("RECFT::Particle")
       eventBank = event.getBank("REC::Event")
       configBank = event.getBank("RUN::config")
       calBank = event.getBank("REC::Calorimeter")

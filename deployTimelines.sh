@@ -9,15 +9,12 @@ fi
 
 subdir=$1
 
-wwwdir="/group/clas/www/clas12mon/html/hipo/${USER}"
-mondir="outmon"
+wwwdir="../www/${USER}" # symlink www
 
-pushd $mondir
-for file in `ls *.hipo | grep -v "monitor"`; do
-  mkdir -p ${wwwdir}/${subdir}
-  cp -v $file ${wwwdir}/${subdir}/${file}
+mkdir -p ${wwwdir}/${subdir}
+for file in `ls outmon/*.hipo | grep -v "monitor"`; do
+  cp -v $file ${wwwdir}/${subdir}/
 done
-popd
 
 pushd $wwwdir
 extradir=${subdir}_extra

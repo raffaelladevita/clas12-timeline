@@ -4,8 +4,8 @@
 releaseName="inbending_1"
 localName="pass1"
 
-wwwReleaseDir="/group/clas/www/clas12mon/html/hipo/rga/pass1/qa"
-wwwLocalDir="/group/clas/www/clas12mon/html/hipo/${USER}"
+wwwReleaseDir="../www/rga/pass1/qa"
+wwwLocalDir="../www/${USER}"
 
 mkdir -p ${wwwReleaseDir}/${releaseName}
 mkdir -p ${wwwReleaseDir}/${releaseName}_extra

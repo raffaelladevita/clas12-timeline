@@ -243,7 +243,7 @@ def defineTimeline = { title,ytitle,name ->
 def TLqa = defineTimeline("${electronT} QA Pass Fraction","QA Pass Fraction","QA")
 def TLA = defineTimeline("Number of ${electronT}s N / Faraday Cup Charge F","N/F","A")
 def TLN = defineTimeline("Number of ${electronT}s N","N","N")
-def TLF = defineTimeline("Faraday Cup Charge F","F","F")
+def TLF = defineTimeline("Accumulated Faraday Cup Charge [mC]","Charge","F")
 def TLT = defineTimeline("Live Time","Live Time","LT")
 def TLsigmaN = defineTimeline("${electronT} Yield sigmaN / aveN","sigmaN/aveN","sigmaN")
 def TLsigmaF = defineTimeline("Faraday Cup Charge sigmaF / aveF","sigmaF/aveF","sigmaF")
@@ -354,6 +354,7 @@ def graph2list = { graph ->
 def muN, muF
 def varN, varF 
 def totN, totF, totA, totU, totT
+def totFacc = sectors.collect{0}
 def reluncN, reluncF
 def ratio
 def valN,valF,valA
@@ -391,6 +392,10 @@ inList.each { obj ->
       totU = 0
       listF.size().times{ totU += listF[it] / listT[it] }
       totT = totF / totU
+
+      // accumulated charge (units converted nC -> mC)
+      // - should be same for all sectors
+      totFacc[sector-1] += totF/1e6 // (same for all sectors)
 
       // get mean, and variance of N and F
       muN = listMean(listN,listWgt)
@@ -491,7 +496,7 @@ inList.each { obj ->
       )
       TLA[sector-1].addPoint(runnum,totA,0,0)
       TLN[sector-1].addPoint(runnum,totN,0,0)
-      TLF[sector-1].addPoint(runnum,totF,0,0)
+      TLF[sector-1].addPoint(runnum,totFacc[sector-1],0,0)
       TLT[sector-1].addPoint(runnum,totT,0,0)
       TLsigmaN[sector-1].addPoint(runnum,reluncN,0,0)
       TLsigmaF[sector-1].addPoint(runnum,reluncF,0,0)
@@ -528,10 +533,17 @@ sectors.each { s ->
 
 // write timelines to output hipo files
 def electronN
-def writeTimeline = { tdir,timeline,title ->
+def writeTimeline (tdir,timeline,title,once=false) {
   tdir.mkdir("/timelines")
   tdir.cd("/timelines")
-  timeline.each { tdir.addDataSet(it) }
+  if(once) {
+    def name = timeline[0].getName().replaceAll(/_sector.*$/,"")
+    timeline[0].setName(name)
+    tdir.addDataSet(timeline[0])
+  }
+  else {
+    timeline.each { tdir.addDataSet(it) }
+  }
   def outHipoName = "outmon/${title}.hipo"
   File outHipoFile = new File(outHipoName)
   if(outHipoFile.exists()) outHipoFile.delete()
@@ -544,11 +556,11 @@ writeTimeline(outHipoA,TLA,"${electronN}_yield_normalized_values")
 writeTimeline(outHipoN,TLN,"${electronN}_yield_values")
 writeTimeline(outHipoSigmaN,TLsigmaN,"${electronN}_yield_stddev")
 if(!useFT) {
-  writeTimeline(outHipoF,TLF,"faraday_cup_values")
-  writeTimeline(outHipoT,TLT,"live_time")
-  writeTimeline(outHipoSigmaF,TLsigmaF,"faraday_cup_stddev")
+  writeTimeline(outHipoF,TLF,"faraday_cup_charge",true)
+  writeTimeline(outHipoT,TLT,"live_time",true)
+  writeTimeline(outHipoSigmaF,TLsigmaF,"faraday_cup_stddev",true)
 }
-//writeTimeline(outHipoRhoNF,TLrhoNF,"faraday_cup_vs_${electronN}_yield_correlation")
+//writeTimeline(outHipoRhoNF,TLrhoNF,"faraday_cup_vs_${electronN}_yield_correlation",true)
 
 outHipoEpochs.mkdir("/timelines")
 outHipoEpochs.cd("/timelines")

@@ -1,4 +1,6 @@
 .*.sw*
+.sw*
+*.json
 *.hipo
 *.root
 *.png

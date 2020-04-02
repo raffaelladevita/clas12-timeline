@@ -12,12 +12,16 @@ subdir=$1
 wwwdir="../www/${USER}" # symlink www
 
 mkdir -p ${wwwdir}/${subdir}
+rm -r ${wwwdir}/${subdir}
+mkdir -p ${wwwdir}/${subdir}
 for file in `ls outmon/*.hipo | grep -v "monitor"`; do
   cp -v $file ${wwwdir}/${subdir}/
 done
 
 pushd $wwwdir
 extradir=${subdir}_extra
+mkdir -p $extradir
+rm -r $extradir
 mkdir -p $extradir
 function mvextra { mv -v ${subdir}/$1 ${extradir}/; }
 mvextra electron_FT_yield_QA_epoch_view.hipo

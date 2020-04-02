@@ -28,7 +28,7 @@ Data monitoring tools for CLAS run QA
 * The procedure is outlined by [docDiagram.pdf](docDiagram.pdf); this section details
   the action of each script, in a suggested order of execution
 
-### Input files: 
+### Input files
 * DST or skim files
   * DST files are assumed to be organized into directories, with one directory
     corresponding to one run
@@ -95,7 +95,7 @@ identified with a data set name `$dataset`
   * create symlinks (discouraged, may be buggy)
 
 
-### Plotting Sripts
+### Plotting Scripts
 These scripts primary purpose is to make plots and store them in HIPO files; these HIPO
 files can then be fed to a QA script
 

@@ -65,21 +65,10 @@ else if(inHipoType=="dst") {
 println "runnum=$runnum"
 
 
-// if reading a DST file, load Faraday cup json file, and prepare output table
-def fcFileName
-def slurp
-def fcFile
-def fcMapRun
-if(inHipoType=="dst") {
-  fcFileName = "fcdata.json"
-  slurp = new JsonSlurper()
-  fcFile = new File(fcFileName)
-  fcMapRun = slurp.parse(fcFile).groupBy{ it.run }.get(runnum)
-}
+// prepare output table for electron count and FC charge
 "mkdir -p outdat".execute()
 def datfile = new File("outdat/data_table_${runnum}.dat")
 def datfileWriter = datfile.newWriter(false)
-
 
 
 // property lists
@@ -152,6 +141,7 @@ def FTparticleBank
 def configBank
 def eventBank
 def calBank
+def scalerBank
 def pipList = []
 def pimList = []
 def eleList = []
@@ -173,6 +163,8 @@ def nbins
 def sectors = 0..<6
 def nElec = sectors.collect{0}
 def nElecFT = 0
+def FClist = []
+def UFClist = []
 def detIdEC = DetectorType.ECAL.getDetectorId()
 
 // lorentz vectors
@@ -310,6 +302,7 @@ outHipo.mkdir("/$runnum")
 outHipo.cd("/$runnum")
 def histN,histT
 def writeHistos = {
+
   // get segment number
   if(inHipoType=="skim") {
     // segment number is average event number; include standard deviation
@@ -340,52 +333,29 @@ def writeHistos = {
   })
   //println "write histograms:"; T.printTree(histTree,{T.leaf.getName()})
 
-  // write number of electrons / FC, if reading dst file
-  if(inHipoType=="dst") {
-    // get faraday cup data
-    def fcMapRunFiles
-    def fcVals
-    def ufcVals
-    def fcStart, fcStop
-    def ufcStart, ufcStop
-    if(fcMapRun) fcMapRunFiles = fcMapRun.groupBy{ it.fnum }.get(segmentNum)
-    if(fcMapRunFiles) {
-      // "gated" and "ungated" were switched in hipo files...
-      fcVals=fcMapRunFiles.find()."data"."fcup" // actually gated
-      ufcVals=fcMapRunFiles.find()."data"."fcupgated" // actually ungated
-    }
-    if(fcVals && ufcVals) {
-      fcStart = fcVals."min"
-      fcStop = fcVals."max"
-      ufcStart = ufcVals."min"
-      ufcStop = ufcVals."max"
-    }
-    else {
-      System.err << 
-        "WARNING: faraday cup values not found for" <<
-        " run=${runnum} file=${segmentNum}\n"
-      fcStart = 0
-      fcStop = 0
-      ufcStart = 0
-      ufcStop = 0
-    }
-    if(fcStart>fcStop || ufcStart>ufcStop) {
-      System.err <<
-        "WARNING: faraday cup start > stop for" <<
-        " run=${runnum} file=${segmentNum}\n"
-    }
 
-    // write to datfile
-    sectors.each{ sec ->
-      datfileWriter << [ runnum, segmentNum, sec+1 ].join(' ') << ' '
-      datfileWriter << [ nElec[sec], nElecFT ].join(' ') << ' '
-      datfileWriter << [ fcStart, fcStop, ufcStart, ufcStop ].join(' ') << '\n'
-    }
-
-    // reset number of trigger electrons counter
-    nElec = sectors.collect{0}
-    nElecFT = 0
+  // get FC charge
+  def fcStart = FClist.min()
+  def fcStop = FClist.max()
+  def ufcStart = UFClist.min()
+  def ufcStop = UFClist.max()
+  if(fcStart>fcStop || ufcStart>ufcStop) {
+    System.err << "WARNING: faraday cup start > stop for" <<
+      " run=${runnum} file=${segmentNum}\n"
   }
+
+  // write number of electrons and FC charge to datfile
+  sectors.each{ sec ->
+    datfileWriter << [ runnum, segmentNum, sec+1 ].join(' ') << ' '
+    datfileWriter << [ nElec[sec], nElecFT ].join(' ') << ' '
+    datfileWriter << [ fcStart, fcStop, ufcStart, ufcStop ].join(' ') << '\n'
+  }
+
+  // reset number of trigger electrons counter and FC lists
+  nElec = sectors.collect{0}
+  nElecFT = 0
+  FClist = []
+  UFClist = []
 }
 
 
@@ -395,36 +365,41 @@ def writeHistos = {
 //----------------------
 evCount = 0
 inHipoList.each { inHipoFile ->
+
+  // open skim/DST file
   reader = new HipoDataSource()
   reader.open(inHipoFile)
+
+  // if DST file, set segment number to 5-file number
+  if(inHipoType=="dst")
+    segment = inHipoFile.tokenize('.')[-2].tokenize('-')[0].toInteger()
+
+  // EVENT LOOP
   while(reader.hasEvent()) {
     //if(evCount>100000) break // limiter
     event = reader.getNextEvent()
 
     if(event.hasBank("REC::Particle") &&
        event.hasBank("REC::Event") &&
-       event.hasBank("RUN::config") &&
-       event.hasBank("REC::Calorimeter") ){
+       event.hasBank("RUN::config") ) {
 
-      // get banks
+      // get required banks
       particleBank = event.getBank("REC::Particle")
-      FTparticleBank = event.getBank("RECFT::Particle")
       eventBank = event.getBank("REC::Event")
       configBank = event.getBank("RUN::config")
+      // get additional banks
+      FTparticleBank = event.getBank("RECFT::Particle")
       calBank = event.getBank("REC::Calorimeter")
+      scalerBank = event.getBank("RUN::scaler")
+
 
       // get list of PIDs, with list index corresponding to bank row
       pidList = (0..<particleBank.rows()).collect{ particleBank.getInt('pid',it) }
       //println "pidList = $pidList"
 
 
-      // get segment number
-      if(inHipoType=="skim") {
-        segment = (evCount/segmentSize).toInteger()
-      }
-      else if(inHipoType=="dst") {
-        segment = inHipoFile.tokenize('.')[-2].tokenize('-')[0].toInteger()
-      }
+      // update segment number, if reading skim file
+      if(inHipoType=="skim") segment = (evCount/segmentSize).toInteger()
 
       // if segment number changed, write out filled histos 
       // and/or create new histos
@@ -471,6 +446,7 @@ inHipoList.each { inHipoFile ->
         segmentTmp = segment
       }
 
+
       // get helicity and fill helicity distribution
       helicity = eventBank.getByte('helicity',0)
       histTree.helic.dist.fill(helicity)
@@ -488,15 +464,20 @@ inHipoList.each { inHipoFile ->
           break
       }
 
+      
+      // get FC charge (note: gated and ungated bankdefs are switched!)
+      if(scalerBank.rows()>0) {
+        FClist << scalerBank.getFloat("fcup",0) // actually gated
+        UFClist << scalerBank.getFloat("fcupgated",0) // actually ungated
+      }
+
 
       // get electron list, and increment the number of trigger electrons
       eleList = findParticles(11)
 
 
-      // CUT: proceed if helicity is defined, unless we are reading a DST file, wherein
-      //      helicity is not defined
-      if(helDefined || inHipoType=="dst") {
-
+      // CUT: proceed with kinematic calculations, if helicity is defined
+      if(helDefined) {
 
         // CUT: find scattered electron: highest-E electron such that 2 < E < 11
         disElectron = eleList.findAll{ it.e()>2 && it.e()<11 }.max{it.e()}

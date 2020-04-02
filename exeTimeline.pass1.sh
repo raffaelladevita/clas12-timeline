@@ -3,8 +3,12 @@
 # setup error filtered execution function
 errlog="errors.log"
 > $errlog
+function sep { printf '%70s\n' | tr ' ' -; }
 function exe { 
-  printf '%70s\n' | tr ' ' - >> $errlog
+  sep
+  echo "EXECUTE: $*"
+  sep
+  sep >> $errlog
   echo "$* errors:" >> $errlog
   $* 2>>$errlog
 }
@@ -21,12 +25,14 @@ while read dataset; do
   exe groovy qaPlot.groovy $dataset FT
   exe groovy qaCut.groovy $dataset FT
   # general monitor
-  exe groovy monitorPlot.groovy $datset
+  exe groovy monitorPlot.groovy $dataset
+  # deploy timelines to dev www
+  exe ./deployTimelines.sh $dataset $dataset
 done < datasetList.dat
 
 
 # print errors (filtering out hipo logo contamination)
-printf '%70s\n' | tr ' ' -
+sep
 echo "TIMELINE GENERATION COMPLETE"
 grep -vE '█|═|Physics Division|^     $' $errlog
 rm $errlog

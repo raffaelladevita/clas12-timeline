@@ -6,8 +6,8 @@ import groovy.json.JsonOutput
 
 //----------------------------------------------------------------------------------
 // ARGUMENTS:
-def dataset = 'pass1'
-def useFT = false // if true, use FT electrons instead
+dataset = 'pass1'
+useFT = false // if true, use FT electrons instead
 if(args.length>=1) dataset = args[0]
 if(args.length>=2) useFT = true
 //----------------------------------------------------------------------------------
@@ -39,7 +39,7 @@ def getEpoch = { r,s ->
 
 // open hipo file
 def inTdir = new TDirectory()
-inTdir.readFile("outmon/monitorElec"+(useFT?"FT":"")+".hipo")
+inTdir.readFile("outmon.${dataset}/monitorElec"+(useFT?"FT":"")+".hipo")
 def inList = inTdir.getCompositeObjectList(inTdir)
 
 // define 'ratioTree', a tree with the following structure
@@ -570,7 +570,7 @@ def writeTimeline (tdir,timeline,title,once=false) {
   else {
     timeline.each { tdir.addDataSet(it) }
   }
-  def outHipoName = "outmon/${title}.hipo"
+  def outHipoName = "outmon.${dataset}/${title}.hipo"
   File outHipoFile = new File(outHipoName)
   if(outHipoFile.exists()) outHipoFile.delete()
   tdir.writeFile(outHipoName)
@@ -591,7 +591,7 @@ if(!useFT) {
 outHipoEpochs.mkdir("/timelines")
 outHipoEpochs.cd("/timelines")
 outHipoEpochs.addDataSet(TLqaEpochs)
-outHipoName = "outmon/${electronN}_yield_QA_epoch_view.hipo"
+outHipoName = "outmon.${dataset}/${electronN}_yield_QA_epoch_view.hipo"
 File outHipoEpochsFile = new File(outHipoName)
 if(outHipoEpochsFile.exists()) outHipoEpochsFile.delete()
 outHipoEpochs.writeFile(outHipoName)

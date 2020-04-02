@@ -168,7 +168,7 @@ def copyPoint = { g1,g2,i ->
 def splitGraph = { g ->
   def gG,gB
   gG = new GraphErrors(g.getName())
-  gB = new GraphErrors(g.getName()+":outliers")
+  gB = new GraphErrors(g.getName()+":red")
   copyTitles(g,gG)
   copyTitles(g,gB)
   gB.setMarkerColor(2)
@@ -219,7 +219,7 @@ def outHipoSigmaF = new TDirectory()
 def outHipoRhoNF = new TDirectory()
 
 // define good and bad file lists
-def qaTree = [:] // [runnum][filenum][sector] -> "good" or "bad"
+def qaTree = [:] // [runnum][filenum] -> defects enumeration
 def goodFile = new File("outdat.${dataset}/goodFiles"+(useFT?"FT":"")+".dat")
 def goodFileWriter = goodFile.newWriter(false)
 def badFile = new File("outdat.${dataset}/badFiles"+(useFT?"FT":"")+".dat")
@@ -356,7 +356,8 @@ def varN, varF
 def totN, totF, totA, totU, totT
 def totFacc = sectors.collect{0}
 def reluncN, reluncF
-def ratio
+def NF,NFerrH,NFerrL,LT
+def defectList = []
 def valN,valF,valA
 inList.each { obj ->
   if(obj.contains("/grA_")) {
@@ -437,12 +438,43 @@ inList.each { obj ->
       grA.getDataSize(0).times { i -> 
 
         filenum = grA.getDataX(i).toInteger()
-        if(!qaTree[runnum].containsKey(filenum)) qaTree[runnum][filenum] = [:]
+        if(!qaTree[runnum].containsKey(filenum)) {
+          qaTree[runnum][filenum] = [:]
+          qaTree[runnum][filenum]['defect'] = 0
+          qaTree[runnum][filenum]['sectorDefects'] = sectors.collectEntries{s->[sec(s),[]]}
+        }
 
-        ratio = grA.getDataY(i)
+        // defect bits:
+        // outlier bits: only one of these is set; they are in order of severity:
+        def bitTotalOutlier = 0 // outlier N/F, in general (worst case)
+        def bitTerminalOutlier = 1 // outlier N/F, but first or last file
+        def bitMarginalOutlier = 2 // marginal outlier N/F
+        def bitSectorLoss = 3 // sector loss (set manually in postQA check)
+        // FC issues:
+        def bitLiveTime = 4 // livetime>1
 
-        if(ratio > cutTree[sector][epoch]['cutLo'] &&
-           ratio < cutTree[sector][epoch]['cutHi']) {
+        NF = grA.getDataY(i)
+        NFerrH = NF + grA.getDataEY(i)
+        NFerrL = NF - grA.getDataEY(i)
+        cutLo = cutTree[sector][epoch]['cutLo']
+        cutHi = cutTree[sector][epoch]['cutHi']
+        LT = grT.getDataY(i)
+        defectList = []
+
+        // set outlier bit
+        if( NF<cutLo || NF>cutHi ) {
+          if( NFerrH>cutLo && NFerrL<cutHi )  defectList.add(bitMarginalOutlier)
+          else if( i==0 || i+1==grA.getDataSize(0) ) defectList.add(bitTerminalOutlier)
+          else defectList.add(bitTotalOutlier)
+        }
+        // set FC bit
+        if( LT>1 ) defectList.add(bitLiveTime)
+
+        // insert in qaTree
+        qaTree[runnum][filenum]['sectorDefects'][sector] = defectList.collect()
+
+        // if any defects were found, send the point to "bad" graphs
+        if( defectList.size() == 0 ) {
           copyPoint(grA,grA_good,i)
           copyPoint(grN,grN_good,i)
           copyPoint(grF,grF_good,i)
@@ -451,8 +483,8 @@ inList.each { obj ->
           addEpochPlotPoint(epochPlotTree[sector][epoch]['grN_good'],grN,i,runnum)
           addEpochPlotPoint(epochPlotTree[sector][epoch]['grF_good'],grF,i,runnum)
           addEpochPlotPoint(epochPlotTree[sector][epoch]['grT_good'],grT,i,runnum)
-          qaTree[runnum][filenum][sector] = "good"
         } else {
+          qaTree[runnum][filenum]['defect'] = 1 // TODO
           copyPoint(grA,grA_bad,i)
           copyPoint(grN,grN_bad,i)
           copyPoint(grF,grF_bad,i)
@@ -461,7 +493,6 @@ inList.each { obj ->
           addEpochPlotPoint(epochPlotTree[sector][epoch]['grN_bad'],grN,i,runnum)
           addEpochPlotPoint(epochPlotTree[sector][epoch]['grF_bad'],grF,i,runnum)
           addEpochPlotPoint(epochPlotTree[sector][epoch]['grT_bad'],grT,i,runnum)
-          qaTree[runnum][filenum][sector] = "bad"
         }
       }
 
@@ -572,10 +603,8 @@ outHipoEpochs.writeFile(outHipoName)
 
 
 // sort qaTree and output to json file
-qaTree.each { qaRun, qaRunTree ->
-  qaRunTree.each { qaFile, qaFileTree -> qaFileTree.sort() }
-  qaRunTree.sort()
-}
+//println pPrint(qaTree)
+qaTree.each { qaRun, qaRunTree -> qaRunTree.sort{it.key.toInteger()} }
 qaTree.sort()
 new File("outdat.${dataset}/qaTree"+(useFT?"FT":"")+".json").write(JsonOutput.toJson(qaTree))
 

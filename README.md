@@ -1,12 +1,13 @@
 # clasqa
 Data monitoring tools for CLAS run QA
 
-* There are two data monitoring tools:
-  * Electron Trigger and Faraday Cup Monitor: monitors electron trigger and
-    determines quality assurance (QA) cuts for filtering 'bad' files
-  * General Monitor: generalized data monitor, used to supplement the QA
-* The sections below explain each of these monitors;
-  [docDiagram.pdf](docDiagram.pdf) shows a flowcharts of the scripts and I/O
+* Tracks the electron trigger count, normalized by the Faraday cup charge
+* Also implements helicity monitoring, by tracking inclusive beam spin asymmetries
+* Accepts DST or skim files
+* [docDiagram.pdf](docDiagram.pdf) shows a flowcharts of the scripts and I/O
+* The variable `${dataset}` will be used throughout as a name specifying the data set to
+  be analyzed; this name is for organization purposes, for those who want to
+  monitor several different sets of data
 
 
 ## PASS1 Procedure
@@ -23,126 +24,9 @@ Data monitoring tools for CLAS run QA
 * release timeline to main directory: use `releaseTimelines.sh`
 
 
-## Electron Trigger and Faraday Cup Monitor
-* This monitor tracks the electron trigger count, normalized by the Faraday cup charge
-* The variable `${dataset}` will be used throughout as a name specifying the data set to
-  be analyzed; this name is for organization purposes, for those who want to
-  monitor several different sets of data
-
-
-### Input files: 
-* Monitoring histograms from Andrey's data monitor; these files should be stored in or
-  symlinked as `monsub.${dataset}/`
-* Faraday cup data: this is a `JSON` file containing the Faraday cup (FC) information,
-  also produced by Andrey; this should be stored or symlinked as
-  `fcdata.${dataset}.json`
-
-
-### Terse procedure:
-* `groovy qaRead.groovy $dataset`
-  * (optional: redirect `stderr` and watch for errors, in case there are still bugs)
-* `mkTree.sh $dataset`; generate `epochs.${dataset}.txt` manually (see verbose
-  procedure below)
-* `groovy qaPlot.groovy $dataset [$useFT]` 
-* `groovy qaCut.groovy $dataset [$useFT]`
-
-
-### Verbose procedure:
-* `groovy qaRead.groovy $dataset`
-  * Reads `monsub.${dataset}/*.hipo` files, scanning for histograms to obtain the number
-    of electrons for each sector; one hipo file corresponds to one 5-file
-  * Reads `fcdata.${dataset}.json` to obtain the FC data, both ungated and gated, for
-    the corresponding run and 5-file
-  * Outputs `outdat.${dataset}/data_table.dat`, which is a data table with the following
-    columns:
-    * run number
-    * 5-file number
-    * sector
-    * number of electron triggers (`N`)
-    * number of electrons in the forward tagger
-    * DAQ-gated FC charge at beginning of 5-file (`F_i`)
-    * DAQ-gated FC charge at end of 5-file (`F_f`)
-    * DAQ-ungated FC charge at beginning of 5-file
-    * DAQ-ungated FC charge at end of 5-file
-  * The electron trigger QA monitors the ratio `N/F`, where `F=F_f-F_i` 
-  * It is recommended to pipe `stderr` somewhere, in case there are still issues; this
-    script generates a lot of `stdout` output, and some errors can be easy to miss
-
-* Determine epoch lines
-  * At the moment, this step is manual, but could be automated in a future
-    release
-  * You need to generate `epochs.${dataset}.txt`, which is a list epoch boundary lines
-    * Each line should contain two numbers: the first run of the epoch, and the last run
-      of the epoch
-    * If you do not want to use epoch lines, execute 
-      `echo "0 1000000" > epochs.${dataset}.txt`; this is a trick to ensure every run is
-      in a single epoch
-  * To help determine where to draw the epoch boundaries, execute `mkTree.sh $dataset`
-    * this script, in conjunction with `readTree.C`, will build a `ROOT` tree and draw
-      N/F vs. file index, along with the current epoch boundary lines (if defined)
-      * other plots will be drawn, including N/F vs. run number (as a 2d histogram),
-        along with plots for the Faraday Cup
-      * the N/F plots are helpful in determining where to put the epoch boundary lines
-      * look at N/F and identify where the average value "jumps": this typically
-        occurs at the same time for all 6 sectors, but you should check all 6 regardless
-      * the decision of where to put the epoch boundary lines is currently done
-        manually, but could be automated in a future release
-
-* `groovy qaPlot.groovy $dataset [$useFT]` 
-  * reads `outdat.${dataset}/data_table.dat` and generates `outmon/monitorElec.hipo`
-    * within this hipo file, there is one directory for each run, containing several
-      plots:
-      * `grA*`: N/F vs. file number (the `A` notation is so it appears first in the
-        online timeline front-end)
-      * `grF*`: F vs. file number
-      * `grN*`: N vs. file number
-      * `grT*`: livetime vs. file number
-    * if `$useFT` is set, it will use FT electrons instead
-
-* `groovy qaCut.groovy $dataset [$useFT]`
-  * reads `outmon/monitorElec.hipo`, along with `epochs.${dataset}.txt`, to build
-    timelines for the online monitor
-  * if `$useFT` is set, it will use FT electrons instead
-  * the runs are organized into epochs, wherein each:
-    * calculate N/F quartiles
-      * `mq`: middle quartile, the overall median N/F
-      * `lq`: lower quartile, the median N/F below `mq`
-      * `uq`: upper quartile, the median N/F above `mq`
-    * QA cut lines are set using an interquartile range (IQR) rule: `cutFactor` * IQR,
-      where `cutFactor` adjusts the overall width of the cuts (currently set to `3.0`)
-      * the QA cut lines are stored in `cuts.${dataset}.json`
-      * this is done for each sector individually
-      * if any sector's N/F value is outside the QA cut lines, the file is marked as
-        'bad'; othrewise it is marked as 'good'
-        * the run number and file number are printed to the files
-          `outdat.${dataset}/goodFiles.dat` and `outdat.${dataset}/badFiles.dat`
-  * timelines are generated (which can be uploaded to the webserver):
-    * QA timeline
-      * timeline is the 'pass fraction': the fraction of files in a run which pass QA
-        cuts
-      * 6 timelines are plotted simultaneously: one for each sector
-      * click any point to show the corresponding graphs and histograms of N/F, N, F,
-        and livetime
-    * QA timeline "epoch view"
-      * this is a timeline used to evaluate how the QA cuts look overall, for each epoch
-      * the timeline is just a list of the 6 sectors; clicking on one of them will show
-        plots of N/F, N, F, and livetime, for each epoch
-        * the horizontal axis of these plots is a file index, defined as the run
-          number plus a small offset (<1) proportional to the file number
-      * the N/F plots include the cut lines: here you can zoom in and see how
-        well-defined the cut lines are for each epoch
-        * if there are any significant 'jumps' in the N/F value, the cut lines may be
-          appear to be too wide: this indicates an epoch boundary line needs to be drawn
-          at the step in N/F
-    * Several other timelines are generated as well, such as standard deviation of 
-      the number of electrons
-
-
-
-## General Monitor
-* This is a generalized monitor, which accepts DST or skim files, and produces
-  monitoring timelines for any quantity of interest
-* Particular focus for QA is helicity monitoring
+## Procedure and Script Details
+* The procedure is outlined by [docDiagram.pdf](docDiagram.pdf); this section details
+  the action of each script, in a suggested order of execution
 
 ### Input files: 
 * DST or skim files
@@ -156,54 +40,67 @@ Data monitoring tools for CLAS run QA
   * One way to do this in `bash` is `export CLASSPATH="${CLASSPATH}:.`, which adds the
     present working directory
 
-### Terse Procedure: 
-* `groovy monitorRead.groovy __skim_file__ skim` or
-  `groovy monitorRead.groovy __directory_of_DST_files__ dst`
-  * This is better run with `slurm` in parallel (details below)
-  * The variable `inHipoType` needs to be set manually as the second argument,
-    depending on whether you are reading skim files or DST files
-* `groovy monitorPlot.groovy`
 
-### Verbose Procedure: 
-* `groovy monitorRead.groovy __hipo_file_(directory__ skim(dst)`
-  * It is better to run this using `slurm`, but this can be run on a single skim
-    file or directory of one run's DST files
-    * see the `slurm*.sh` scripts for example job submission scripts
-  * the 2nd argument, `inHipoType` needs to be specified so that determination of
-    run number and segment(file) number is done correctly
+### DST / Skim reading
+First step is to read DST or Skim files, producing hipo files and data tables
+
+* `groovy monitorRead.groovy __hipo_file_(directory)__ skim(dst)`
+  * It is better to run this using `slurm`, but this can be run on a single skim file or
+    directory of one run's DST files
+    * see the `exeSlurm*.sh` scripts for example job submission scripts
+  * the 2nd argument, `inHipoType` needs to be specified so that determination of run
+    number and segment(file) number is done correctly
     * use `dst` for DST files
     * use `skim` for skim files
-  * the plots are organized into a tree data structure, which allows plot any
-    variable, for any set of properties
-    * for example, the helicity plots are for pi+,pi-, and positive helicity and
-      negative helicity; this is a total of four plots
-      * each particle branches into two helicity branches, each of which contain the
-        plot object as a leaf
-    * there is one plot per 'segment' where a segment is a single DST file
-      (5-file) or a set of 10000 events for skim files
-      * for skim files, the variable `segmentSize` can be used to change this
-        number of events
-      * for skim files, the segment number is set to be the average event
-        number; the standard deviation is also included, which indicates the
-        temporal localization of these events; typically the standard deviation
-        is much smaller than the distance between two consecutive segments'
-        averege event numbers
-      * for DST files, the segment number is set to be the 5-file number, which
-        is the minimum file number of the 5 consecutive, concatenated files (and
-        is hence divisible by 5)
-  * outputs `outmon/monitor*.hipo` files, with one file corresponding to one
-    run, along with all the plots of quantities, versus segment number
-    * if reading skim files, the points will have horizontal error bars,
-      corresponding to the event number standard deviation described above
-  * also outputs tables to `outdat/data_table_${runnum}.dat`, which are similar to what
-    is output by `qaRead.groovy`: they contain the number of trigger electrons for each
-    sector, as well as the Faraday cup info
-    * in order to use these tables, you must concatenate them to
-      `outdat.${dataset}/data_table.dat`, and follow the `qaPlot.groovy` and
-      `qaCut.groovy` procedure
+  * Outputs:
+    * `outdat/data_table_${run}.dat`, which is a data table with the following columns:
+      * run number
+      * 5-file number
+      * sector
+      * number of electron triggers (`N`)
+      * number of electrons in the forward tagger
+      * DAQ-gated FC charge at beginning of 5-file (`F_i`)
+      * DAQ-gated FC charge at end of 5-file (`F_f`)
+      * DAQ-ungated FC charge at beginning of 5-file
+      * DAQ-ungated FC charge at end of 5-file
+    * `outmon/monitor_${runnum}.hipo` contains several plots 
+      * in the script, they are organized into a tree data structure, which allows plot
+        any variable, for any set of properties
+        * for example, the helicity plots are for pi+,pi-, and positive helicity and
+          negative helicity; this is a total of four plots
+          * each particle branches into two helicity branches, each of which contain the
+            plot object as a leaf
+      * there is one plot per 'segment' where a segment is a single DST file
+        (5-file) or a set of 10000 events for skim files
+        * for skim files, the variable `segmentSize` can be used to change this
+          number of events
+        * for skim files, the segment number is set to be the average event
+          number; the standard deviation is also included, which indicates the
+          temporal localization of these events; typically the standard deviation
+          is much smaller than the distance between two consecutive segments'
+          averege event numbers
+        * for DST files, the segment number is set to be the 5-file number, which
+          is the minimum file number of the 5 consecutive, concatenated files (and
+          is hence divisible by 5)
 
-* `groovy monitorPlot.groovy`
-  * this will read `outmon/monitor*.hipo` files and produce several timelines
+
+### Data Organization
+It is recommended to copy the data produced in `outdat/` and `outmon/` to a directory
+identified with a data set name `$dataset`
+
+* purpose is to keep production of timelines organized
+* syntax is `outdat.${dataset}/` and `outmon.${dataset}`
+* prodedure (pick one): 
+  * use the script `datasetOrganize.sh`, editting it if necessary
+  * create symlinks (discouraged, may be buggy)
+
+
+### Plotting Sripts
+These scripts primary purpose is to make plots and store them in HIPO files; these HIPO
+files can then be fed to a QA script
+
+* `groovy monitorPlot.groovy $dataset`
+  * this will read `outmon.${dataset}/monitor*.hipo` files and produce several timelines
     * the list of timelines is at the bottom of the script, and is handled by
       the `hipoWrite` closure, which takes two arguments:
       * the name of the timeline, which will be the name of the corresponding
@@ -229,6 +126,76 @@ Data monitoring tools for CLAS run QA
         * graph of the average value of X versus segment number
     * see the supplementary scripts section for some helpful scripts to upload
       timelines to the webserver
+
+* `groovy qaPlot.groovy $dataset [$useFT]` 
+  * reads `outdat.${dataset}/data_table.dat` and generates `outmon/monitorElec.hipo`
+    * within this hipo file, there is one directory for each run, containing several
+      plots:
+      * `grA*`: N/F vs. file number (the `A` notation is so it appears first in the
+        online timeline front-end)
+      * `grF*`: F vs. file number
+      * `grN*`: N vs. file number
+      * `grT*`: livetime vs. file number
+    * if `$useFT` is set, it will use FT electrons instead
+
+
+### Automated QA of Normalized Electron Yield
+This section will run the automated QA of the electron yield; it will ultimately
+generate QA timelines, and a `json` file which is used for the manual followup QA
+
+* Determine epoch lines
+  * At the moment, this step is manual, but could be automated in a future release
+  * You need to generate `epochs.${dataset}.txt`, which is a list epoch boundary lines
+    * Each line should contain two numbers: the first run of the epoch, and the last run
+      of the epoch
+    * If you do not want to use epoch lines, execute 
+      `echo "0 1000000" > epochs.${dataset}.txt`; this is a trick to ensure every run is
+      in a single epoch
+  * To help determine where to draw the epoch boundaries, execute `mkTree.sh $dataset`
+    * this script, in conjunction with `readTree.C`, will build a `ROOT` tree and draw
+      N/F vs. file index, along with the current epoch boundary lines (if defined)
+      * other plots will be drawn, including N/F vs. run number (as a 2d histogram),
+        along with plots for the Faraday Cup
+      * the N/F plots are helpful in determining where to put the epoch boundary lines
+      * look at N/F and identify where the average value "jumps": this typically
+        occurs at the same time for all 6 sectors, but you should check all 6 regardless
+      * the decision of where to put the epoch boundary lines is currently done
+        manually, but could be automated in a future release
+
+* `groovy qaCut.groovy $dataset [$useFT]`
+  * reads `outmon/monitorElec.hipo`, along with `epochs.${dataset}.txt`, to build
+    timelines for the online monitor
+  * if `$useFT` is set, it will use FT electrons instead
+  * the runs are organized into epochs, wherein each:
+    * calculate N/F quartiles
+      * `mq`: middle quartile, the overall median N/F
+      * `lq`: lower quartile, the median N/F below `mq`
+      * `uq`: upper quartile, the median N/F above `mq`
+    * QA cut lines are set using an interquartile range (IQR) rule: `cutFactor` * IQR,
+      where `cutFactor` adjusts the overall width of the cuts (currently set to `3.0`)
+      * this is done for each sector individually
+      * at this point, the automatic QA is initiated; results are stored in
+        `outdat.${dataset}/qaTree.json`
+  * timelines are generated (which can be uploaded to the webserver):
+    * QA timeline
+      * timeline is the 'pass fraction': the fraction of files in a run which pass QA
+        cuts
+      * 6 timelines are plotted simultaneously: one for each sector
+      * click any point to show the corresponding graphs and histograms of N/F, N, F,
+        and livetime
+    * QA timeline "epoch view"
+      * this is a timeline used to evaluate how the QA cuts look overall, for each epoch
+      * the timeline is just a list of the 6 sectors; clicking on one of them will show
+        plots of N/F, N, F, and livetime, for each epoch
+        * the horizontal axis of these plots is a file index, defined as the run
+          number plus a small offset (<1) proportional to the file number
+      * the N/F plots include the cut lines: here you can zoom in and see how
+        well-defined the cut lines are for each epoch
+        * if there are any significant 'jumps' in the N/F value, the cut lines may be
+          appear to be too wide: this indicates an epoch boundary line needs to be drawn
+          at the step in N/F
+    * Several other timelines are generated as well, such as standard deviation of 
+      the number of electrons
 
 
 ## Supplementary Scripts

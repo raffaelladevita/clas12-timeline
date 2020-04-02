@@ -1,4 +1,4 @@
-// reads outmon/monitor* files and generates timeline hipo files
+// reads outmon.${dataset}/monitor* files and generates timeline hipo files
 // - to be executed after monitorRead.groovy
 
 import org.jlab.groot.data.TDirectory
@@ -10,9 +10,13 @@ import java.lang.Math.*
 import Tools
 Tools T = new Tools()
 
+// ARGUMENTS:
+def dataset = 'pass1'
+if(args.length>=1) dataset = args[0]
+
 
 // get list of input hipo files
-def inDir = "outmon"
+def inDir = "outmon.${dataset}"
 def inDirObj = new File(inDir)
 def inList = []
 def inFilter = ~/monitor_.*\.hipo/
@@ -432,7 +436,7 @@ def hipoWrite = { hipoName, filterList ->
     if(checkFilter(T.leafPath,filterList)) outHipo.addDataSet(T.leaf)
   })
 
-  def outHipoN = "outmon/${hipoName}.hipo"
+  def outHipoN = "outmon.${dataset}/${hipoName}.hipo"
   File outHipoFile = new File(outHipoN)
   if(outHipoFile.exists()) outHipoFile.delete()
   outHipo.writeFile(outHipoN)

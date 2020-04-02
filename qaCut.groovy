@@ -218,13 +218,8 @@ def outHipoSigmaN = new TDirectory()
 def outHipoSigmaF = new TDirectory()
 def outHipoRhoNF = new TDirectory()
 
-// define good and bad file lists
+// define qaTree
 def qaTree = [:] // [runnum][filenum] -> defects enumeration
-def goodFile = new File("outdat.${dataset}/goodFiles"+(useFT?"FT":"")+".dat")
-def goodFileWriter = goodFile.newWriter(false)
-def badFile = new File("outdat.${dataset}/badFiles"+(useFT?"FT":"")+".dat")
-def badFileWriter = badFile.newWriter(false)
-
 
 
 // define timeline graphs
@@ -608,17 +603,6 @@ qaTree.each { qaRun, qaRunTree -> qaRunTree.sort{it.key.toInteger()} }
 qaTree.sort()
 new File("outdat.${dataset}/qaTree"+(useFT?"FT":"")+".json").write(JsonOutput.toJson(qaTree))
 
-// write goodFile and badFile: lists of good and bad files
-def nbad
-qaTree.each { qaRun, qaRunTree ->
-  qaRunTree.each { qaFile, qaFileTree -> 
-    nbad = 0
-    qaFileTree.each { sectorNum, qaStr -> if(qaStr=="bad") nbad++ }
-    ( nbad>0 ? badFileWriter:goodFileWriter) << [ qaRun, qaFile ].join(' ') << '\n'
-  }
-}
-goodFileWriter.close()
-badFileWriter.close()
 
 // print total QA passing fractions
 def PF = nGoodTotal / (nGoodTotal+nBadTotal)

@@ -128,5 +128,14 @@ class Tools {
   // print a tree's branches, with optional printout of closure 'clos'
   def printTree(tree,clos={""}) { exeLeaves(tree,{println "$leafPath "+clos()}) }
 
-    
+  ////////////////
+  // JSON FILES //
+  ////////////////
+  // access subtree at path
+  def jAccess ( tree,path ) {
+    if(path.size()<1) tree
+    else if(path.size()==1) jAccess(tree[path[0]],[])
+    else jAccess(tree[path[0]],path[1..-1])
+  }
+
 }

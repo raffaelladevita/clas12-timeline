@@ -532,6 +532,23 @@ inList.each { obj ->
 }
 
 
+// assign defect masks
+qaTree.each { qaRun, qaRunTree -> 
+  qaRunTree.each { qaFile, qaFileTree ->
+    println qaFileTree
+    def defList = []
+    def defMask = 0
+    qaFileTree["sectorDefects"].each { qaSec, qaDefList ->
+      println qaDefList
+      defList += qaDefList.collect{it.toInteger()}
+    }
+    defList.unique().each { defMask += (0x1<<it) }
+    qaTree[qaRun][qaFile]["defect"] = defMask
+    println defMask
+  }
+}
+
+
 // write epoch plots to hipo file
 sectors.each { s ->
   sectorIt = sec(s)

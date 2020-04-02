@@ -10,18 +10,18 @@ if(args.size()==0) {
 
 import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
+import Tools
+Tools T = new Tools()
 
 def slurper = new JsonSlurper()
 def jsonFile = new File(args[0])
 def jsonObj = slurper.parse(jsonFile)
 
-def jAccess ( tree,path ) {
-  if(path.size()<1) println JsonOutput.prettyPrint(JsonOutput.toJson(tree))
-  else if(path.size()==1) jAccess(tree[path[0]],[])
-  else jAccess(tree[path[0]],path[1..-1])
-}
-
 def accessPath = []
 args.length.times { if(it>=1) accessPath << args[it] }
 println("\n\n$accessPath\n\n")
-jAccess(jsonObj,accessPath)
+println JsonOutput.prettyPrint(
+  JsonOutput.toJson(
+    T.jAccess(jsonObj,accessPath)
+  )
+)

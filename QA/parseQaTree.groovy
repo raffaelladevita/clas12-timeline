@@ -34,8 +34,11 @@ qaTree.sort{a,b -> a.key.toInteger() <=> b.key.toInteger() }.each{
       defectBits.eachWithIndex { str,i ->
         if(defect >> i & 0x1) defStr += " " + str
       }
-      if(fileTree.comment!=null) defStr += " :: " + fileTree.comment
+      if(fileTree.comment!=null) {
+        if(fileTree.comment.length()>0) defStr += " :: " + fileTree.comment
+      }
       outfileW << defStr.join(' ') << "\n"
+      //outfileW << fileTree.sectorDefects << "\n"
     }
   }
 }

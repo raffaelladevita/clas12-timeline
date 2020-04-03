@@ -8,11 +8,11 @@ class Tools {
   /////////////////
 
   // outlier bits: only one of these is set; they are in order of severity:
-  def bitTotalOutlier = 0 // outlier N/F, in general (worst case)
+  def bitTotalOutlier    = 0 // outlier N/F, in general (worst case)
   def bitTerminalOutlier = 1 // outlier N/F, but first or last file
   def bitMarginalOutlier = 2 // marginal outlier N/F
-  def bitSectorLoss = 3 // sector loss (set manually in postQA check)
-  // FC issues:
+  def bitSectorLoss      = 3 // sector loss (set manually in postQA check)
+  // FC issues bits:
   def bitLiveTime = 4 // livetime>1
 
   //////////

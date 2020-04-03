@@ -443,18 +443,18 @@ inList.each { obj ->
 
         // DETERMINE DEFECT BITS
 
-        // variables for determining defect bits
+        // get variables needed for checking for defects
         NF = grA.getDataY(i)
         NFerrH = NF + grA.getDataEY(i)
         NFerrL = NF - grA.getDataEY(i)
         cutLo = cutTree[sector][epoch]['cutLo']
         cutHi = cutTree[sector][epoch]['cutHi']
         LT = grT.getDataY(i)
-        defectList = []
 
+        defectList = []
         // set outlier bit
         if( NF<cutLo || NF>cutHi ) {
-          if( NFerrH>cutLo && NFerrL<cutHi )  defectList.add(T.bitMarginalOutlier)
+          if( NFerrH>cutLo && NFerrL<cutHi ) defectList.add(T.bitMarginalOutlier)
           else if( i==0 || i+1==grA.getDataSize(0) ) defectList.add(T.bitTerminalOutlier)
           else defectList.add(T.bitTotalOutlier)
         }

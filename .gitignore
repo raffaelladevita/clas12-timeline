@@ -6,6 +6,7 @@
 *.png
 *.tmp
 *.bat
+*.bak
 */*.dat*
 *.dat
 qaTree*.json

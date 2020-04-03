@@ -3,6 +3,8 @@ import org.jlab.groot.data.GraphErrors
 import org.jlab.groot.data.H1F
 import org.jlab.groot.math.F1D
 import groovy.json.JsonOutput
+import Tools
+Tools T = new Tools()
 
 //----------------------------------------------------------------------------------
 // ARGUMENTS:
@@ -439,15 +441,9 @@ inList.each { obj ->
           qaTree[runnum][filenum]['sectorDefects'] = sectors.collectEntries{s->[sec(s),[]]}
         }
 
-        // defect bits:
-        // outlier bits: only one of these is set; they are in order of severity:
-        def bitTotalOutlier = 0 // outlier N/F, in general (worst case)
-        def bitTerminalOutlier = 1 // outlier N/F, but first or last file
-        def bitMarginalOutlier = 2 // marginal outlier N/F
-        def bitSectorLoss = 3 // sector loss (set manually in postQA check)
-        // FC issues:
-        def bitLiveTime = 4 // livetime>1
+        // DETERMINE DEFECT BITS
 
+        // variables for determining defect bits
         NF = grA.getDataY(i)
         NFerrH = NF + grA.getDataEY(i)
         NFerrL = NF - grA.getDataEY(i)
@@ -458,12 +454,12 @@ inList.each { obj ->
 
         // set outlier bit
         if( NF<cutLo || NF>cutHi ) {
-          if( NFerrH>cutLo && NFerrL<cutHi )  defectList.add(bitMarginalOutlier)
-          else if( i==0 || i+1==grA.getDataSize(0) ) defectList.add(bitTerminalOutlier)
-          else defectList.add(bitTotalOutlier)
+          if( NFerrH>cutLo && NFerrL<cutHi )  defectList.add(T.bitMarginalOutlier)
+          else if( i==0 || i+1==grA.getDataSize(0) ) defectList.add(T.bitTerminalOutlier)
+          else defectList.add(T.bitTotalOutlier)
         }
         // set FC bit
-        if( LT>1 ) defectList.add(bitLiveTime)
+        if( LT>1 ) defectList.add(T.bitLiveTime)
 
         // insert in qaTree
         qaTree[runnum][filenum]['sectorDefects'][sector] = defectList.collect()
@@ -535,16 +531,13 @@ inList.each { obj ->
 // assign defect masks
 qaTree.each { qaRun, qaRunTree -> 
   qaRunTree.each { qaFile, qaFileTree ->
-    println qaFileTree
     def defList = []
     def defMask = 0
     qaFileTree["sectorDefects"].each { qaSec, qaDefList ->
-      println qaDefList
       defList += qaDefList.collect{it.toInteger()}
     }
     defList.unique().each { defMask += (0x1<<it) }
     qaTree[qaRun][qaFile]["defect"] = defMask
-    println defMask
   }
 }
 

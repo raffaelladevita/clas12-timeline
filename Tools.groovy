@@ -7,13 +7,32 @@ class Tools {
   // defect bits //
   /////////////////
 
-  // outlier bits: only one of these is set; they are in order of severity:
-  def bitTotalOutlier    = 0 // outlier N/F, in general (worst case)
-  def bitTerminalOutlier = 1 // outlier N/F, but first or last file
-  def bitMarginalOutlier = 2 // marginal outlier N/F
-  def bitSectorLoss      = 3 // sector loss (set manually in postQA check)
-  // FC issues bits:
-  def bitLiveTime = 4 // livetime>1
+  // define defect bits here, with syntax "[bitName]: description"
+  // - bitName will be used as an enumerator; colon must follow
+  // - description will be printed if desired; do not use colons in description
+  def bitDefinitions = [
+    "TotalOutler: outlier N/F, but not terminal, marginal, or sector loss",
+    "TerminalOutlier: outlier N/F of first or last file of run, not marginal",
+    "MarginalOutlier: outlier N/F, within one stddev of cut line",
+    "SectorLoss: N/F is diminished within a sector for several consecutive files",
+    "LivetimeGT1: live time > 1",
+    "Misc: miscellaneous observation, details stored in comment"
+  ]
+
+  // list of bit names and descriptions
+  def bitNames = bitDefinitions.collect{ it.tokenize(':')[0] }
+  def bitDescripts = bitDefinitions.collect{ it.tokenize(':')[1] }
+
+  // map of bitName to bit number
+  def bit = { bitName ->
+    def bitNum = bitNames.findIndexOf{ it==bitName }
+    if(bitNum>=0 && bitNum<bitNames.size()) return bitNum
+    else {
+      System.err << "ERROR bad bit name $bitName\n"
+      return 31
+    }
+  }
+
 
   //////////
   // MATH //

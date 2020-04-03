@@ -454,12 +454,16 @@ inList.each { obj ->
         defectList = []
         // set outlier bit
         if( NF<cutLo || NF>cutHi ) {
-          if( NFerrH>cutLo && NFerrL<cutHi ) defectList.add(T.bitMarginalOutlier)
-          else if( i==0 || i+1==grA.getDataSize(0) ) defectList.add(T.bitTerminalOutlier)
-          else defectList.add(T.bitTotalOutlier)
+          if( NFerrH>cutLo && NFerrL<cutHi ) {
+            defectList.add(T.bit("MarginalOutlier"))
+          } else if( i==0 || i+1==grA.getDataSize(0) ) {
+            defectList.add(T.bit("TerminalOutlier"))
+          } else {
+            defectList.add(T.bit("TotalOutlier"))
+          }
         }
         // set FC bit
-        if( LT>1 ) defectList.add(T.bitLiveTime)
+        if( LT>1 ) defectList.add(T.bit("LiveTimeGT1"))
 
         // insert in qaTree
         qaTree[runnum][filenum]['sectorDefects'][sector] = defectList.collect()

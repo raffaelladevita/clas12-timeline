@@ -8,12 +8,16 @@ if [ $# -ne 1 ]; then
 fi
 dataset=$1
 
-mkdir -p outmon.${dataset}.qa
-rm -r outmon.${dataset}.qa
-mkdir -p outmon.${dataset}.qa
+qaDir=outmon.${dataset}.qa
+
+mkdir -p $qaDir
+rm -r $qaDir
+mkdir -p $qaDir
 
 for bit in {0..5} 100; do
   groovy qaCut.groovy $dataset false $bit
   qa=$(ls -t outmon.${dataset}/electron_trigger_*QA*.hipo | grep -v epoch | head -n1)
-  mv $qa outmon.${dataset}.qa/$(echo $qa | sed 's/^.*_QA_//g')
+  mv $qa ${qaDir}/$(echo $qa | sed 's/^.*_QA_//g')
 done
+
+cp QA/qa.${dataset}/qaTree.json $qaDir

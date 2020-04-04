@@ -11,11 +11,11 @@ class Tools {
   // - bitName will be used as an enumerator; colon must follow
   // - description will be printed if desired; do not use colons in description
   def bitDefinitions = [
-    "TotalOutler: outlier N/F, but not terminal, marginal, or sector loss",
+    "TotalOutlier: outlier N/F, but not terminal, marginal, or sector loss",
     "TerminalOutlier: outlier N/F of first or last file of run, not marginal",
     "MarginalOutlier: outlier N/F, within one stddev of cut line",
     "SectorLoss: N/F is diminished within a sector for several consecutive files",
-    "LivetimeGT1: live time > 1",
+    "LiveTimeGT1: live time > 1",
     "Misc: miscellaneous observation, details stored in comment"
   ]
 

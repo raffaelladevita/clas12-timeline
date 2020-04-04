@@ -20,17 +20,21 @@ for file in `ls outmon.${dataset}/*.hipo | grep -v "monitor"`; do
 done
 
 pushd $wwwdir
-extradir=${destdir}_extra
-mkdir -p $extradir
-rm -r $extradir
-mkdir -p $extradir
-function mvextra { mv -v ${destdir}/$1 ${extradir}/; }
-mvextra electron_FT_yield_QA_epoch_view.hipo
-mvextra electron_FT_yield_stddev.hipo
-mvextra electron_FT_yield_values.hipo
-mvextra electron_trigger_yield_QA_epoch_view.hipo
-mvextra electron_trigger_yield_stddev.hipo
-mvextra electron_trigger_yield_values.hipo
-mvextra faraday_cup_stddev.hipo
-mvextra helicity_sinPhi.hipo
+supplementaldir=${destdir}_supplemental
+mkdir -p $supplementaldir
+rm -r $supplementaldir
+mkdir -p $supplementaldir
+function mvsupplemental { mv -v ${destdir}/$1 ${supplementaldir}/; }
+mvsupplemental electron_FT_yield_QA_epoch_view.hipo
+mvsupplemental electron_FT_yield_stddev.hipo
+mvsupplemental electron_FT_yield_values.hipo
+mvsupplemental electron_trigger_yield_QA_epoch_view.hipo
+mvsupplemental electron_trigger_yield_stddev.hipo
+mvsupplemental electron_trigger_yield_values.hipo
+mvsupplemental faraday_cup_stddev.hipo
+mvsupplemental helicity_sinPhi.hipo
 popd
+
+if [ -d "outmon.${dataset}.qa" ]; then
+  cp -r outmon.${dataset}.qa ${wwwdir}/${destdir}_QA
+fi

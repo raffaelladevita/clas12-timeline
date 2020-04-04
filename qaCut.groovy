@@ -2,6 +2,7 @@ import org.jlab.groot.data.TDirectory
 import org.jlab.groot.data.GraphErrors
 import org.jlab.groot.data.H1F
 import org.jlab.groot.math.F1D
+import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
 import Tools
 Tools T = new Tools()
@@ -10,8 +11,10 @@ Tools T = new Tools()
 // ARGUMENTS:
 dataset = 'pass1'
 useFT = false // if true, use FT electrons instead
+qaBit = -1 // if positive, produce QA timeline based on QA/qa.${dataset}/qaTree.json
 if(args.length>=1) dataset = args[0]
-if(args.length>=2) useFT = true
+if(args.length>=2) useFT = (args[1]=="FT") ? true : false
+if(args.length>=3) qaBit = args[2].toInteger()
 //----------------------------------------------------------------------------------
 
 // vars and subroutines
@@ -221,7 +224,32 @@ def outHipoSigmaF = new TDirectory()
 def outHipoRhoNF = new TDirectory()
 
 // define qaTree
-def qaTree = [:] // [runnum][filenum] -> defects enumeration
+def qaTree // [runnum][filenum] -> defects enumeration
+def slurper
+def jsonFile
+if(qaBit>=0) {
+  slurper = new JsonSlurper()
+  jsonFile = new File("QA/qa.${dataset}/qaTree.json")
+  qaTree = slurper.parse(jsonFile)
+}
+else qaTree = [:]
+
+
+// define QA timeline title and name
+def qaTitle, qaName
+if(qaBit>=0) {
+  if(qaBit==100) {
+    qaTitle = ":: Fraction of files with any defect"
+    qaName = "Any_Defect"
+  }
+  else {
+    qaTitle = ":: Fraction of files with defect=" + T.bitDefinitions[qaBit]
+    qaName = T.bitNames[qaBit]
+  }
+} else {
+  qaTitle = ":: AUTOMATIC QA RESULT: Fraction of files with any defect"
+  qaName = "Automatic_Result"
+}
 
 
 // define timeline graphs
@@ -230,14 +258,14 @@ def defineTimeline = { title,ytitle,name ->
     if( !useFT || (useFT && s==0) ) {
       def gN = useFT ? "${name}_FT" : "${name}_sector_"+sec(s)
       def g = new GraphErrors(gN)
-      g.setTitle("${title} vs. run number")
+      g.setTitle(title)
       g.setTitleY(ytitle)
       g.setTitleX("run number")
       return g
     }
   }.findAll()
 }
-def TLqa = defineTimeline("${electronT} QA Pass Fraction","QA Pass Fraction","QA")
+def TLqa = defineTimeline("${electronT} ${qaTitle}","","QA")
 def TLA = defineTimeline("Number of ${electronT}s N / Faraday Cup Charge F","N/F","A")
 def TLN = defineTimeline("Number of ${electronT}s N","N","N")
 def TLF = defineTimeline("Accumulated Faraday Cup Charge [mC]","Charge","F")
@@ -354,15 +382,16 @@ def totN, totF, totA, totU, totT
 def totFacc = sectors.collect{0}
 def reluncN, reluncF
 def NF,NFerrH,NFerrL,LT
-def defectList = []
 def valN,valF,valA
+def defectList = []
+def badfile
 inList.each { obj ->
   if(obj.contains("/grA_")) {
 
     // get runnum, sector, epoch
     (runnum,sector) = obj.tokenize('_').subList(1,3).collect{ it.toInteger() }
     epoch = getEpoch(runnum,sector)
-    if(!qaTree.containsKey(runnum)) qaTree[runnum] = [:]
+    if(qaBit<0 && !qaTree.containsKey(runnum)) qaTree[runnum] = [:]
 
     // if using the FT, only loop over sector 1 (no sectors-dependence for FT)
     if( !useFT || (useFT && sector==1)) {
@@ -435,51 +464,56 @@ inList.each { obj ->
       grA.getDataSize(0).times { i -> 
 
         filenum = grA.getDataX(i).toInteger()
-        if(!qaTree[runnum].containsKey(filenum)) {
-          qaTree[runnum][filenum] = [:]
-          qaTree[runnum][filenum]['defect'] = 0
-          qaTree[runnum][filenum]['sectorDefects'] = sectors.collectEntries{s->[sec(s),[]]}
+
+        // DETERMINE DEFECT BITS, or load them from modified qaTree.json
+        badfile = false
+        if(qaBit<0) {
+
+          if(!qaTree[runnum].containsKey(filenum)) {
+            qaTree[runnum][filenum] = [:]
+            qaTree[runnum][filenum]['defect'] = 0
+            qaTree[runnum][filenum]['sectorDefects'] = sectors.collectEntries{s->[sec(s),[]]}
+          }
+
+          // get variables needed for checking for defects
+          NF = grA.getDataY(i)
+          NFerrH = NF + grA.getDataEY(i)
+          NFerrL = NF - grA.getDataEY(i)
+          cutLo = cutTree[sector][epoch]['cutLo']
+          cutHi = cutTree[sector][epoch]['cutHi']
+          LT = grT.getDataY(i)
+
+          defectList = []
+          // set outlier bit
+          if( NF<cutLo || NF>cutHi ) {
+            if( NFerrH>cutLo && NFerrL<cutHi ) {
+              defectList.add(T.bit("MarginalOutlier"))
+            } else if( i==0 || i+1==grA.getDataSize(0) ) {
+              defectList.add(T.bit("TerminalOutlier"))
+            } else {
+              defectList.add(T.bit("TotalOutlier"))
+            }
+          }
+          // set FC bit
+          if( LT>1 ) defectList.add(T.bit("LiveTimeGT1"))
+
+          // insert in qaTree
+          qaTree[runnum][filenum]['sectorDefects'][sector] = defectList.collect()
+          badfile = defectList.size() > 0
         }
-
-        // DETERMINE DEFECT BITS
-
-        // get variables needed for checking for defects
-        NF = grA.getDataY(i)
-        NFerrH = NF + grA.getDataEY(i)
-        NFerrL = NF - grA.getDataEY(i)
-        cutLo = cutTree[sector][epoch]['cutLo']
-        cutHi = cutTree[sector][epoch]['cutHi']
-        LT = grT.getDataY(i)
-
-        defectList = []
-        // set outlier bit
-        if( NF<cutLo || NF>cutHi ) {
-          if( NFerrH>cutLo && NFerrL<cutHi ) {
-            defectList.add(T.bit("MarginalOutlier"))
-          } else if( i==0 || i+1==grA.getDataSize(0) ) {
-            defectList.add(T.bit("TerminalOutlier"))
-          } else {
-            defectList.add(T.bit("TotalOutlier"))
+        else {
+          // lookup defectList for this sector
+          if(qaBit==100) { // bad if not perfect
+            badfile = qaTree["$runnum"]["$filenum"]['sectorDefects']["$sector"].size() > 0
+          } else { // bad only if defectList includes qaBit
+            if(qaTree["$runnum"]["$filenum"]['sectorDefects']["$sector"].size()>0) {
+              badfile = qaBit in qaTree["$runnum"]["$filenum"]['sectorDefects']["$sector"]
+            }
           }
         }
-        // set FC bit
-        if( LT>1 ) defectList.add(T.bit("LiveTimeGT1"))
 
-        // insert in qaTree
-        qaTree[runnum][filenum]['sectorDefects'][sector] = defectList.collect()
-
-        // if any defects were found, send the point to "bad" graphs
-        if( defectList.size() == 0 ) {
-          copyPoint(grA,grA_good,i)
-          copyPoint(grN,grN_good,i)
-          copyPoint(grF,grF_good,i)
-          copyPoint(grT,grT_good,i)
-          addEpochPlotPoint(epochPlotTree[sector][epoch]['grA_good'],grA,i,runnum)
-          addEpochPlotPoint(epochPlotTree[sector][epoch]['grN_good'],grN,i,runnum)
-          addEpochPlotPoint(epochPlotTree[sector][epoch]['grF_good'],grF,i,runnum)
-          addEpochPlotPoint(epochPlotTree[sector][epoch]['grT_good'],grT,i,runnum)
-        } else {
-          qaTree[runnum][filenum]['defect'] = 1 // TODO
+        // send points to "good" or "bad" graphs
+        if(badfile) {
           copyPoint(grA,grA_bad,i)
           copyPoint(grN,grN_bad,i)
           copyPoint(grF,grF_bad,i)
@@ -488,6 +522,15 @@ inList.each { obj ->
           addEpochPlotPoint(epochPlotTree[sector][epoch]['grN_bad'],grN,i,runnum)
           addEpochPlotPoint(epochPlotTree[sector][epoch]['grF_bad'],grF,i,runnum)
           addEpochPlotPoint(epochPlotTree[sector][epoch]['grT_bad'],grT,i,runnum)
+        } else {
+          copyPoint(grA,grA_good,i)
+          copyPoint(grN,grN_good,i)
+          copyPoint(grF,grF_good,i)
+          copyPoint(grT,grT_good,i)
+          addEpochPlotPoint(epochPlotTree[sector][epoch]['grA_good'],grA,i,runnum)
+          addEpochPlotPoint(epochPlotTree[sector][epoch]['grN_good'],grN,i,runnum)
+          addEpochPlotPoint(epochPlotTree[sector][epoch]['grF_good'],grF,i,runnum)
+          addEpochPlotPoint(epochPlotTree[sector][epoch]['grT_good'],grT,i,runnum)
         }
       }
 
@@ -517,7 +560,7 @@ inList.each { obj ->
       nBadTotal += nBad
       TLqa[sector-1].addPoint(
         runnum,
-        nGood+nBad>0 ? nGood/(nGood+nBad) : 0,
+        nGood+nBad>0 ? nBad/(nGood+nBad) : 0,
         0,0
       )
       TLA[sector-1].addPoint(runnum,totA,0,0)
@@ -591,7 +634,7 @@ def writeTimeline (tdir,timeline,title,once=false) {
 }
 
 electronN = "electron_" + (useFT ? "FT" : "trigger")
-writeTimeline(outHipoQA,TLqa,"${electronN}_yield_QA")
+writeTimeline(outHipoQA,TLqa,"${electronN}_yield_QA_${qaName}")
 writeTimeline(outHipoA,TLA,"${electronN}_yield_normalized_values")
 writeTimeline(outHipoN,TLN,"${electronN}_yield_values")
 writeTimeline(outHipoSigmaN,TLsigmaN,"${electronN}_yield_stddev")

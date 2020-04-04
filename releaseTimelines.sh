@@ -11,14 +11,7 @@ dataset=$1
 wwwReleaseDir="../www/rga/pass1/qa"
 wwwLocalDir="../www/${USER}"
 
-mkdir -p ${wwwReleaseDir}/${dataset}
-mkdir -p ${wwwReleaseDir}/${dataset}_extra
-rm -r ${wwwReleaseDir}/${dataset}
-rm -r ${wwwReleaseDir}/${dataset}_extra
-mkdir -p ${wwwReleaseDir}/${dataset}
-mkdir -p ${wwwReleaseDir}/${dataset}_extra
-
-cp -v ${wwwLocalDir}/${dataset}/* ${wwwReleaseDir}/${dataset}/
-cp -v ${wwwLocalDir}/${dataset}_extra/* ${wwwReleaseDir}/${dataset}_extra/
+rm -r ${wwwReleaseDir}/${dataset}*
+cp -rv ${wwwLocalDir}/${dataset}* ${wwwReleaseDir}/
 
 groovy indexPage.groovy $wwwReleaseDir

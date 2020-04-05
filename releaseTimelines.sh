@@ -13,5 +13,6 @@ wwwLocalDir="../www/${USER}"
 
 rm -r ${wwwReleaseDir}/${dataset}*
 cp -rv ${wwwLocalDir}/${dataset}* ${wwwReleaseDir}/
+cp outdat.${dataset}/qaTree.json ${wwwReleaseDir}/${dataset}_QA/
 
 groovy indexPage.groovy $wwwReleaseDir

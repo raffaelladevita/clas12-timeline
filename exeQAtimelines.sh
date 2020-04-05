@@ -21,3 +21,5 @@ for bit in {0..5} 100; do
 done
 
 cp QA/qa.${dataset}/qaTree.json $qaDir
+echo ""
+cat outdat.${dataset}/passFractions.dat

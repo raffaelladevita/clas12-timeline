@@ -243,7 +243,7 @@ if(qaBit>=0) {
     qaName = "Any_Defect"
   }
   else {
-    qaTitle = ":: Fraction of files with defect=" + T.bitDefinitions[qaBit]
+    qaTitle = ":: Fraction of files with " + T.bitDescripts[qaBit]
     qaName = T.bitNames[qaBit]
   }
 } else {
@@ -663,4 +663,14 @@ new File("outdat.${dataset}/qaTree"+(useFT?"FT":"")+".json").write(JsonOutput.to
 
 // print total QA passing fractions
 def PF = nGoodTotal / (nGoodTotal+nBadTotal)
-println "\n QA cut overall passing fraction: $PF"
+def FF = 1-PF
+if(qaBit<0) println "\nQA cut overall passing fraction: $PF"
+else {
+  def PFfile = new File("outdat.${dataset}/passFractions.dat")
+  def PFfileWriter = PFfile.newWriter(qaBit>0?true:false)
+  def PFstr = qaBit==100 ? "Fraction of golden files (no defects): $PF" :
+                           "Fraction of files with "+T.bitDescripts[qaBit]+": $FF"
+  PFfileWriter << PFstr << "\n"
+  PFfileWriter.close()
+}
+

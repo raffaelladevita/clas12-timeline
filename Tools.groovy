@@ -13,15 +13,15 @@ class Tools {
   def bitDefinitions = [
     "TotalOutlier: outlier N/F, but not terminal, marginal, or sector loss",
     "TerminalOutlier: outlier N/F of first or last file of run, not marginal",
-    "MarginalOutlier: outlier N/F, within one stddev of cut line",
-    "SectorLoss: N/F is diminished within a sector for several consecutive files",
+    "MarginalOutlier: marginal outlier N/F, within one stddev of cut line",
+    "SectorLoss: N/F diminished within a sector for several consecutive files",
     "LiveTimeGT1: live time > 1",
-    "Misc: miscellaneous observation, details stored in comment"
+    "Misc: miscellaneous defect, documented as comment"
   ]
 
   // list of bit names and descriptions
   def bitNames = bitDefinitions.collect{ it.tokenize(':')[0] }
-  def bitDescripts = bitDefinitions.collect{ it.tokenize(':')[1] }
+  def bitDescripts = bitDefinitions.collect{ it.tokenize(':')[1].substring(1) }
 
   // map of bitName to bit number
   def bit = { bitName ->

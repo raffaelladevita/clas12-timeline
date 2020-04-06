@@ -5,8 +5,8 @@ datadir="${PWD}/../pass1"
 if [ $# -ne 1 ];then echo "USAGE: $0 [dataset]"; exit; fi
 dataset=$1
 
-runL=$(grep $dataset datasetList.dat | awk '{print $2}')
-runH=$(grep $dataset datasetList.dat | awk '{print $3}')
+runL=$(grep $dataset datasetList.txt | awk '{print $2}')
+runH=$(grep $dataset datasetList.txt | awk '{print $3}')
 
 
 # build list of files, and cleanup outdat and outmon directories

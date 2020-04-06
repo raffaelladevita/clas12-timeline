@@ -10,7 +10,7 @@ while read line; do
     rm -r $dir
     mkdir -p $dir
   done
-done < datasetList.dat
+done < datasetList.txt
 
 # loop over runs, copying and linking to dataset subdirs
 for file in outmon/monitor_*.hipo; do
@@ -24,7 +24,7 @@ for file in outmon/monitor_*.hipo; do
     if [ $run -ge $runL -a $run -le $runH ]; then
       dataset=$(echo $line|awk '{print $1}')
     fi
-  done < datasetList.dat
+  done < datasetList.txt
   
   # if the dataset is associated to a run, import its data
   if [ -n "$dataset" ]; then

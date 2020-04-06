@@ -29,7 +29,7 @@ while read line; do
   exe groovy monitorPlot.groovy $dataset
   # deploy timelines to dev www
   exe ./deployTimelines.sh $dataset $dataset
-done < datasetList.dat
+done < datasetList.txt
 
 
 # print errors (filtering out hipo logo contamination)

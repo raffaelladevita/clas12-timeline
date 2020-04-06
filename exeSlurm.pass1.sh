@@ -1,21 +1,39 @@
 #!/bin/bash
 
-datadir="/home/dilks/j/dm/pass1"
+datadir="${PWD}/../pass1"
 
-slurm=slurm.pass1.dst.bat
+if [ $# -ne 1 ];then echo "USAGE: $0 [dataset]"; exit; fi
+dataset=$1
+
+runL=$(grep $dataset datasetList.dat | awk '{print $2}')
+runH=$(grep $dataset datasetList.dat | awk '{print $3}')
+
+
+# build list of files, and cleanup outdat and outmon directories
+joblist=joblist.${dataset}.slurm
+> $joblist
+for rundir in `ls -d ${datadir}/*`; do
+  run=$(echo $rundir | sed 's/^.*\/0*//g;s/\/$//g')
+  if [ $run -ge $runL -a $run -le $runH ]; then
+    echo "--- found dir=$rundir  run=$run"
+    echo "groovy monitorRead.groovy $rundir dst" >> $joblist
+    rm -v outdat/*${run}.dat
+    rm -v outmon/*${run}.hipo
+  fi
+done
+echo "JOBLIST:"
+cat $joblist
+
+
+# write job descriptor
+
+slurm=job.${dataset}.slurm
 > $slurm
-
 rm -v farmout/clasqa*
-rm -v outdat/*.dat
-rm -v outmon/*.hipo
 
 function app { echo "$1" >> $slurm; }
 
-nruns=$(ls -d ${datadir}/*/ | wc -l)
-let nruns--
-
 app "#!/bin/bash"
-
 
 app "#SBATCH --job-name=clasqa"
 app "#SBATCH --account=clas12"
@@ -24,16 +42,16 @@ app "#SBATCH --partition=production"
 app "#SBATCH --mem-per-cpu=6000"
 app "#SBATCH --time=4:00:00"
 
-app "#SBATCH --array=0-${nruns}"
+app "#SBATCH --array=1-$(cat $joblist | wc -l)"
 app "#SBATCH --ntasks=1"
 
 app "#SBATCH --output=/farm_out/%u/%x-%j-%N.out"
 app "#SBATCH --error=/farm_out/%u/%x-%j-%N.err"
 
-app "dataList=(${datadir}/00*)"
+app "srun \$(head -n\$SLURM_ARRAY_TASK_ID $joblist | tail -n1)"
 
-app "srun groovy monitorRead.groovy \${dataList[\$SLURM_ARRAY_TASK_ID]} dst"
 
+# launch jobs
 echo "job script"
 printf '%70s\n' | tr ' ' -
 cat $slurm

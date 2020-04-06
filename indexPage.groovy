@@ -7,18 +7,18 @@ def wwwDirName="../www/dilks"
 if(args.length>=1) wwwDirName = args[0]
 
 def wwwDir = new File(wwwDirName)
-def datasetList = []
+def datasets = []
 wwwDir.traverse(
   type: groovy.io.FileType.DIRECTORIES ) 
-{ datasetList << it.getName() }
-datasetList.sort()
-println datasetList
+{ datasets << it.getName() }
+datasets.sort()
+println datasets
 
 def fileTreeList = []
 def fileTree = [:]
 def datasetDir
 def timelineList = []
-datasetList.each { datasetDirName ->
+datasets.each { datasetDirName ->
   timelineList = []
   fileTree = [:]
   fileTree.put('subsystem',datasetDirName)

@@ -17,7 +17,8 @@ function exe {
 exe ./datasetOrganize.sh
 
 # loop over datasets
-while read dataset; do
+while read line; do
+  dataset=$(echo $line|awk '{print $1}')
   # trigger electrons monitor
   exe groovy qaPlot.groovy $dataset
   exe groovy qaCut.groovy $dataset

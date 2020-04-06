@@ -36,5 +36,7 @@ mvsupplemental helicity_sinPhi.hipo
 popd
 
 if [ -d "outmon.${dataset}.qa" ]; then
+  mkdir -p ${wwwdir}/${destdir}_QA
+  rm -r ${wwwdir}/${destdir}_QA
   cp -r outmon.${dataset}.qa ${wwwdir}/${destdir}_QA
 fi

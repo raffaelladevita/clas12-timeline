@@ -21,8 +21,6 @@ for rundir in `ls -d ${datadir}/*`; do
     rm -v outmon/*${run}.hipo
   fi
 done
-echo "JOBLIST:"
-cat $joblist
 
 
 # write job descriptor
@@ -52,8 +50,11 @@ app "srun \$(head -n\$SLURM_ARRAY_TASK_ID $joblist | tail -n1)"
 
 
 # launch jobs
-echo "job script"
 printf '%70s\n' | tr ' ' -
+echo "JOB LIST: $joblist"
+cat $joblist
+printf '%70s\n' | tr ' ' -
+echo "JOB DESCRIPTOR: $slurm"
 cat $slurm
 printf '%70s\n' | tr ' ' -
 echo "submitting to slurm..."

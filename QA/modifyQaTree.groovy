@@ -10,7 +10,8 @@ def usage = [:]
 usage["setBit"] = "setBit: overwrites stored defectBit(s) with specified bit"
 usage["addBit"] = "addBit: add specified bit to defectBit(s)"
 usage["delBit"] = "delBit: delete specified bit from defectBit(s)"
-usage["addComment"] = "addComment: change the comment"
+usage["setComment"] = "setComment: change or delete the comment"
+usage["addComment"] = "addComment: append a comment"
 println("\n\n")
 
 
@@ -124,7 +125,7 @@ if( cmd=="setBit" || cmd=="addBit" || cmd=="delBit") {
   }
 }
 
-else if( cmd=="addComment") {
+else if( cmd=="addComment" || cmd=="setComment") {
   def rnum,fnumL,fnumR
   def secList = []
   if(args.length==4) {
@@ -132,14 +133,23 @@ else if( cmd=="addComment") {
     fnumL = args[2].toInteger()
     fnumR = args[3].toInteger()
 
-    println("run $rnum files ${fnumL}-"+(fnumR==1 ? "END" : fnumR) + ": modify comment")
-    println("Enter the new comment, or leave it blank to delete the stored comment")
+    println("run $rnum files ${fnumL}-"+(fnumR==1 ? "END" : fnumR) + ": $cmd")
+    if(cmd=="addComment") 
+      println("Enter the new comment to be appended")
+    else if(cmd=="setComment") 
+      println("Enter the new comment, or leave it blank to delete any stored comment")
     print("> ")
     def cmt = System.in.newReader().readLine()
     qaTree["$rnum"].each { k,v ->
       def qaFnum = k.toInteger()
       if( qaFnum>=fnumL && ( fnumR==1 || qaFnum<=fnumR ) ) {
-        qaTree["$rnum"]["$qaFnum"]["comment"] = cmt
+        if (cmd=="addComment") {
+          if(qaTree["$rnum"]["$qaFnum"]["comment"].length()>0)
+            qaTree["$rnum"]["$qaFnum"]["comment"] += "; "
+          qaTree["$rnum"]["$qaFnum"]["comment"] += cmt
+        }
+        else if (cmd=="setComment") 
+          qaTree["$rnum"]["$qaFnum"]["comment"] = cmt
       }
     }
   }
@@ -148,7 +158,7 @@ else if( cmd=="addComment") {
     """
     SYNTAX: ${cmd} [run] [firstFile] [lastFile]
       - set [lastFile] to 1 to denote last file of run
-      - you will be prompted to enter the new comment
+      - you will be prompted to enter the comment
     """)
     return
   }

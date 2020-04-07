@@ -366,10 +366,10 @@ T.exeLeaves(monTree,{
         else if(T.key=='asymGraph') tlT = "beam spin asymmetry: pion sin(phiH) amplitude"
         else tlT = "unknown"
       }
-      if(tlPath.contains('DIS')) tlT = "DIS kinematics"
+      if(tlPath.contains('DIS')) tlT = "DIS kinematics (errorBar=stddev)"
       if(tlPath.contains('inclusive')) {
-        if(tlPath.contains('pip')) tlT = "inclusive pi+ kinematics"
-        if(tlPath.contains('pim')) tlT = "inclusive pi- kinematics"
+        if(tlPath.contains('pip')) tlT = "inclusive pi+ kinematics (errorBar=stddev)"
+        if(tlPath.contains('pim')) tlT = "inclusive pi- kinematics (errorBar=stddev)"
       }
       if(T.key.contains('Dist')) tlT = "average ${tlT}"
       tlT = "${tlT} vs. run number"
@@ -380,7 +380,10 @@ T.exeLeaves(monTree,{
     // add this run's <X> to the timeline
     if(T.key=='aveDist') {
       aveX = T.leaf.getMean()
-      aveXerr = T.leaf.getRMS() / Math.sqrt(T.leaf.integral())
+      if(tlPath.contains('DIS') || tlPath.contains('inclusive')) {
+        aveXerr = T.leaf.getRMS() // stddev, i.e., NOT stat uncertainty
+      else
+        aveXerr = T.leaf.getRMS() / Math.sqrt(T.leaf.integral()) // stat. uncertainty
       T.getLeaf(timelineTree,tlPath).addPoint(tlRun,aveX,0.0,aveXerr)
     }
     // or if it's a helicity distribution monitor, add the run's overall fractions

@@ -18,6 +18,7 @@ exe ./datasetOrganize.sh
 
 # loop over datasets
 while read line; do
+  if [[ $line == \#* ]]; then continue; fi
   dataset=$(echo $line|awk '{print $1}')
   # trigger electrons monitor
   exe groovy qaPlot.groovy $dataset

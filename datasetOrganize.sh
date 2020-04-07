@@ -2,6 +2,7 @@
 
 # cleanup / generate new dataset subdirs
 while read line; do
+  if [[ $line == \#* ]]; then continue; fi
   dataset=$(echo $line|awk '{print $1}')
   for outdir in outmon outdat; do
     dir=${outdir}.${dataset}
@@ -19,6 +20,7 @@ for file in outmon/monitor_*.hipo; do
   # determine which dataset this run belongs to
   dataset=""
   while read line; do
+    if [[ $line == \#* ]]; then continue; fi
     runL=$(echo $line|awk '{print $2}')
     runH=$(echo $line|awk '{print $3}')
     if [ $run -ge $runL -a $run -le $runH ]; then

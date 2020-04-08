@@ -25,6 +25,8 @@ mkdir -p $supplementaldir
 rm -r $supplementaldir
 mkdir -p $supplementaldir
 function mvsupplemental { mv -v ${destdir}/$1 ${supplementaldir}/; }
+mvsupplemental electron_FT_yield_QA_Automatic_Result.hipo
+mvsupplemental electron_trigger_yield_QA_Automatic_Result.hipo
 mvsupplemental electron_FT_yield_QA_epoch_view.hipo
 mvsupplemental electron_FT_yield_stddev.hipo
 mvsupplemental electron_FT_yield_values.hipo

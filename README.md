@@ -12,15 +12,17 @@ Data monitoring tools for CLAS run QA
 
 ## PASS1 Procedure
 * `exeSlurm.pass1.sh`: runs `monitorRead.groovy` on DSTs using slurm
+  * if you want to restrict the jobs to specific data sets, comment out lines in
+    `datasetList.txt` (`bash` syntax, use `#`)
   * wait for slurm jobs to finish
   * execute `errorPrint.sh` to inspect error logs
-* if there are runs you do not want to include in the QA, use `truncate.sh`
-  * this is useful to cut out any runs which have not been fully cooked
 * `exeTimeline.pass1.sh`, which does the following:
+  * runs `qaPlot.groovy` (on electron trigger and FT)
+  * runs `qaCut.groovy` (on electron trigger and FT)
+  * runs `datasetOrganize.sh`
   * runs `monitorPlot.groovy`
-  * runs `qaPlot.groovy`
-  * runs `qaCut.groovy`
-  * copies timelines to webserver
+  * copies timelines to webserver using `deployTimelines.sh`
+* perform the QA (see QA procedure below)
 * release timeline to main directory: use `releaseTimelines.sh`
 
 
@@ -196,6 +198,21 @@ generate QA timelines, and a `json` file which is used for the manual followup Q
           at the step in N/F
     * Several other timelines are generated as well, such as standard deviation of 
       the number of electrons
+
+
+## QA procedure
+section is under construction, here's the rough outline:
+* `cd QA`
+* `import.sh [dataset]` to import the automatically generated `qaTree.json`
+* open `qa/qaTable.dat` in another window; this is the human-readable version of
+  the imported `qaTree.json`
+* while reading through this file, inspect the online timelines
+  * use `modify.sh`, refreshing `qaTable.dat` to verify the modifications are correct
+  * if you make a mistake, call `undo.sh` to revert `qaTree.json` and `qaTable.dat`
+* when you are done, `cd ..` and call `exeQAtimelines.sh` to produce the QA timelines
+  * QA timelines are stored in `outmon.${dataset}.qa`
+  * it copies the new `qaTree.json` we editted from `QA/qa.${dataset}/qaTree.json` to
+    the new QA timeline directory, which can then be deployed to the webservers
 
 
 ## Supplementary Scripts

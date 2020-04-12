@@ -156,7 +156,7 @@ sectors.each { s ->
   }
 }
 //jPrint("cuts.${dataset}.json",cutTree) // output cutTree to JSON
-println pPrint(cutTree)
+//println pPrint(cutTree)
 
 
 // vars and subroutines for splitting graphs into "good" and "bad", 
@@ -298,9 +298,8 @@ else {
 // other subroutines
 def lineMedian, lineCutLo, lineCutHi
 def elineMedian, elineCutLo, elineCutHi
-def buildLine = { graph,epochNum,name,val ->
-  getEpochBounds(epochNum)
-  new F1D(graph.getName()+":"+name,Double.toString(val),lowerBound-3,upperBound+3)
+def buildLine = { graph,lb,ub,name,val ->
+  new F1D(graph.getName()+":"+name,Double.toString(val),lb-3,ub+3)
 }
 def addEpochPlotPoint = { plotOut,plotIn,i,r ->
   def f = plotIn.getDataX(i) // filenum
@@ -545,9 +544,14 @@ inList.each { obj ->
       histA_bad = buildHisto(grA_bad,250,minA,maxA)
 
       // define lines
-      lineMedian = buildLine(grA,epoch,"median",cutTree[sector][epoch]['mq'])
-      lineCutLo = buildLine(grA,epoch,"cutLo",cutTree[sector][epoch]['cutLo'])
-      lineCutHi = buildLine(grA,epoch,"cutHi",cutTree[sector][epoch]['cutHi'])
+      lowerBound = grA.getDataX(0)
+      upperBound = grA.getDataX(grA.getDataSize(0)-1)
+      lineMedian = buildLine(
+        grA,lowerBound,upperBound,"median",cutTree[sector][epoch]['mq'])
+      lineCutLo = buildLine(
+        grA,lowerBound,upperBound,"cutLo",cutTree[sector][epoch]['cutLo'])
+      lineCutHi = buildLine(
+        grA,lowerBound,upperBound,"cutHi",cutTree[sector][epoch]['cutHi'])
 
       // write graphs to hipo file
       addGraphsToHipo(outHipoQA)
@@ -604,9 +608,13 @@ sectors.each { s ->
     outHipoEpochs.cd("/${sectorIt}")
     epochPlotTree[sectorIt].each { epochIt,map ->
 
-      elineMedian = buildLine(map['grA_good'],epochIt,"median",cutTree[sectorIt][epochIt]['mq'])
-      elineCutLo = buildLine(map['grA_good'],epochIt,"cutLo",cutTree[sectorIt][epochIt]['cutLo'])
-      elineCutHi = buildLine(map['grA_good'],epochIt,"cutHi",cutTree[sectorIt][epochIt]['cutHi'])
+      getEpochBounds(epochIt) // sets lower(upper)Bound
+      elineMedian = buildLine(
+        map['grA_good'],lowerBound,upperBound,"median",cutTree[sectorIt][epochIt]['mq'])
+      elineCutLo = buildLine(
+        map['grA_good'],lowerBound,upperBound,"cutLo",cutTree[sectorIt][epochIt]['cutLo'])
+      elineCutHi = buildLine(
+        map['grA_good'],lowerBound,upperBound,"cutHi",cutTree[sectorIt][epochIt]['cutHi'])
 
       histA_good = buildHisto(map['grA_good'],500,minA,maxA)
       histA_bad = buildHisto(map['grA_bad'],500,minA,maxA)

@@ -12,6 +12,7 @@ usage["addBit"] = "addBit: add specified bit to defectBit(s)"
 usage["delBit"] = "delBit: delete specified bit from defectBit(s)"
 usage["setComment"] = "setComment: change or delete the comment"
 usage["addComment"] = "addComment: append a comment"
+usage["custom"] = "custom: do a custom action (see code)"
 println("\n\n")
 
 
@@ -144,9 +145,14 @@ else if( cmd=="addComment" || cmd=="setComment") {
       def qaFnum = k.toInteger()
       if( qaFnum>=fnumL && ( fnumR==1 || qaFnum<=fnumR ) ) {
         if (cmd=="addComment") {
-          if(qaTree["$rnum"]["$qaFnum"]["comment"].length()>0)
-            qaTree["$rnum"]["$qaFnum"]["comment"] += "; "
-          qaTree["$rnum"]["$qaFnum"]["comment"] += cmt
+          if(!qaTree["$rnum"]["$qaFnum"].containsKey("comment")) {
+            qaTree["$rnum"]["$qaFnum"]["comment"] = cmt
+          }
+          else {
+            if(qaTree["$rnum"]["$qaFnum"]["comment"].length()>0)
+              qaTree["$rnum"]["$qaFnum"]["comment"] += "; "
+            qaTree["$rnum"]["$qaFnum"]["comment"] += cmt
+          }
         }
         else if (cmd=="setComment") 
           qaTree["$rnum"]["$qaFnum"]["comment"] = cmt
@@ -161,6 +167,34 @@ else if( cmd=="addComment" || cmd=="setComment") {
       - you will be prompted to enter the comment
     """)
     return
+  }
+}
+
+else if( cmd=="custom") {
+  // this cmd is useful if you want to do a specific action, while
+  // calling this groovy script from another program
+  def rnum,fnum
+  if(args.length==3) {
+    rnum = args[1].toInteger()
+    fnum = args[2].toInteger()
+
+    def secList = (1..6).collect{it}
+    secList.each{ 
+      qaTree["$rnum"]["$fnum"]["sectorDefects"]["$it"] += T.bit("Misc")
+    }
+
+    def cmt = "ungated FC charge spike"
+    if(!qaTree["$rnum"]["$fnum"].containsKey("comment")) {
+      qaTree["$rnum"]["$fnum"]["comment"] = cmt
+    }
+    else {
+      if(qaTree["$rnum"]["$fnum"]["comment"].length()>0)
+        qaTree["$rnum"]["$fnum"]["comment"] += "; "
+      qaTree["$rnum"]["$fnum"]["comment"] += cmt
+    }
+
+    recomputeDefMask(rnum,fnum)
+
   }
 }
 

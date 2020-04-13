@@ -540,11 +540,12 @@ inHipoList.each { inHipoFile ->
           }
         }
       }
-    }
 
-    // add eventNum to the list of this segment's event numbers
-    eventNum = BigInteger.valueOf(configBank.getInt('event',0))
-    eventNumList.add(eventNum)
+      // add eventNum to the list of this segment's event numbers
+      eventNum = BigInteger.valueOf(configBank.getInt('event',0))
+      eventNumList.add(eventNum)
+
+    } // end if event has specific banks
 
   } // end event loop
   reader.close()

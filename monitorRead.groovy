@@ -148,6 +148,7 @@ def eleList = []
 def disElectron
 def eventNum
 def eventNumList = []
+def eventNumMin, eventNumMax
 def segmentNum
 def segmentDev
 def helicity
@@ -303,6 +304,10 @@ outHipo.cd("/$runnum")
 def histN,histT
 def writeHistos = {
 
+  // get event number range
+  eventNumMin = eventNumList.min()
+  eventNumMax = eventNumList.max()
+
   // get segment number
   if(inHipoType=="skim") {
     // segment number is average event number; include standard deviation
@@ -312,8 +317,8 @@ def writeHistos = {
      eventNumList.collect{ n -> Math.pow((n-segmentNum),2) }.sum() / 
      (eventNumList.size()-1)
     ))
-    println "eventNumAve=$segmentNum  eventNumDev=$segmentDev"
-    eventNumList.clear()
+    print "eventNum ave=$segmentNum dev=$segmentDev"
+    print "min=$eventNumMin max=$eventNumMax\n"
   }
   else if(inHipoType=="dst") {
     // segment number is the DST 5-file number; standard devation is irrelevant here
@@ -321,6 +326,9 @@ def writeHistos = {
     segmentNum = segmentTmp
     segmentDev = 0
   }
+
+  // reset the eventNum list
+  eventNumList.clear()
 
   // loop through histTree, adding histos to the hipo file;
   // note that the average event number is appended to the name
@@ -346,8 +354,9 @@ def writeHistos = {
 
   // write number of electrons and FC charge to datfile
   sectors.each{ sec ->
-    datfileWriter << [ runnum, segmentNum, sec+1 ].join(' ') << ' '
-    datfileWriter << [ nElec[sec], nElecFT ].join(' ') << ' '
+    datfileWriter << [ runnum, segmentNum ].join(' ') << ' '
+    datfileWriter << [ eventNumMin, eventNumMax ].join(' ') << ' '
+    datfileWriter << [ sec+1, nElec[sec], nElecFT ].join(' ') << ' '
     datfileWriter << [ fcStart, fcStop, ufcStart, ufcStop ].join(' ') << '\n'
   }
 
@@ -527,16 +536,15 @@ inHipoList.each { inHipoFile ->
               evCount++
               if(evCount % 100000 == 0) println "found $evCount events which contain a pion"
 
-              // add eventNum to the list of this segment's event numbers
-              if(inHipoType=="skim") {
-                eventNum = BigInteger.valueOf(configBank.getInt('event',0))
-                eventNumList.add(eventNum)
-              }
             }
           }
         }
       }
     }
+
+    // add eventNum to the list of this segment's event numbers
+    eventNum = BigInteger.valueOf(configBank.getInt('event',0))
+    eventNumList.add(eventNum)
 
   } // end event loop
   reader.close()

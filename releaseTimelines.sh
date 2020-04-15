@@ -8,8 +8,8 @@ fi
 
 dataset=$1
 
-wwwReleaseDir="../www/rga/pass1/qa"
-wwwLocalDir="../www/${USER}"
+wwwReleaseDir="../wwwRelease"
+wwwLocalDir="../wwwDev"
 
 rm -r ${wwwReleaseDir}/${dataset}*
 cp -rv ${wwwLocalDir}/${dataset}* ${wwwReleaseDir}/

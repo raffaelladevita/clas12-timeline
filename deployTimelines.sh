@@ -10,7 +10,7 @@ fi
 dataset=$1
 destdir=$2
 
-wwwdir="../www/${USER}" # symlink www
+wwwdir="../wwwDev" # symlink www
 
 mkdir -p ${wwwdir}/${destdir}
 rm -r ${wwwdir}/${destdir}

@@ -27,7 +27,7 @@ done
 
 slurm=job.${dataset}.slurm
 > $slurm
-rm -v farmout/clasqa*
+rm -v /farm_out/`whoami`/clasqa*
 
 function app { echo "$1" >> $slurm; }
 

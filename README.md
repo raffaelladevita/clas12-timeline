@@ -14,6 +14,7 @@ Data monitoring tools for CLAS run QA
 * `exeSlurm.pass1.sh`: runs `monitorRead.groovy` on DSTs using slurm
   * if you want to restrict the jobs to specific data sets, comment out lines in
     `datasetList.txt` (`bash` syntax, use `#`)
+  * you may need to edit `$datadir` to specify the location of DST files
   * wait for slurm jobs to finish
   * execute `errorPrint.sh` to inspect error logs
 * `exeTimeline.pass1.sh`, which does the following:

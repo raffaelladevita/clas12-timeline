@@ -29,6 +29,10 @@ Data monitoring tools for CLAS run QA
   * runs `datasetOrganize.sh`
   * runs `monitorPlot.groovy`
   * copies timelines to webserver using `deployTimelines.sh`
+  * if any of these scripts throw errors, they will be redirected and printed at the end
+    of `exeTimeline.pass1.sh`
+    * if you see any errors for a script, it's best to rerun that script independently
+      to diagnose the problem
 * perform the QA (see QA procedure below)
 * release timeline to main directory: use `releaseTimelines.sh`
 

@@ -8,6 +8,12 @@ Data monitoring tools for CLAS run QA
 * The variable `${dataset}` will be used throughout as a name specifying the data set to
   be analyzed; this name is for organization purposes, for those who want to
   monitor several different sets of data
+* make sure `$CLASSPATH` includes the `$COATJAVA` libraries, as well as `.`; this can be
+  done in `bash` by: 
+  ```
+  if [ -n "$CLASSPATH" ]; then export CLASSPATH="${CLASSPATH}:"; fi
+  export CLASSPATH="${CLASSPATH}${COATJAVA}/lib/clas/*:."
+  ```
 
 
 ## PASS1 Procedure

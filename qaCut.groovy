@@ -9,7 +9,7 @@ Tools T = new Tools()
 
 //----------------------------------------------------------------------------------
 // ARGUMENTS:
-dataset = 'pass1'
+dataset = 'inbending1'
 useFT = false // if true, use FT electrons instead
 qaBit = -1 // if positive, produce QA timeline based on QA/qa.${dataset}/qaTree.json
 if(args.length>=1) dataset = args[0]

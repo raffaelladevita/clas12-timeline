@@ -1,7 +1,7 @@
 #!/bin/bash
 # build root tree
 
-dataset="pass1"
+dataset="inbending1"
 if [ $# -eq 1 ]; then dataset=$1; fi
 
 datfile="outdat.${dataset}/data_table.dat"

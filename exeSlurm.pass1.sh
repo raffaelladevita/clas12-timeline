@@ -1,19 +1,18 @@
 #!/bin/bash
 
-datadir="${PWD}/../pass1"
-
 if [ $# -ne 1 ];then echo "USAGE: $0 [dataset]"; exit; fi
 dataset=$1
+
+datadir="${PWD}/../pass1.${dataset}"
 
 runL=$(grep $dataset datasetList.txt | awk '{print $2}')
 runH=$(grep $dataset datasetList.txt | awk '{print $3}')
 
-
 # build list of files, and cleanup outdat and outmon directories
 joblist=joblist.${dataset}.slurm
 > $joblist
-for rundir in `ls -d ${datadir}/*`; do
-  run=$(echo $rundir | sed 's/^.*\/0*//g;s/\/$//g')
+for rundir in `ls -d ${datadir}/*/ | sed 's/\/$//'`; do
+  run=$(echo $rundir | sed 's/^.*\/0*//g')
   if [ $run -ge $runL -a $run -le $runH ]; then
     echo "--- found dir=$rundir  run=$run"
     echo "groovy monitorRead.groovy $rundir dst" >> $joblist
@@ -24,7 +23,6 @@ done
 
 
 # write job descriptor
-
 slurm=job.${dataset}.slurm
 > $slurm
 rm -v /farm_out/`whoami`/clasqa*

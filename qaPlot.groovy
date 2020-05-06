@@ -7,7 +7,7 @@ import org.jlab.groot.data.GraphErrors
 
 //----------------------------------------------------------------------------------
 // ARGUMENTS:
-def dataset = 'pass1'
+def dataset = 'inbending1'
 def useFT = false // if true, use FT electrons instead
 if(args.length>=1) dataset = args[0]
 if(args.length>=2) useFT = true

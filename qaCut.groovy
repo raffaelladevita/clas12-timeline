@@ -7,7 +7,7 @@ import groovy.json.JsonOutput
 import Tools
 Tools T = new Tools()
 
-//----------------------------------------------------------------------------------
+//--------------------------------------------------------------------------
 // ARGUMENTS:
 dataset = 'inbending1'
 useFT = false // if true, use FT electrons instead
@@ -15,12 +15,12 @@ qaBit = -1 // if positive, produce QA timeline based on QA/qa.${dataset}/qaTree.
 if(args.length>=1) dataset = args[0]
 if(args.length>=2) useFT = (args[1]=="FT") ? true : false
 if(args.length>=3) qaBit = args[2].toInteger()
-//----------------------------------------------------------------------------------
+//--------------------------------------------------------------------------
 
 // vars and subroutines
 def sectors = 0..<6
 def sec = { int i -> i+1 }
-def runnum, filenum, sector, epoch
+def runnum, filenum, sector, epoch, evnumMin, evnumMax
 def gr
 def pPrint = { str -> JsonOutput.prettyPrint(JsonOutput.toJson(str)) }
 def jPrint = { name,object -> new File(name).write(JsonOutput.toJson(object)) }
@@ -46,8 +46,29 @@ def getEpochBounds = { e ->
     if(i==e) (lowerBound,upperBound) = line.tokenize(' ').collect{it.toInteger()}
   }
 }
-  
-  
+
+
+// build map of (runnum,filenum) -> (evnumMin,evnumMax)
+def dataFile = new File("outdat.${dataset}/data_table.dat")
+def tok
+def evnumTree = [:]
+if(!(dataFile.exists())) throw new Exception("data_table.dat not found")
+dataFile.eachLine { line ->
+  tok = line.tokenize(' ')
+  runnum = tok[0].toInteger()
+  filenum = tok[1].toInteger()
+  evnumMin = tok[2].toInteger()
+  evnumMax = tok[3].toInteger()
+  if(!evnumTree.containsKey(runnum))
+    evnumTree[runnum] = [:]
+  if(!evnumTree[runnum].containsKey(filenum)) {
+    evnumTree[runnum][filenum] = [
+      "evnumMin":evnumMin,
+      "evnumMax":evnumMax
+    ]
+  }
+}
+
 
 // open hipo file
 def inTdir = new TDirectory()
@@ -476,6 +497,9 @@ inList.each { obj ->
 
           if(!qaTree[runnum].containsKey(filenum)) {
             qaTree[runnum][filenum] = [:]
+            qaTree[runnum][filenum]['evnumMin'] = evnumTree[runnum][filenum]['evnumMin']
+            qaTree[runnum][filenum]['evnumMax'] = evnumTree[runnum][filenum]['evnumMax']
+            qaTree[runnum][filenum]['comment'] = ""
             qaTree[runnum][filenum]['defect'] = 0
             qaTree[runnum][filenum]['sectorDefects'] = sectors.collectEntries{s->[sec(s),[]]}
           }

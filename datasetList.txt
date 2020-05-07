@@ -1,3 +1,4 @@
 #inbending1 5032 5262
 #inbending2 5300 5419
-outbending 5422 5666
+#outbending 5422 5666
+rgb_test 6164 6595

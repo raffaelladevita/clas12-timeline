@@ -14,7 +14,6 @@ def slurper = new JsonSlurper()
 def jsonFile = new File(infile)
 def qaTree = slurper.parse(jsonFile)
 def defStr = []
-def printOut = false
 qaTree.sort{a,b -> a.key.toInteger() <=> b.key.toInteger() }.each{
   run, runTree ->
   outfileW << "\nRUN: $run\n"
@@ -23,7 +22,6 @@ qaTree.sort{a,b -> a.key.toInteger() <=> b.key.toInteger() }.each{
     def defect = fileTree.defect
     //defStr=[run,file,defect,Integer.toBinaryString(defect)]
     defStr = [run,file]
-    printOut = false
 
     def getSecList = { bitNum ->
       def secList = []
@@ -37,18 +35,12 @@ qaTree.sort{a,b -> a.key.toInteger() <=> b.key.toInteger() }.each{
       T.bitNames.eachWithIndex { str,i ->
         if(defect >> i & 0x1) defStr += " " + str + getSecList(i)
       }
-      printOut = true
-    }
+    } else defStr += " GOLDEN"
     if(fileTree.comment!=null) {
-      if(fileTree.comment.length()>0) {
-        defStr += " :: " + fileTree.comment
-        printOut = true
-      }
+      if(fileTree.comment.length()>0) defStr += " :: " + fileTree.comment
     }
-    if(printOut) {
-      outfileW << defStr.join(' ') << "\n"
-      //outfileW << fileTree.sectorDefects << "\n"
-    }
+    outfileW << defStr.join(' ') << "\n"
+    //outfileW << fileTree.sectorDefects << "\n"
   }
 }
 

@@ -1,10 +1,13 @@
-// test tree recursion bug:
-// there is a difference between groovy 2.5.6 and 2.4.x:
-// the newer version does not build the tree properly
+// test Tools::exeLeaves bug
+// there is a difference between groovy 2.5 and 2.4:
+// "push" and "pop" operations on lists are different between the two versions
+// - this has been fixed
 import org.jlab.groot.data.H1F
 import org.jlab.groot.data.H2F
+import groovy.json.JsonOutput
 import Tools // (make sure `.` is in $CLASSPATH)
 Tools T = new Tools()
+def pPrint = { str -> JsonOutput.prettyPrint(JsonOutput.toJson(str)) }
 
 println("CALL buildTree")
 def partList = [ 'pip', 'pim' ]
@@ -14,9 +17,11 @@ T.buildTree(histTree,'helic',[
   ['sinPhi'],
   partList,
   helList
-],{ new H1F() })
+],{ /*new H1F()*/ })
 println("PRINT histTree branches")
 T.printTree(histTree)
+println("JSON PRINT:")
+println pPrint(histTree)
 
 
 def buildHist(histName, histTitle, propList, runn, nb, lb, ub, nb2=0, lb2=0, ub2=0) {

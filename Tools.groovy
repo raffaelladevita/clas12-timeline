@@ -140,10 +140,10 @@ class Tools {
     // analyze their nodes
     if(node.getClass()==java.util.LinkedHashMap) {
       node.each { 
-        path.push(it.key)
+        path += it.key
         exeLeaves(it.value,clos,path)
         if(it.value.getClass()!=java.util.LinkedHashMap) it.value = leaf
-        path.pop()
+        path.removeAt(path.size()-1)
       }
     }
     else {

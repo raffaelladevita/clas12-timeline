@@ -21,7 +21,7 @@ Tools T = new Tools()
 // OPTIONS
 def segmentSize = 10000 // number of events in each segment
 def EBEAM = 10.6 // beam energy (shouldn't be hard-coded... TODO)
-def inHipoType = "skim" // options: "dst", "skim"
+def inHipoType = "dst" // options: "dst", "skim"
 
 
 // ARGUMENTS
@@ -164,7 +164,7 @@ def nbins
 def sectors = 0..<6
 def nElec = sectors.collect{0}
 def nElecFT = 0
-def FClist = []
+def LTlist = []
 def UFClist = []
 def detIdEC = DetectorType.ECAL.getDetectorId()
 
@@ -343,10 +343,12 @@ def writeHistos = {
 
 
   // get FC charge
-  def fcStart = FClist.min()
-  def fcStop = FClist.max()
+  LTlist.removeAll{it<0} // remove undefined livetime values
+  def aveLivetime = LTlist.size()>0 ? LTlist.sum() / LTlist.size() : 0
   def ufcStart = UFClist.min()
   def ufcStop = UFClist.max()
+  def fcStart = ufcStart * aveLivetime
+  def fcStop = ufcStop * aveLivetime
   if(fcStart>fcStop || ufcStart>ufcStop) {
     System.err << "WARNING: faraday cup start > stop for" <<
       " run=${runnum} file=${segmentNum}\n"
@@ -363,8 +365,8 @@ def writeHistos = {
   // reset number of trigger electrons counter and FC lists
   nElec = sectors.collect{0}
   nElecFT = 0
-  FClist = []
   UFClist = []
+  LTlist = []
 }
 
 
@@ -474,10 +476,11 @@ inHipoList.each { inHipoFile ->
       }
 
       
-      // get FC charge (note: gated and ungated bankdefs are switched!)
+      // get FC charge
       if(scalerBank.rows()>0) {
-        FClist << scalerBank.getFloat("fcup",0) // actually gated
-        UFClist << scalerBank.getFloat("fcupgated",0) // actually ungated
+        UFClist << scalerBank.getFloat("fcup",0) // ungated charge
+        //FClist << scalerBank.getFloat("fcupgated",0) // do not use!
+        LTlist << scalerBank.getFloat("livetime",0) // livetime
       }
 
 

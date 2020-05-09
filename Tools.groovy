@@ -1,5 +1,6 @@
 import org.jlab.clas.physics.LorentzVector
 import org.jlab.clas.physics.Vector3
+import groovy.json.JsonOutput
 
 class Tools {
 
@@ -168,5 +169,8 @@ class Tools {
     else if(path.size()==1) jAccess(tree[path[0]],[])
     else jAccess(tree[path[0]],path[1..-1])
   }
+
+  // pretty printer
+  def pPrint = { str -> JsonOutput.prettyPrint(JsonOutput.toJson(str)) }
 
 }

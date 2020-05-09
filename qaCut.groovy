@@ -22,7 +22,6 @@ def sectors = 0..<6
 def sec = { int i -> i+1 }
 def runnum, filenum, sector, epoch, evnumMin, evnumMax
 def gr
-def pPrint = { str -> JsonOutput.prettyPrint(JsonOutput.toJson(str)) }
 def jPrint = { name,object -> new File(name).write(JsonOutput.toJson(object)) }
 
 
@@ -135,7 +134,7 @@ inList.each { obj ->
     //ratioTree[sector][epoch].add(runnum) // useful for testing
   }
 }
-//println pPrint(ratioTree)
+//println T.pPrint(ratioTree)
 
 
 // subroutine for calculating median of a list
@@ -177,7 +176,7 @@ sectors.each { s ->
   }
 }
 //jPrint("cuts.${dataset}.json",cutTree) // output cutTree to JSON
-//println pPrint(cutTree)
+//println T.pPrint(cutTree)
 
 
 // vars and subroutines for splitting graphs into "good" and "bad", 
@@ -693,7 +692,7 @@ outHipoEpochs.writeFile(outHipoName)
 
 
 // sort qaTree and output to json file
-//println pPrint(qaTree)
+//println T.pPrint(qaTree)
 qaTree.each { qaRun, qaRunTree -> qaRunTree.sort{it.key.toInteger()} }
 qaTree.sort()
 new File("outdat.${dataset}/qaTree"+(useFT?"FT":"")+".json").write(JsonOutput.toJson(qaTree))

@@ -10,7 +10,7 @@
 *.bak
 */*.dat*
 *.dat
-qaTree*.json
+qaTree*.json*
 logfiles/*.out
 logfiles/*.err
 farmout/*

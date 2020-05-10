@@ -523,7 +523,7 @@ inList.each { obj ->
             }
           }
           // set FC bit
-          if( LT>1 ) defectList.add(T.bit("LiveTimeGT1"))
+          if( LT<0.9 ) defectList.add(T.bit("LowLiveTime"))
 
           // insert in qaTree
           qaTree[runnum][filenum]['sectorDefects'][sector] = defectList.collect()

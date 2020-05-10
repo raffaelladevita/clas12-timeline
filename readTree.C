@@ -6,7 +6,8 @@ void readTree(TString dataset="fall18") {
   gStyle->SetOptStat(0);
   TFile * f = new TFile("tree.root","RECREATE");
   TTree * tr = new TTree("tr","tr");
-  TString cols = "i/I:runnum/I:filenum/I:sector/I:nElec/F:nElecFT/F";
+  TString cols = "i/I:runnum/I:filenum/I:evnumMin/I:evnumMax/I";
+  cols += ":sector/I:nElec/F:nElecFT/F";
   cols += ":fcstart/F:fcstop/F:ufcstart/F:ufcstop/F";
   tr->ReadFile("tree.tmp",cols);
   Double_t maxLineY = 16000;

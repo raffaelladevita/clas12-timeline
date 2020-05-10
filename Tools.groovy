@@ -16,7 +16,7 @@ class Tools {
     "TerminalOutlier: outlier N/F of first or last file of run, not marginal",
     "MarginalOutlier: marginal outlier N/F, within one stddev of cut line",
     "SectorLoss: N/F diminished within a sector for several consecutive files",
-    "LiveTimeGT1: live time > 1",
+    "LowLiveTime: live time < 0.9",
     "Misc: miscellaneous defect, documented as comment"
   ]
 

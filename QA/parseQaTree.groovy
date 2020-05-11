@@ -7,6 +7,11 @@ Tools T = new Tools()
 
 infile="qa/qaTree.json"
 outfile="qa/qaTable.dat"
+if(args.length>=1) {
+  infile = args[0]
+  outfile = "${infile}.table"
+}
+
 def outfileF = new File(outfile)
 def outfileW = outfileF.newWriter(false)
 

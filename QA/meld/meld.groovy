@@ -15,7 +15,7 @@ import groovy.json.JsonOutput
 import Tools
 Tools T = new Tools()
 
-def debug = true
+def debug = false
 
 def newFileN = "qaTree.json.new"
 def oldFileN = "qaTree.json.old"
@@ -24,6 +24,7 @@ def oldFile = new File(oldFileN)
 def slurper = new JsonSlurper()
 def qaTreeNew = slurper.parse(newFile)
 def qaTreeOld = slurper.parse(oldFile)
+def qaTreeMelded = [:]
 def defectListOld
 def meldList
 def meldListOR
@@ -34,9 +35,12 @@ def comment
 // run number loop
 qaTreeNew.each{ runnum, fileTree ->
   if(debug) println "RUN=$runnum ---------------"
+  qaTreeMelded[runnum] = [:]
+
   // file number loop
   fileTree.each{ filenum, fileQAnew ->
     if(debug) println "\nrun=$runnum file=$filenum"
+    qaTreeMelded[runnum][filenum] = [:]
     
     // get QA info from old qaTree
     fileQAold = qaTreeOld[runnum][filenum]
@@ -44,12 +48,17 @@ qaTreeNew.each{ runnum, fileTree ->
     // get the comment from the old qaTree file
     comment = T.getLeaf(fileQAold,['comment'])
     if(comment==null) comment=""
+    qaTreeMelded[runnum][filenum]['comment'] = comment
+
+    // copy event number range from new qaTree file
+    qaTreeMelded[runnum][filenum]['evnumMin'] = fileQAnew['evnumMin']
+    qaTreeMelded[runnum][filenum]['evnumMax'] = fileQAnew['evnumMax']
 
     // loop through sectors and meld their defect bits
     meldListOR = []
-    fileQAnew.sectorDefects.each{ sector, defectListNew ->
+    qaTreeMelded[runnum][filenum]['sectorDefects'] = [:]
+    fileQAnew['sectorDefects'].each{ sector, defectListNew ->
 
-      defectListOld = T.getLeaf(fileQAold,['sectorDefects',sector])
       meldList = []
 
       // meld new defect bits
@@ -61,6 +70,7 @@ qaTreeNew.each{ runnum, fileTree ->
       }
 
       // meld old defect bits
+      defectListOld = T.getLeaf(fileQAold,['sectorDefects',sector])
       defectListOld.each{ defect ->
         if(defect==T.bit("SectorLoss")) {
           meldList << defect
@@ -71,8 +81,12 @@ qaTreeNew.each{ runnum, fileTree ->
         if(defect==T.bit("Misc")) meldList << defect
       }
 
-      // add this sector's meldList to the OR of each sector's meldList
+
+      // add this sector's meldList to the OR of each sector's meldList,
+      // and to the melded tree
+      qaTreeMelded[runnum][filenum]['sectorDefects'][sector] = meldList
       meldListOR += meldList
+
 
       if(debug) {
         println "s${sector}"
@@ -89,8 +103,15 @@ qaTreeNew.each{ runnum, fileTree ->
       println "--> DEFECT: $defectMask = " + T.printBinary(defectMask)
       println "--> comment: $comment"
     }
+    qaTreeMelded[runnum][filenum]['defect'] = defectMask
+
   } // end filenum loop
 } // end runnum loop
-      
 
 
+// output melded qaTree.json
+new File("qaTree.json.melded").write(JsonOutput.toJson(qaTreeMelded))
+['new','old','melded'].each{
+  "groovy ../parseQaTree.groovy qaTree.json.$it".execute()
+}
+"./prettyPrint.sh".execute()

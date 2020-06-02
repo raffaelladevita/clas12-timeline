@@ -34,7 +34,7 @@ if(args.length>=2) inHipoType = args[1]
 def inHipoList = []
 if(inHipoType=="dst") {
   def inHipoDirObj = new File(inHipo)
-  def inHipoFilter = inHipoFilter = ~/.*\.hipo/
+  def inHipoFilter = ~/.*\.hipo/
   inHipoDirObj.traverse( type: groovy.io.FileType.FILES, nameFilter: inHipoFilter ) {
     if(it.size()>0) inHipoList << inHipo+"/"+it.getName()
   }

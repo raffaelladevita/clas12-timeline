@@ -27,7 +27,12 @@ def jPrint = { name,object -> new File(name).write(JsonOutput.toJson(object)) }
 
 // read epochs list file
 def epochFile = new File("epochs.${dataset}.txt")
-if(!(epochFile.exists())) throw new Exception("epochs.${dataset}.txt not found")
+if(!(epochFile.exists())) {
+  System.err << "WARNING: using epochs.default.txt\n"
+  epochFile = new File("epochs.default.txt")
+}
+//if(!(epochFile.exists())) throw new Exception("epochs.${dataset}.txt not found")
+
 def getEpoch = { r,s ->
   //return 1 // (for testing single-epoch mode)
   def lb,ub

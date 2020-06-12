@@ -1,5 +1,7 @@
 #!/bin/bash
 
+if [ -z "$CLASQA" ]; then source env.sh; fi
+
 if [ $# -ne 1 ];then echo "USAGE: $0 [dataset]"; exit; fi
 dataset=$1
 
@@ -15,7 +17,7 @@ for rundir in `ls -d ${datadir}/*/ | sed 's/\/$//'`; do
   run=$(echo $rundir | sed 's/^.*\/0*//g')
   if [ $run -ge $runL -a $run -le $runH ]; then
     echo "--- found dir=$rundir  run=$run"
-    echo "groovy monitorRead.groovy $rundir dst" >> $joblist
+    echo "run-groovy monitorRead.groovy $rundir dst" >> $joblist
     rm -v outdat/*${run}.dat
     rm -v outmon/*${run}.hipo
   fi

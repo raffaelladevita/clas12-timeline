@@ -2,6 +2,8 @@
 # after finishing analysis in the `QA` subdirectory, this script will call
 # qaCut.groovy on the results
 
+if [ -z "$CLASQA" ]; then source env.sh; fi
+
 if [ $# -ne 1 ]; then
   echo "USAGE: $0 [dataset]"
   exit
@@ -15,7 +17,7 @@ rm -r $qaDir
 mkdir -p $qaDir
 
 for bit in {0..5} 100; do
-  groovy qaCut.groovy $dataset false $bit
+  run-groovy qaCut.groovy $dataset false $bit
   qa=$(ls -t outmon.${dataset}/electron_trigger_*QA*.hipo | grep -v epoch | head -n1)
   mv $qa ${qaDir}/$(echo $qa | sed 's/^.*_QA_//g')
 done

@@ -11,7 +11,7 @@ mkdir -p qa.${dataset}
 cp -v ../outdat.${dataset}/qaTree.json qa.${dataset}/
 rm qa
 ln -sv qa.${dataset} qa
-groovy parseQaTree.groovy
+run-groovy parseQaTree.groovy
 echo ""
 echo "imported qaTree.json from $dataset"
 echo "view qa/qaTable.dat for human readable version"

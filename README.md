@@ -8,10 +8,19 @@ Data monitoring tools for CLAS run QA
 * The variable `${dataset}` will be used throughout as a name specifying the data set to
   be analyzed; this name is for organization purposes, for those who want to
   monitor several different sets of data
-* make sure `$CLASSPATH` includes the `$COATJAVA` libraries, as well as this repository;
-  in bash, you can do this by `source env.sh`, or copy those lines to your shell config file,
-  e.g. `~/.bashrc`
 
+# Setup
+1. set `COATJAVA` environment
+  * on `ifarm`:
+    * `source /group/clas12/packages/setup.sh`
+    * `module load clas12/pro`
+  * local environment:
+    * `$COATJAVA` must point to your local install
+    * `run-groovy` (likely in `$COATJAVA/bin`) must be in your `$PATH`
+2. set local environment variables with `source env.sh`
+  * some primary run scripts do this automatically, in case the user forgets
+  * note: `JYPATH` is added to the classpath for groovy called via
+    `run-groovy`, from `coatjava`
 
 ## PASS1 Procedure
 * `exeSlurm.pass1.sh $dataset`: runs `monitorRead.groovy` on DSTs using slurm

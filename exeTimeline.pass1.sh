@@ -1,5 +1,7 @@
 #!/bin/bash
 
+if [ -z "$CLASQA" ]; then source env.sh; fi
+
 # setup error filtered execution function
 errlog="errors.log"
 > $errlog
@@ -21,13 +23,13 @@ while read line; do
   if [[ $line == \#* ]]; then continue; fi
   dataset=$(echo $line|awk '{print $1}')
   # trigger electrons monitor
-  exe groovy qaPlot.groovy $dataset
-  exe groovy qaCut.groovy $dataset
+  exe run-groovy qaPlot.groovy $dataset
+  exe run-groovy qaCut.groovy $dataset
   # FT electrons
-  exe groovy qaPlot.groovy $dataset FT
-  exe groovy qaCut.groovy $dataset FT
+  exe run-groovy qaPlot.groovy $dataset FT
+  exe run-groovy qaCut.groovy $dataset FT
   # general monitor
-  exe groovy monitorPlot.groovy $dataset
+  exe run-groovy monitorPlot.groovy $dataset
   # deploy timelines to dev www
   exe ./deployTimelines.sh $dataset $dataset
 done < datasetList.txt

@@ -5,10 +5,10 @@ if [ -z "$CLASQA" ]; then source env.sh; fi
 if [ $# -ne 1 ];then echo "USAGE: $0 [dataset]"; exit; fi
 dataset=$1
 
-datadir="${PWD}/../pass1.${dataset}"
 
 runL=$(grep $dataset datasetList.txt | awk '{print $2}')
 runH=$(grep $dataset datasetList.txt | awk '{print $3}')
+datadir=$(grep $dataset datasetList.txt | awk '{print $4}')
 
 # build list of files, and cleanup outdat and outmon directories
 joblist=joblist.${dataset}.slurm

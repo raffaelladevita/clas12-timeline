@@ -1,4 +1,7 @@
 #inbending1 5032 5262
 #inbending2 5300 5419
 #outbending 5422 5666
-rgk_test 5700 5958
+rgb_spring 6150 6603
+#rgb_fall 11023 11309
+#rgb_winter 11324 11571
+#rgk_test 5700 5958

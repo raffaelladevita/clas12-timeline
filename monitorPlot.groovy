@@ -360,8 +360,8 @@ T.exeLeaves(monTree,{
     def tlPath = T.leafPath[1..-2]
 
     // initialise new timeline graph, if not yet initialised
-    T.addLeaf(timelineTree,tlPath+'TL',{
-      def tlN = (tlPath+'TL').join('_')
+    T.addLeaf(timelineTree,tlPath+'timeline',{
+      def tlN = (tlPath+'timeline').join('_')
       def tlT
       if(tlPath.contains('helic')) {
         if(tlPath.contains('sinPhi')) tlT = "sinPhiH"
@@ -383,9 +383,9 @@ T.exeLeaves(monTree,{
     })
 
     // we also want a few timelines to monitor standard deviations
-    T.addLeaf(timelineTree,tlPath+'TLdev',{
+    T.addLeaf(timelineTree,tlPath+'timelineDev',{
       if(tlPath.contains('DIS') || tlPath.contains('inclusive')) {
-        def tlN = (tlPath+'TLdev').join('_')
+        def tlN = (tlPath+'timelineDev').join('_')
         def tlT
         if(tlPath.contains('DIS')) tlT = "DIS kinematics"
         if(tlPath.contains('inclusive')) {
@@ -405,9 +405,9 @@ T.exeLeaves(monTree,{
       aveX = T.leaf.getMean()
       stddevX = T.leaf.getRMS()
       aveXerr = stddevX / Math.sqrt(T.leaf.integral())
-      T.getLeaf(timelineTree,tlPath+'TL').addPoint(tlRun,aveX,0.0,aveXerr)
+      T.getLeaf(timelineTree,tlPath+'timeline').addPoint(tlRun,aveX,0.0,aveXerr)
       if(tlPath.contains('DIS') || tlPath.contains('inclusive')) {
-        T.getLeaf(timelineTree,tlPath+'TLdev').addPoint(tlRun,stddevX,0.0,0.0)
+        T.getLeaf(timelineTree,tlPath+'timelineDev').addPoint(tlRun,stddevX,0.0,0.0)
       }
     }
     // or if it's a helicity distribution monitor, add the run's overall fractions
@@ -416,13 +416,13 @@ T.exeLeaves(monTree,{
       def numer = monTree[tlRun]['helic']['dist'][ndKey]["${ndKey}Numer"]
       def denom = monTree[tlRun]['helic']['dist'][ndKey]["${ndKey}Denom"]
       def frac = denom>0 ? numer/denom : 0
-      T.getLeaf(timelineTree,tlPath+'TL').addPoint(tlRun,frac,0.0,0.0)
+      T.getLeaf(timelineTree,tlPath+'timeline').addPoint(tlRun,frac,0.0,0.0)
     }
     // or if it's an asymmetry graph, add fit results to the timeline
     if(T.key=='asymGraph') {
       def valPath = T.leafPath[0..-2] + 'asymValue'
       def errPath = T.leafPath[0..-2] + 'asymError'
-      T.getLeaf(timelineTree,tlPath+'TL').addPoint(
+      T.getLeaf(timelineTree,tlPath+'timeline').addPoint(
         tlRun, T.getLeaf(monTree,valPath),
         0.0, T.getLeaf(monTree,errPath))
     }
@@ -472,13 +472,13 @@ def hipoWrite = { hipoName, filterList, TLkey ->
 }
 
 // write objects to hipo files
-hipoWrite("helicity_sinPhi",['helic','sinPhi'],"TL")
-hipoWrite("beam_spin_asymmetry",['helic','asym'],"TL")
-hipoWrite("defined_helicity_fraction",['helic','dist','heldef'],"TL")
-hipoWrite("relative_luminosity",['helic','dist','rellum'],"TL")
-hipoWrite("q2_W_x_y_means",['DIS'],"TL")
-hipoWrite("pip_kinematics_means",['inclusive','pip'],"TL")
-hipoWrite("pim_kinematics_means",['inclusive','pim'],"TL")
-hipoWrite("q2_W_x_y_stddevs",['DIS'],"TLdev")
-hipoWrite("pip_kinematics_stddevs",['inclusive','pip'],"TLdev")
-hipoWrite("pim_kinematics_stddevs",['inclusive','pim'],"TLdev")
+hipoWrite("helicity_sinPhi",['helic','sinPhi'],"timeline")
+hipoWrite("beam_spin_asymmetry",['helic','asym'],"timeline")
+hipoWrite("defined_helicity_fraction",['helic','dist','heldef'],"timeline")
+hipoWrite("relative_luminosity",['helic','dist','rellum'],"timeline")
+hipoWrite("q2_W_x_y_means",['DIS'],"timeline")
+hipoWrite("pip_kinematics_means",['inclusive','pip'],"timeline")
+hipoWrite("pim_kinematics_means",['inclusive','pim'],"timeline")
+hipoWrite("q2_W_x_y_stddevs",['DIS'],"timelineDev")
+hipoWrite("pip_kinematics_stddevs",['inclusive','pip'],"timelineDev")
+hipoWrite("pim_kinematics_stddevs",['inclusive','pim'],"timelineDev")

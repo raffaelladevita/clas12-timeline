@@ -307,10 +307,9 @@ def writeHistos = {
   // get event number range
   eventNumMin = eventNumList.min()
   eventNumMax = eventNumList.max()
-  println "SIZE:"
-  println eventNumList.size()>0
 
-  if(eventNumList.size()>0) {
+  // proceed only if there are data to write
+  if(eventNumList.size()>0 && UFClist.size()>0) {
 
     // get segment number
     if(inHipoType=="skim") {
@@ -365,8 +364,7 @@ def writeHistos = {
     }
   }
   else {
-    System.err << 
-      "WARNING: no events in this segment (segmentTmp=$segmentTmp)\n"
+    System.err << "WARNING: empty segment (segmentTmp=$segmentTmp)\n"
   }
 
   // reset number of trigger electrons counter and FC lists

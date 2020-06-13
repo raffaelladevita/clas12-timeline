@@ -307,59 +307,66 @@ def writeHistos = {
   // get event number range
   eventNumMin = eventNumList.min()
   eventNumMax = eventNumList.max()
+  println "SIZE:"
+  println eventNumList.size()>0
 
-  // get segment number
-  if(inHipoType=="skim") {
-    // segment number is average event number; include standard deviation
-    // of event number as well
-    segmentNum = Math.round( eventNumList.sum() / eventNumList.size() )
-    segmentDev = Math.round(Math.sqrt( 
-     eventNumList.collect{ n -> Math.pow((n-segmentNum),2) }.sum() / 
-     (eventNumList.size()-1)
-    ))
-    print "eventNum ave=$segmentNum dev=$segmentDev"
-    print "min=$eventNumMin max=$eventNumMax\n"
+  if(eventNumList.size()>0) {
+
+    // get segment number
+    if(inHipoType=="skim") {
+      // segment number is average event number; include standard deviation
+      // of event number as well
+      segmentNum = Math.round( eventNumList.sum() / eventNumList.size() )
+      segmentDev = Math.round(Math.sqrt( 
+       eventNumList.collect{ n -> Math.pow((n-segmentNum),2) }.sum() / 
+       (eventNumList.size()-1)
+      ))
+      print "eventNum ave=$segmentNum dev=$segmentDev"
+      print "min=$eventNumMin max=$eventNumMax\n"
+    }
+    else if(inHipoType=="dst") {
+      // segment number is the DST 5-file number; standard devation is irrelevant here
+      // and set to 0 for compatibility with downstream code
+      segmentNum = segmentTmp
+      segmentDev = 0
+    }
+
+
+    // loop through histTree, adding histos to the hipo file;
+    // note that the average event number is appended to the name
+    T.exeLeaves( histTree, {
+      histN = T.leaf.getName() + "_${segmentNum}_${segmentDev}"
+      histT = T.leaf.getTitle() + " :: segment=${segmentNum}"
+      T.leaf.setName(histN)
+      T.leaf.setTitle(histT)
+      outHipo.addDataSet(T.leaf) 
+    })
+    //println "write histograms:"; T.printTree(histTree,{T.leaf.getName()})
+
+
+    // get FC charge
+    LTlist.removeAll{it<0} // remove undefined livetime values
+    def aveLivetime = LTlist.size()>0 ? LTlist.sum() / LTlist.size() : 0
+    def ufcStart = UFClist.min()
+    def ufcStop = UFClist.max()
+    def fcStart = ufcStart * aveLivetime
+    def fcStop = ufcStop * aveLivetime
+    if(fcStart>fcStop || ufcStart>ufcStop) {
+      System.err << "WARNING: faraday cup start > stop for" <<
+        " run=${runnum} file=${segmentNum}\n"
+    }
+
+    // write number of electrons and FC charge to datfile
+    sectors.each{ sec ->
+      datfileWriter << [ runnum, segmentNum ].join(' ') << ' '
+      datfileWriter << [ eventNumMin, eventNumMax ].join(' ') << ' '
+      datfileWriter << [ sec+1, nElec[sec], nElecFT ].join(' ') << ' '
+      datfileWriter << [ fcStart, fcStop, ufcStart, ufcStop ].join(' ') << '\n'
+    }
   }
-  else if(inHipoType=="dst") {
-    // segment number is the DST 5-file number; standard devation is irrelevant here
-    // and set to 0 for compatibility with downstream code
-    segmentNum = segmentTmp
-    segmentDev = 0
-  }
-
-  // reset the eventNum list
-  eventNumList.clear()
-
-  // loop through histTree, adding histos to the hipo file;
-  // note that the average event number is appended to the name
-  T.exeLeaves( histTree, {
-    histN = T.leaf.getName() + "_${segmentNum}_${segmentDev}"
-    histT = T.leaf.getTitle() + " :: segment=${segmentNum}"
-    T.leaf.setName(histN)
-    T.leaf.setTitle(histT)
-    outHipo.addDataSet(T.leaf) 
-  })
-  //println "write histograms:"; T.printTree(histTree,{T.leaf.getName()})
-
-
-  // get FC charge
-  LTlist.removeAll{it<0} // remove undefined livetime values
-  def aveLivetime = LTlist.size()>0 ? LTlist.sum() / LTlist.size() : 0
-  def ufcStart = UFClist.min()
-  def ufcStop = UFClist.max()
-  def fcStart = ufcStart * aveLivetime
-  def fcStop = ufcStop * aveLivetime
-  if(fcStart>fcStop || ufcStart>ufcStop) {
-    System.err << "WARNING: faraday cup start > stop for" <<
-      " run=${runnum} file=${segmentNum}\n"
-  }
-
-  // write number of electrons and FC charge to datfile
-  sectors.each{ sec ->
-    datfileWriter << [ runnum, segmentNum ].join(' ') << ' '
-    datfileWriter << [ eventNumMin, eventNumMax ].join(' ') << ' '
-    datfileWriter << [ sec+1, nElec[sec], nElecFT ].join(' ') << ' '
-    datfileWriter << [ fcStart, fcStop, ufcStart, ufcStop ].join(' ') << '\n'
+  else {
+    System.err << 
+      "WARNING: no events in this segment (segmentTmp=$segmentTmp)\n"
   }
 
   // reset number of trigger electrons counter and FC lists
@@ -367,6 +374,7 @@ def writeHistos = {
   nElecFT = 0
   UFClist = []
   LTlist = []
+  eventNumList.clear()
 }
 
 

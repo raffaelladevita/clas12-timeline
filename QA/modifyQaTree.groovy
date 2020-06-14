@@ -22,7 +22,7 @@ if(args.length>=1) cmd = args[0]
 else { 
   println(
   """
-  syntax: groovy modifyQaTree.groovy [command] [arguments]\n
+  syntax: modify.sh [command] [arguments]\n
 List of Commands:
   """)
   usage.each{ println("- "+it.value) }
@@ -204,4 +204,4 @@ else { println("ERROR: unknown command!"); return }
 
 // update qaTree.json
 new File("qa/qaTree.json").write(JsonOutput.toJson(qaTree))
-"groovy parseQaTree.groovy".execute()
+"run-groovy parseQaTree.groovy".execute()

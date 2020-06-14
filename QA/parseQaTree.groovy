@@ -38,7 +38,7 @@ qaTree.sort{a,b -> a.key.toInteger() <=> b.key.toInteger() }.each{
 
     if(defect>0) {
       T.bitNames.eachWithIndex { str,i ->
-        if(defect >> i & 0x1) defStr += " " + str + getSecList(i)
+        if(defect >> i & 0x1) defStr += " ${i}-" + str + getSecList(i)
       }
     } else defStr += " GOLDEN"
     if(fileTree.comment!=null) {

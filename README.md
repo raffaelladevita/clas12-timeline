@@ -227,6 +227,10 @@ generate QA timelines, and a `json` file which is used for the manual followup Q
 section is under construction, here's the rough outline:
 * `cd QA`
 * `import.sh [dataset]` to import the automatically generated `qaTree.json`
+  * by default, this is in `../outdat.${dataset}/qaTree.json`
+  * you can also specify a path to a specific `qaTree.json` file; this is 
+    useful if you have a more up-to-date version somewhere else, and you
+    want to use the tools in this QA directory to make revisions
 * open `qa/qaTable.dat` in another window; this is the human-readable version of
   the imported `qaTree.json`
 * while reading through this file, inspect the online timelines
@@ -236,6 +240,14 @@ section is under construction, here's the rough outline:
   * QA timelines are stored in `outmon.${dataset}.qa`
   * it copies the new `qaTree.json` we editted from `QA/qa.${dataset}/qaTree.json` to
     the new QA timeline directory, which can then be deployed to the webservers
+
+### melding
+* This procedure is used if you need to combine two `qaTree.json` files
+  * the trees must have the same set of runs, not for concatenating two different sets
+    of runs
+  * this is useful if, e.g, you change bit definitions and want to update a `qaTree.json`
+    file, with full control of each defect bit's behavior
+  * see `QA/meld/README.md`
 
 
 ## Supplementary Scripts

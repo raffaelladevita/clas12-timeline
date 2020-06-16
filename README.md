@@ -35,7 +35,7 @@ Data monitoring tools for CLAS run QA
       to the appropriate DST directory
   * wait for slurm jobs to finish
   * execute `errorPrint.sh` to inspect error logs
-* `exeTimeline.pass1.sh`, which does the following:
+* `exeTimeline.pass1.sh $dataset`, which does the following:
   * runs `qaPlot.groovy` (on electron trigger and FT)
   * runs `qaCut.groovy` (on electron trigger and FT)
   * runs `datasetOrganize.sh`
@@ -110,14 +110,13 @@ First step is to read DST or Skim files, producing hipo files and data tables
 
 
 ### Data Organization
-It is recommended to copy the data produced in `outdat/` and `outmon/` to a directory
-identified with a data set name `$dataset`
-
-* purpose is to keep production of timelines organized
-* syntax is `outdat.${dataset}/` and `outmon.${dataset}`
-* prodedure (pick one): 
-  * use the script `datasetOrganize.sh`, editting it if necessary
-  * create symlinks (discouraged, may be buggy)
+* use the script `datasetOrganize.sh`
+  * this will concatenate files from `outdat` into a single file
+    `outdat.${dataset}/data_table.dat`, for each dataset that is *not* commented
+    out in `datasetList.txt`
+  * it will also generate symlinks from `outmon.${dataset}/monitor*.hipo` to the
+    relevant `outmon/monitor*.hipo` files, for each dataset that is *not* commented
+    out in `datasetList.txt`
 
 
 ### Plotting Scripts

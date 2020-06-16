@@ -2,6 +2,9 @@
 
 if [ -z "$CLASQA" ]; then source env.sh; fi
 
+if [ $# -ne 1 ];then echo "USAGE: $0 [dataset]"; exit; fi
+dataset=$1
+
 # setup error filtered execution function
 errlog="errors.log"
 > $errlog
@@ -15,24 +18,20 @@ function exe {
   $* 2>>$errlog
 }
 
-# organize the data into dataset
+# organize the data into datasets
 exe ./datasetOrganize.sh
 
 # loop over datasets
-while read line; do
-  if [[ $line == \#* ]]; then continue; fi
-  dataset=$(echo $line|awk '{print $1}')
-  # trigger electrons monitor
-  exe run-groovy qaPlot.groovy $dataset
-  exe run-groovy qaCut.groovy $dataset
-  # FT electrons
-  exe run-groovy qaPlot.groovy $dataset FT
-  exe run-groovy qaCut.groovy $dataset FT
-  # general monitor
-  exe run-groovy monitorPlot.groovy $dataset
-  # deploy timelines to dev www
-  exe ./deployTimelines.sh $dataset $dataset
-done < datasetList.txt
+# trigger electrons monitor
+exe run-groovy qaPlot.groovy $dataset
+exe run-groovy qaCut.groovy $dataset
+# FT electrons
+exe run-groovy qaPlot.groovy $dataset FT
+exe run-groovy qaCut.groovy $dataset FT
+# general monitor
+exe run-groovy monitorPlot.groovy $dataset
+# deploy timelines to dev www
+exe ./deployTimelines.sh $dataset $dataset
 
 
 # print errors (filtering out hipo logo contamination)

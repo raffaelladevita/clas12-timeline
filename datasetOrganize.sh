@@ -20,13 +20,16 @@ for file in outmon/monitor_*.hipo; do
   # determine which dataset this run belongs to
   dataset=""
   while read line; do
-    if [[ $line == \#* ]]; then continue; fi
     runL=$(echo $line|awk '{print $2}')
     runH=$(echo $line|awk '{print $3}')
     if [ $run -ge $runL -a $run -le $runH ]; then
       dataset=$(echo $line|awk '{print $1}')
+      break
     fi
   done < datasetList.txt
+
+  # if the run belongs to a commented out dataset, ignore it
+  if [[ $dataset == \#* ]]; then continue; fi
   
   # if the dataset is associated to a run, import its data
   if [ -n "$dataset" ]; then

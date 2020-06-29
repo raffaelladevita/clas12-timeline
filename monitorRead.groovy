@@ -169,6 +169,12 @@ def nElecFT = 0
 def LTlist = []
 def UFClist = []
 def detIdEC = DetectorType.ECAL.getDetectorId()
+def Q2
+def W
+def nu
+def x,y,z
+def p,pT,theta,phiH
+def countEvent
 
 // lorentz vectors
 def vecBeam = new LorentzVector(0, 0, EBEAM, EBEAM)
@@ -334,12 +340,6 @@ def findParticles = { pid ->
 
 // subroutine to calculate hadron (pion) kinematics, and fill histograms
 // note: needs to have some kinematics defined (vecQ,Q2,W), and helStr
-def Q2
-def W
-def nu
-def x,y,z
-def p,pT,theta,phiH
-def countEvent
 def fillHistos = { list, partN ->
   list.each { part ->
 

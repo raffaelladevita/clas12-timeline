@@ -146,6 +146,8 @@ def pipList = []
 def pimList = []
 def eleList = []
 def disElectron
+def disEleFound
+def eleSec
 def eventNum
 def eventNumList = []
 def eventNumMin, eventNumMax
@@ -180,6 +182,13 @@ def vecW = new LorentzVector()
 // subroutine to increment the number of counted electrons
 def countTriggerElectrons = { eleRows,eleParts ->
 
+  // reset some vars
+  def Emax = 0
+  def Etmp
+  def eleFoundTrigger = false
+  def eleFoundFT = false
+  disEleFound = false
+
   // loop over electrons from REC::Particle
   if(eleRows.size()>0) {
     eleRows.eachWithIndex { row,ind ->
@@ -187,7 +196,7 @@ def countTriggerElectrons = { eleRows,eleParts ->
       def status = particleBank.getShort('status',row)
       def chi2pid = particleBank.getFloat('chi2pid',row)
 
-      // trigger electrons (FD or CD)
+      // TRIGGER ELECTRONS (FD or CD) CUT
       // - must have status<0 and FD or CD bit(s) set
       // - must have |chi2pid|<3
       // - must appear in ECAL, to obtain sector
@@ -196,18 +205,33 @@ def countTriggerElectrons = { eleRows,eleParts ->
             Math.abs(status/1000).toInteger() & 0x4 ) &&
           Math.abs(chi2pid)<3
       ) {
-        def eleSec = (0..calBank.rows()).collect{
+
+        // get sector
+        def eleSecTmp = (0..calBank.rows()).collect{
           ( calBank.getShort('pindex',it).toInteger() == row &&
             calBank.getByte('detector',it).toInteger() == detIdEC ) ?
             calBank.getByte('sector',it).toInteger() : null
         }.find()
-        if(eleSec!=null) nElec[eleSec-1]++
-        else {
-          System.err <<
-            "WARNING: found electron with unknown sector" <<
-            " run=${runnum}\n"
+
+        // CUT for electron: sector must be defined
+        if(eleSecTmp!=null) {
+
+          // CUT for electron: choose maximum energy electron (for triggers)
+          // - choice is from both trigger and FT electron sets (see below)
+          Etmp = eleParts[ind].e()
+          if(Etmp>Emax) {
+            Emax = Etmp
+            eleSec = eleSecTmp
+            eleFoundTrigger = true
+            eleFoundFT = false
+            disElectron = eleParts[ind]
+          }
+
+        } else {
+          System.err << "WARNING: found electron with unknown sector\n"
         }
       }
+
 
       // FT trigger electrons
       // - REC::Particle:status has FT bit
@@ -222,12 +246,67 @@ def countTriggerElectrons = { eleRows,eleParts ->
               Math.abs(status/1000).toInteger() & 0x1 &&
               eleParts[ind].e() > 0.3
           ) {
-            nElecFT++
+
+            // CUT for electron: maximum energy electron (for FT)
+            // - choice is from both trigger and FT electron sets (see above)
+            Etmp = eleParts[ind].e()
+            if(Etmp>Emax) {
+              Emax = Etmp
+              eleFoundFT = true
+              eleFoundTrigger = false
+              disElectron = eleParts[ind]
+            }
+
           }
         }
-
       }
+
+
+    } // eo loop through REC::Particle
+  } // eo if nonempty REC::Particle
+
+
+  // calculate DIS kinematics and increment counters
+  if(eleFoundTrigger || eleFoundFT) {
+
+    
+    // - calculate DIS kinematics
+    // calculate Q2
+    vecQ.copy(vecBeam)
+    vecEle.copy(disElectron.vector())
+    vecQ.sub(vecEle) 
+    Q2 = -1*vecQ.mass2()
+
+    // calculate W
+    vecW.copy(vecBeam)
+    vecW.add(vecTarget)
+    vecW.sub(vecEle)
+    W = vecW.mass()
+
+    // calculate x and y
+    nu = vecBeam.e() - vecEle.e()
+    x = Q2 / ( 2 * 0.938272 * nu )
+    y = nu / EBEAM
+
+
+    // CUT for electron: Q2 cut
+    //if(Q2<2.5) return
+
+
+    // - increment counters, and set `disEleFound`
+    if(eleFoundTrigger && eleFoundFT) {
+      System.err << "ERROR: eleFoundTrigger && eleFoundFT == 1; skip event\n"
+      return
     }
+    else if(eleFoundTrigger) {
+      nElec[eleSec-1]++
+      disEleFound = true
+    }
+    else if(eleFoundFT) {
+      nElecFT++
+      disEleFound = true
+    }
+
   }
 
 }
@@ -243,7 +322,8 @@ def findParticles = { pid ->
   }
   //println "pid=$pid  found in rows $rowList"
 
-  // if looking for electrons, also count the number of trigger electrons
+  // if looking for electrons, also count the number of trigger electrons,
+  // and find the DIS electron
   if(pid==11) countTriggerElectrons(rowList,particleList)
 
   // return list of Particle objects
@@ -267,7 +347,7 @@ def fillHistos = { list, partN ->
     vecH.copy(part.vector())
     z = T.lorentzDot(vecTarget,vecH) / T.lorentzDot(vecTarget,vecQ)
 
-    // CUT: particle z
+    // CUT for pions: particle z
     if(z>0.3 && z<1) {
 
       // calculate momenta, theta, phiH
@@ -276,7 +356,7 @@ def fillHistos = { list, partN ->
       theta = vecH.theta()
       phiH = T.planeAngle( vecQ.vect(), vecEle.vect(), vecQ.vect(), vecH.vect() )
 
-      // CUT: if phiH is defined
+      // CUT for pions: if phiH is defined
       if(phiH>-10000) {
 
         // fill histograms
@@ -491,61 +571,39 @@ inHipoList.each { inHipoFile ->
 
 
       // get electron list, and increment the number of trigger electrons
-      eleList = findParticles(11)
+      // - also finds the DIS electron, and calculates x,Q2,W,y,nu
+      eleList = findParticles(11) // (`eleList` is unused)
 
 
-      // CUT: proceed with kinematic calculations, if helicity is defined
-      if(helDefined) {
+      // CUT: if a dis electron was found (see countTriggerElectrons)
+      if(disEleFound) {
 
-        // CUT: find scattered electron: highest-E electron such that 2 < E < 11
-        disElectron = eleList.findAll{ it.e()>2 && it.e()<11 }.max{it.e()}
-        if(disElectron) {
+        // CUT for pions: Q2 and W and y and helicity
+        if( Q2>1 && W>2 && y<0.8 && helDefined) {
 
-          // calculate Q2
-          vecQ.copy(vecBeam)
-          vecEle.copy(disElectron.vector())
-          vecQ.sub(vecEle) 
-          Q2 = -1*vecQ.mass2()
+          // get lists of pions
+          pipList = findParticles(211)
+          pimList = findParticles(-211)
 
-          // calculate W
-          vecW.copy(vecBeam)
-          vecW.add(vecTarget)
-          vecW.sub(vecEle)
-          W = vecW.mass()
+          // calculate pion kinematics and fill histograms
+          // countEvent will be set to true if a pion is added to the histos 
+          countEvent = false
+          fillHistos(pipList,'pip')
+          fillHistos(pimList,'pim')
 
-          // calculate x and y
-          nu = vecBeam.e() - vecEle.e()
-          x = Q2 / ( 2 * 0.938272 * nu )
-          y = nu / EBEAM
+          if(countEvent) {
 
+            // fill event-level histograms
+            histTree.DIS.Q2.fill(Q2)
+            histTree.DIS.W.fill(W)
+            histTree.DIS.x.fill(x)
+            histTree.DIS.y.fill(y)
+            histTree.DIS.Q2VsW.fill(W,Q2)
 
-          // CUT: Q2 and W and y
-          if( Q2>1 && W>2 && y<0.8) {
+            // increment event counter
+            evCount++
+            if(evCount % 100000 == 0) println "found $evCount events which contain a pion"
 
-            // get lists of pions
-            pipList = findParticles(211)
-            pimList = findParticles(-211)
-
-            // calculate pion kinematics and fill histograms
-            // countEvent will be set to true if a pion is added to the histos 
-            countEvent = false
-            fillHistos(pipList,'pip')
-            fillHistos(pimList,'pim')
-
-            if(countEvent) {
-
-              // fill event-level histograms
-              histTree.DIS.Q2.fill(Q2)
-              histTree.DIS.W.fill(W)
-              histTree.DIS.x.fill(x)
-              histTree.DIS.y.fill(y)
-              histTree.DIS.Q2VsW.fill(W,Q2)
-
-              // increment event counter
-              evCount++
-              if(evCount % 100000 == 0) println "found $evCount events which contain a pion"
-
-            }
           }
         }
       }

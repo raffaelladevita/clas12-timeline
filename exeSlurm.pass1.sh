@@ -37,7 +37,7 @@ app "#SBATCH --job-name=clasqa"
 app "#SBATCH --account=clas12"
 app "#SBATCH --partition=production"
 
-app "#SBATCH --mem-per-cpu=6000"
+app "#SBATCH --mem-per-cpu=2000"
 app "#SBATCH --time=6:00:00"
 
 app "#SBATCH --array=1-$(cat $joblist | wc -l)"

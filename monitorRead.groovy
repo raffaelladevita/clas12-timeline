@@ -175,6 +175,8 @@ def nu
 def x,y,z
 def p,pT,theta,phiH
 def countEvent
+//def caseCountNtrigGT1 = 0
+//def caseCountNFTwithTrig = 0
 
 // lorentz vectors
 def vecBeam = new LorentzVector(0, 0, EBEAM, EBEAM)
@@ -191,8 +193,10 @@ def countTriggerElectrons = { eleRows,eleParts ->
   // reset some vars
   def Emax = 0
   def Etmp
-  def eleFoundTrigger = false
-  def eleFoundFT = false
+  def disElectronInTrigger = false
+  def disElectronInFT = false
+  def nTrigger = 0
+  def nFT = 0
   disEleFound = false
 
   // loop over electrons from REC::Particle
@@ -222,14 +226,16 @@ def countTriggerElectrons = { eleRows,eleParts ->
         // CUT for electron: sector must be defined
         if(eleSecTmp!=null) {
 
+          nTrigger++ // count how many trigger electrons we looked at
+
           // CUT for electron: choose maximum energy electron (for triggers)
           // - choice is from both trigger and FT electron sets (see below)
           Etmp = eleParts[ind].e()
           if(Etmp>Emax) {
             Emax = Etmp
             eleSec = eleSecTmp
-            eleFoundTrigger = true
-            eleFoundFT = false
+            disElectronInTrigger = true
+            disElectronInFT = false
             disElectron = eleParts[ind]
           }
 
@@ -249,17 +255,19 @@ def countTriggerElectrons = { eleRows,eleParts ->
           def FTstatus = FTparticleBank.getShort('status',row)
           if( FTpid==11 && 
               FTstatus<0 && 
-              Math.abs(status/1000).toInteger() & 0x1 &&
+              Math.abs(FTstatus/1000).toInteger() & 0x1 &&
               eleParts[ind].e() > 0.3
           ) {
+
+            nFT++ // count how many FT electrons we looked at
 
             // CUT for electron: maximum energy electron (for FT)
             // - choice is from both trigger and FT electron sets (see above)
             Etmp = eleParts[ind].e()
             if(Etmp>Emax) {
               Emax = Etmp
-              eleFoundFT = true
-              eleFoundTrigger = false
+              disElectronInFT = true
+              disElectronInTrigger = false
               disElectron = eleParts[ind]
             }
 
@@ -273,7 +281,7 @@ def countTriggerElectrons = { eleRows,eleParts ->
 
 
   // calculate DIS kinematics and increment counters
-  if(eleFoundTrigger || eleFoundFT) {
+  if(disElectronInTrigger || disElectronInFT) {
 
     
     // - calculate DIS kinematics
@@ -300,18 +308,28 @@ def countTriggerElectrons = { eleRows,eleParts ->
 
 
     // - increment counters, and set `disEleFound`
-    if(eleFoundTrigger && eleFoundFT) {
-      System.err << "ERROR: eleFoundTrigger && eleFoundFT == 1; skip event\n"
+    if(disElectronInTrigger && disElectronInFT) { // can never happen (failsafe)
+      System.err << "ERROR: disElectronInTrigger && disElectronInFT == 1; skip event\n"
       return
     }
-    else if(eleFoundTrigger) {
+    else if(disElectronInTrigger) {
       nElec[eleSec-1]++
       disEleFound = true
     }
-    else if(eleFoundFT) {
+    else if(disElectronInFT) {
       nElecFT++
       disEleFound = true
     }
+
+    // increment 'case counters' (for studying overlap of trigger/FT cuts)
+    /*
+    // - case where there are more than one trigger electron in FD
+    if(disElectronInTrigger && nTrigger>1)
+      caseCountNtrigGT1 += nTrigger-1 // count number of unanalyzed extra electrons
+    // - case where disElectron is in FT, but there are trigger electrons in FD
+    if(disElectronInFT && nTrigger>0)
+      caseCountNFTwithTrig += nTrigger // count number of unanalyzed trigger (FD) electrons
+      */
 
   }
 
@@ -442,6 +460,15 @@ def writeHistos = {
       datfileWriter << [ sec+1, nElec[sec], nElecFT ].join(' ') << ' '
       datfileWriter << [ fcStart, fcStop, ufcStart, ufcStop ].join(' ') << '\n'
     }
+
+    // print some stats
+    /*
+    println """number of electrons that satisified FD trigger cuts, but were not analyzed...
+    ...because they had subdominant E: $caseCountNtrigGT1
+    ...because there was a higher-E electron satisfying FT cuts: $caseCountNFTwithTrig""" 
+    caseCountNtrigGT1=0
+    caseCountNFTwithTrig=0
+    */
   }
   else {
     System.err << "WARNING: empty segment (segmentTmp=$segmentTmp)\n"
@@ -632,3 +659,4 @@ File outHipoFile = new File(outHipoN)
 if(outHipoFile.exists()) outHipoFile.delete()
 outHipo.writeFile(outHipoN)
 if(inHipoType=="dst") datfileWriter.close()
+

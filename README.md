@@ -223,8 +223,13 @@ generate QA timelines, and a `json` file which is used for the manual followup Q
 
 
 ## QA procedure
-section is under construction, here's the rough outline:
-* `cd QA`
+* first, make sure you have an automatically generated `qaTree.json`
+  * verify your epoch lines are where you want them
+    * use `mkTree.sh`
+    * look at "supplemental" `epoch view` timelines
+  * if you make changes to the epoch lines, re-run `exeTimelines.sh` to
+    generate the updated `qaTree.json`
+* `cd QA`; this subdirectory contains code for the "manual QA"
 * `import.sh [dataset]` to import the automatically generated `qaTree.json`
   * by default, this is in `../outdat.${dataset}/qaTree.json`
   * you can also specify a path to a specific `qaTree.json` file; this is 
@@ -232,20 +237,58 @@ section is under construction, here's the rough outline:
     want to use the tools in this QA directory to make revisions
 * open `qa/qaTable.dat` in another window; this is the human-readable version of
   the imported `qaTree.json`
-* while reading through this file, inspect the online timelines
-  * use `modify.sh`, refreshing `qaTable.dat` to verify the modifications are correct
-  * if you make a mistake, call `undo.sh` to revert `qaTree.json` and `qaTable.dat`
-* when you are done, `cd ..` and call `exeQAtimelines.sh` to produce the QA timelines
-  * QA timelines are stored in `outmon.${dataset}.qa`
-  * it copies the new `qaTree.json` we editted from `QA/qa.${dataset}/qaTree.json` to
+* now scan through `qaTable.dat`, inspecting each run:
+  * recommended procedures and checks:
+    * use [`clas12mon`](https://clas12mon.jlab.org/rga/runs/table/) table to
+      look for useful comments; it is helpful to copy/paraphrase any
+      data-quality-relevant comments to the comment field using `modify.sh
+      addComment ...`; for more information check the electronic logbook by
+      clicking on a run
+    * scan through `qaTable.dat` looking for anything interesting; pay close attention
+      if the `clas12mon` table has any comments
+    * there are some cases where the automatic QA result is not sufficient:
+      * if you find a string of consecutive outliers, maybe it is a sector loss;
+        to define a sector loss period: use `modify.sh sectorLoss ...` (see below)
+      * mark all files in a run with `Misc` bit for special cases which are best
+        summarized in a comment; use `modify.sh addBit ...` to set the `Misc` bit
+        (it will prompt you for a comment)
+    * `modify.sh` usage:
+      * this script allows for easy revision of the imported `qaTree.json`; it will also
+        update `qaTable.dat`, so it is useful to have `qaTable.dat` open in a window
+        which will auto-refresh whenever you call `modify.sh`
+      * type `modify.sh` without any arguments for the most up-to-date usage documentation
+      * the first argument is the modifification you want to make, whether it
+        is to add a defect bit, delete a defect bit, add a comment, etc.
+        * call `modify.sh` with one of these arguments for additional documentation specific
+          to this argument, e.g., `modify.sh addComment`
+        * the subsequent arguments are typically the run number, the range of
+          files, and sectors, but depends on the revision you are making
+      * if you make a mistake, call `undo.sh` to revert `qaTree.json` and
+        `qaTable.dat` to the previous version; in fact, everytime you call
+        `modify.sh`, a backup copy of `qaTree.json`, before the revision, is
+        stored
+  * you should also look through each timeline for any issues that may have slipped under
+    the radar; revise `qaTree.json` using `modify.sh` as needed
+* after scanning through `qaTable.dat` and revising `qaTree.json`, return to the parent
+directory and call `exeQAtimelines.sh` to produce the updated QA timelines
+  * these QA timelines are stored in `outmon.${dataset}.qa`
+  * it copies the revised`qaTree.json` (`QA/qa.${dataset}/qaTree.json`) to
     the new QA timeline directory, which can then be deployed to the webservers
+  * this final `qaTree.json` is stored in the 
+    [`clasqaDB` repository](https://github.com/c-dilks/clasqaDB)
+  * the scripts which copy timelines to the webserver (`deployTimelines.sh` and
+    `releaseTimelines.sh`) will copy the new `outmon.${dataset}.qa` directory's
+    timelines, but you must call these scripts manually
 
 ### melding
-* This procedure is used if you need to combine two `qaTree.json` files
-  * the trees must have the same set of runs, not for concatenating two different sets
-    of runs
-  * this is useful if, e.g, you change bit definitions and want to update a `qaTree.json`
-    file, with full control of each defect bit's behavior
+* This more advanced procedure is used if you need to combine two `qaTree.json` files
+  * you must read the script carefully and edit it for your use case
+  * for each run, the script will "combine" QA info from each of the
+    `qaTree.json` files; the script must know what to do with each case
+    * be careful if your `qaTree.json` files have different/overlapping sets of runs
+  * this procedure is useful if, e.g, you change bit definitions and want to
+    update a `qaTree.json` file, with full control of each defect bit's
+    behavior
   * see `QA/meld/README.md`
 
 

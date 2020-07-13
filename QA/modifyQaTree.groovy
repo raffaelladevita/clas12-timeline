@@ -10,6 +10,7 @@ def usage = [:]
 usage["setBit"] = "setBit: overwrites stored defectBit(s) with specified bit"
 usage["addBit"] = "addBit: add specified bit to defectBit(s)"
 usage["delBit"] = "delBit: delete specified bit from defectBit(s)"
+usage["sectorLoss"] = "sectorLoss: specify a sector loss"
 usage["setComment"] = "setComment: change or delete the comment"
 usage["addComment"] = "addComment: append a comment"
 usage["custom"] = "custom: do a custom action (see code)"
@@ -64,6 +65,7 @@ def recomputeDefMask = { runnum,filenum ->
 
 if( cmd=="setBit" || cmd=="addBit" || cmd=="delBit") {
   def rnum,fnumL,fnumR
+  def bit
   def secList = []
   if(args.length>5) {
     bit = args[1].toInteger()
@@ -122,6 +124,57 @@ if( cmd=="setBit" || cmd=="addBit" || cmd=="delBit") {
     T.bitDefinitions.size().times {
       println("$it\t" + T.bitNames[it] + "\t" + T.bitDescripts[it] + "\n")
     }
+    return
+  }
+}
+
+else if(cmd=="sectorLoss") {
+  def rnum,fnumL,fnumR
+  def secList = []
+  if(args.length>4) {
+    rnum = args[1].toInteger()
+    fnumL = args[2].toInteger()
+    fnumR = args[3].toInteger()
+    if(args[4]=="all") secList = (1..6).collect{it}
+    else (4..<args.length).each{ secList<<args[it].toInteger() }
+
+    println("run $rnum files ${fnumL}-"+(fnumR==1 ? "END" : fnumR) + 
+      " sectors ${secList}: define sector loss")
+
+    println("Enter a comment, if you want, otherwise press return")
+    print("> ")
+    def cmt = System.in.newReader().readLine()
+
+    qaTree["$rnum"].each { k,v ->
+      def qaFnum = k.toInteger()
+      if( qaFnum>=fnumL && ( fnumR==1 || qaFnum<=fnumR ) ) {
+
+        secList.each{ 
+          qaTree["$rnum"]["$qaFnum"]["sectorDefects"]["$it"] -= T.bit("TotalOutlier")
+          qaTree["$rnum"]["$qaFnum"]["sectorDefects"]["$it"] -= T.bit("TerminalOutlier")
+          qaTree["$rnum"]["$qaFnum"]["sectorDefects"]["$it"] -= T.bit("MarginalOutlier")
+          qaTree["$rnum"]["$qaFnum"]["sectorDefects"]["$it"] += T.bit("SectorLoss")
+        }
+
+        recomputeDefMask(rnum,qaFnum)
+
+        if(cmt.length()>0) qaTree["$rnum"]["$qaFnum"]["comment"] = cmt
+      }
+    }
+
+  }
+  else {
+    def helpStr = usage["$cmd"].tokenize(':')[1]
+    println(
+    """
+    SYNTAX: ${cmd} [run] [firstFile] [lastFile] [list_of_sectors]
+      -$helpStr
+      - set [lastFile] to 1 to denote last file of run
+      - use \"all\" in place of [list_of_sectors] to apply to all sectors
+      - this will set the SectorLoss bit for specified files and sectors;
+        it will unset any other relevant bits
+      - you will be prompted to enter a comment
+    """)
     return
   }
 }

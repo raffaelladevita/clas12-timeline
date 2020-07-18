@@ -103,9 +103,11 @@ T.buildTree(histTree,"inclusive",[
   ['p','pT','z','theta','phiH']
 ],{ new H1F() })
 
+/*
 println("---\nhistTree:"); 
 T.printTree(histTree,{T.leaf.getClass()});
 println("---")
+*/
 
 
 // subroutine to build a histogram
@@ -166,8 +168,12 @@ def nbins
 def sectors = 0..<6
 def nElec = sectors.collect{0}
 def nElecFT = 0
+def fcup, fcupgated
 def LTlist = []
 def UFClist = []
+def UFClistSorted = []
+def UFClistHel = ['hp':[],'hm':[]]
+def rellumG, rellumU
 def detIdEC = DetectorType.ECAL.getDetectorId()
 def Q2
 def W
@@ -453,12 +459,50 @@ def writeHistos = {
         " run=${runnum} file=${segmentNum}\n"
     }
 
+    // compute relative luminosity
+    // - note: the FC charge for each helicity state is written to disk,
+    //         instead of rellum
+    println "computing relative luminosity..."
+    UFClistSorted = UFClist.sort()
+    def ufcPrev = 0
+    def ufcP = 0
+    def ufcM = 0
+    def fcP = 0
+    def fcM = 0
+    UFClistSorted.eachWithIndex{ ufc,i ->
+      if(i==0) ufcPrev = ufc // unfortunately, 1st event is forced to be ignored
+      else {
+        def fcount = 0
+        if(ufc in UFClistHel.hp) {
+          ufcP += ufc-ufcPrev
+          fcP += (ufc-ufcPrev) * aveLivetime
+          fcount++
+        }
+        if(ufc in UFClistHel.hm) {
+          ufcM += ufc-ufcPrev
+          fcM += (ufc-ufcPrev) * aveLivetime
+          fcount++
+        } 
+        if(fcount>1) System.err << "WARNING: double-count in relative luminosity\n"
+        if(ufc<=ufcPrev) System.err << "WARNING: UFClistSorted is not sorted or has a duplicate\n"
+        ufcPrev = ufc
+      }
+    }
+    rellumU = ufcP>0 ? ufcP/ufcM : 0 // ungated
+    rellumG = fcP>0 ? fcP/fcM : 0 // gated
+    println "--> relative luminosity:"
+    println "    gated = $rellumG"
+    println "  ungated = $rellumU"
+    println " difference = "+(rellumU-rellumG)
+
+
     // write number of electrons and FC charge to datfile
     sectors.each{ sec ->
       datfileWriter << [ runnum, segmentNum ].join(' ') << ' '
       datfileWriter << [ eventNumMin, eventNumMax ].join(' ') << ' '
       datfileWriter << [ sec+1, nElec[sec], nElecFT ].join(' ') << ' '
-      datfileWriter << [ fcStart, fcStop, ufcStart, ufcStop ].join(' ') << '\n'
+      datfileWriter << [ fcStart, fcStop, ufcStart, ufcStop ].join(' ') << ' '
+      datfileWriter << [ fcP, fcM, ufcP, ufcM ].join(' ') << '\n'
     }
 
     // print some stats
@@ -478,6 +522,9 @@ def writeHistos = {
   nElec = sectors.collect{0}
   nElecFT = 0
   UFClist = []
+  UFClistSorted = []
+  UFClistHel.hp = []
+  UFClistHel.hm = []
   LTlist = []
   eventNumList.clear()
 }
@@ -591,8 +638,14 @@ inHipoList.each { inHipoFile ->
       
       // get FC charge
       if(scalerBank.rows()>0) {
-        UFClist << scalerBank.getFloat("fcup",0) // ungated charge
-        //FClist << scalerBank.getFloat("fcupgated",0) // do not use!
+        fcup = scalerBank.getFloat("fcup",0) // ungated charge
+        //fcupgated = scalerBank.getFloat("fcupgated",0) // do not use!
+        UFClist << fcup
+        //FClist << fcupgated
+        if(helDefined) {
+          UFClistHel[helStr] << fcup
+          //FClistHel[helStr] << fcupgated
+        }
         LTlist << scalerBank.getFloat("livetime",0) // livetime
       }
 

@@ -1,6 +1,9 @@
 #!/bin/bash
 
-if [ -z "$CLASQA" ]; then source env.sh; fi
+if [ -z "$CLASQA" ]; then
+  echo: "ERROR: please source env.sh first"
+  exit
+fi
 
 if [ $# -ne 1 ];then echo "USAGE: $0 [dataset]"; exit; fi
 dataset=$1

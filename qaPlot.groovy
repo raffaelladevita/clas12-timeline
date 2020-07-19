@@ -70,12 +70,12 @@ dataFile.eachLine { line ->
   eventNumMin = tok[r++].toInteger()
   eventNumMax = tok[r++].toInteger()
   sector = tok[r++].toInteger()
-  nElec = tok[r++].toFloat()
-  nElecFT = tok[r++].toFloat()
-  fcStart = tok[r++].toFloat()
-  fcStop = tok[r++].toFloat()
-  ufcStart = tok[r++].toFloat()
-  ufcStop = tok[r++].toFloat()
+  nElec = tok[r++].toBigDecimal()
+  nElecFT = tok[r++].toBigDecimal()
+  fcStart = tok[r++].toBigDecimal()
+  fcStop = tok[r++].toBigDecimal()
+  ufcStart = tok[r++].toBigDecimal()
+  ufcStop = tok[r++].toBigDecimal()
 
 
   // if we are using the FT electrons, simply set nElec to nElecFT, since

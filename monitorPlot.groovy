@@ -48,6 +48,33 @@ def objToMonTitle = { title ->
   return title
 }
 
+
+// build map of (runnum,filenum) -> (FC charges)
+// - this is only used for the relative luminosity
+def dataFile = new File("outdat.${dataset}/data_table.dat")
+def tok
+def fcTree = [:]
+def fcrun,fcfile,fcp,fcm,ufcp,ufcm
+if(!(dataFile.exists())) throw new Exception("data_table.dat not found")
+dataFile.eachLine { line ->
+  tok = line.tokenize(' ')
+  fcrun = tok[0].toInteger()
+  fcfile = tok[1].toInteger()
+  fcp = tok[11].toBigDecimal()
+  fcm = tok[12].toBigDecimal()
+  ufcp = tok[13].toBigDecimal()
+  ufcm = tok[14].toBigDecimal()
+  if(!fcTree.containsKey(fcrun)) fcTree[fcrun] = [:]
+  if(!fcTree[fcrun].containsKey(fcfile)) {
+    fcTree[fcrun][fcfile] = [
+      'fcP':fcp,
+      'fcM':fcm,
+      'ufcP':ufcp,
+      'ufcM':ufcm
+    ]
+  }
+}
+
 //---------------------------------
 // monitor builders
 //---------------------------------
@@ -129,7 +156,6 @@ def var
 def varNB
 def varLB,varUB
 def runnum,segnum
-def tok
 def obj
 def aveX
 def aveXerr
@@ -246,8 +272,10 @@ inList.each { inFile ->
         return h
       })
       if(obj.integral()>0) {
-        helP = obj.getBinContent(0) // positive helicity is 'helicity==-1' in banks
-        helM = obj.getBinContent(2) // negative helicity is 'helicity==+1' in banks
+        //helP = obj.getBinContent(0) // positive helicity is 'helicity==-1' in banks
+        //helM = obj.getBinContent(2) // negative helicity is 'helicity==+1' in banks
+        helP = fcTree[runnum][segnum.toInteger()]['fcP']
+        helM = fcTree[runnum][segnum.toInteger()]['fcM']
         rellum = helM>0 ? helP / helM : 0
         rellumErr = rellum>0 ? rellum * Math.sqrt( 1.0/helP + 1.0/helM ) : 0
         monTree[runnum]['helic']['dist']['rellum']['rellumGr'].addPoint(

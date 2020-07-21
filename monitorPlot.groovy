@@ -50,7 +50,9 @@ def objToMonTitle = { title ->
 
 
 // build map of (runnum,filenum) -> (FC charges)
-// - this is only used for the relative luminosity
+// - this is only used for the relative luminosity attempt
+// - not enough statistics; disabled
+/*
 def dataFile = new File("outdat.${dataset}/data_table.dat")
 def tok
 def fcTree = [:]
@@ -74,6 +76,7 @@ dataFile.eachLine { line ->
     ]
   }
 }
+*/
 
 //---------------------------------
 // monitor builders
@@ -254,6 +257,8 @@ inList.each { inFile ->
         monTree[runnum]['helic']['dist']['heldef']['heldefDenom'] += denom
       }
 
+    if(objN.contains("/helic_distGoodOnly_")) {
+
       // relative luminosity
       T.addLeaf(monTree,[runnum,'helic','dist','rellum','rellumNumer'],{0})
       T.addLeaf(monTree,[runnum,'helic','dist','rellum','rellumDenom'],{0})
@@ -272,10 +277,12 @@ inList.each { inFile ->
         return h
       })
       if(obj.integral()>0) {
-        //helP = obj.getBinContent(0) // positive helicity is 'helicity==-1' in banks
-        //helM = obj.getBinContent(2) // negative helicity is 'helicity==+1' in banks
-        helP = fcTree[runnum][segnum.toInteger()]['fcP']
-        helM = fcTree[runnum][segnum.toInteger()]['fcM']
+        // use values from helic_dist
+        helP = obj.getBinContent(0) // + helicity is 'helicity==-1' in banks
+        helM = obj.getBinContent(2) // - helicity is 'helicity==+1' in banks
+        // use charge from FC (disabled)
+        //helP = fcTree[runnum][segnum.toInteger()]['fcP']
+        //helM = fcTree[runnum][segnum.toInteger()]['fcM']
         rellum = helM>0 ? helP / helM : 0
         rellumErr = rellum>0 ? rellum * Math.sqrt( 1.0/helP + 1.0/helM ) : 0
         monTree[runnum]['helic']['dist']['rellum']['rellumGr'].addPoint(

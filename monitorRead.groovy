@@ -90,6 +90,10 @@ T.buildTree(histTree,'helic',[
   ['dist']
 ],{ new H1F() })
 
+T.buildTree(histTree,'helic',[
+  ['distGoodOnly']
+],{ new H1F() })
+
 T.buildTree(histTree,'DIS',[
   ['Q2','W','x','y']
 ],{ new H1F() })
@@ -194,13 +198,15 @@ def vecW = new LorentzVector()
 
 
 // subroutine to increment the number of counted electrons
+def disElectronInTrigger
+def disElectronInFT
 def countTriggerElectrons = { eleRows,eleParts ->
 
   // reset some vars
   def Emax = 0
   def Etmp
-  def disElectronInTrigger = false
-  def disElectronInFT = false
+  disElectronInTrigger = false
+  disElectronInFT = false
   def nTrigger = 0
   def nFT = 0
   disEleFound = false
@@ -459,10 +465,10 @@ def writeHistos = {
         " run=${runnum} file=${segmentNum}\n"
     }
 
-    // compute relative luminosity
-    // - note: the FC charge for each helicity state is written to disk,
-    //         instead of rellum
-    println "computing relative luminosity..."
+    // FC charge from each helicity state
+    // - disabled for now (not so useful...)
+    /*
+    println "computing relative luminosity from FC charge..."
     UFClistSorted = UFClist.sort()
     def ufcPrev = 0
     def ufcP = 0
@@ -494,6 +500,7 @@ def writeHistos = {
     println "    gated = $rellumG"
     println "  ungated = $rellumU"
     println " difference = "+(rellumU-rellumG)
+    */
 
 
     // write number of electrons and FC charge to datfile
@@ -501,8 +508,8 @@ def writeHistos = {
       datfileWriter << [ runnum, segmentNum ].join(' ') << ' '
       datfileWriter << [ eventNumMin, eventNumMax ].join(' ') << ' '
       datfileWriter << [ sec+1, nElec[sec], nElecFT ].join(' ') << ' '
-      datfileWriter << [ fcStart, fcStop, ufcStart, ufcStop ].join(' ') << ' '
-      datfileWriter << [ fcP, fcM, ufcP, ufcM ].join(' ') << '\n'
+      datfileWriter << [ fcStart, fcStop, ufcStart, ufcStop ].join(' ') << '\n'
+      //datfileWriter << [ fcP, fcM, ufcP, ufcM ].join(' ') << '\n'
     }
 
     // print some stats
@@ -587,6 +594,7 @@ inHipoList.each { inHipoFile ->
           T.leaf = buildHist('helic_sinPhi','sinPhiH',T.leafPath,runnum,nbins,-1,1) 
         })
         histTree.helic.dist = buildHist('helic_dist','helicity',[],runnum,3,-1,2)
+        histTree.helic.distGoodOnly = buildHist('helic_distGoodOnly','helicity (with electron cuts)',[],runnum,3,-1,2)
         histTree.DIS.Q2 = buildHist('DIS_Q2','Q^2',[],runnum,2*nbins,0,12)
         histTree.DIS.W = buildHist('DIS_W','W',[],runnum,2*nbins,0,6)
         histTree.DIS.x = buildHist('DIS_x','x',[],runnum,2*nbins,0,1)
@@ -642,10 +650,12 @@ inHipoList.each { inHipoFile ->
         //fcupgated = scalerBank.getFloat("fcupgated",0) // do not use!
         UFClist << fcup
         //FClist << fcupgated
+        /*
         if(helDefined) {
           UFClistHel[helStr] << fcup
           //FClistHel[helStr] << fcupgated
         }
+        */
         LTlist << scalerBank.getFloat("livetime",0) // livetime
       }
 
@@ -657,6 +667,9 @@ inHipoList.each { inHipoFile ->
 
       // CUT: if a dis electron was found (see countTriggerElectrons)
       if(disEleFound) {
+
+        if(disElectronInTrigger)
+          histTree.helic.distGoodOnly.fill(helicity)
 
         // CUT for pions: Q2 and W and y and helicity
         if( Q2>1 && W>2 && y<0.8 && helDefined) {

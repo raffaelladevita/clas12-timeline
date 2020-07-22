@@ -256,6 +256,7 @@ inList.each { inFile ->
         monTree[runnum]['helic']['dist']['heldef']['heldefNumer'] += numer
         monTree[runnum]['helic']['dist']['heldef']['heldefDenom'] += denom
       }
+    }
 
     if(objN.contains("/helic_distGoodOnly_")) {
 

@@ -185,8 +185,9 @@ def nu
 def x,y,z
 def p,pT,theta,phiH
 def countEvent
-//def caseCountNtrigGT1 = 0
-//def caseCountNFTwithTrig = 0
+def caseCountNtrigGT1 = 0
+def caseCountNFTwithTrig = 0
+def nElecTotal
 
 // lorentz vectors
 def vecBeam = new LorentzVector(0, 0, EBEAM, EBEAM)
@@ -334,14 +335,12 @@ def countTriggerElectrons = { eleRows,eleParts ->
     }
 
     // increment 'case counters' (for studying overlap of trigger/FT cuts)
-    /*
     // - case where there are more than one trigger electron in FD
     if(disElectronInTrigger && nTrigger>1)
       caseCountNtrigGT1 += nTrigger-1 // count number of unanalyzed extra electrons
     // - case where disElectron is in FT, but there are trigger electrons in FD
     if(disElectronInFT && nTrigger>0)
       caseCountNFTwithTrig += nTrigger // count number of unanalyzed trigger (FD) electrons
-      */
 
   }
 
@@ -514,6 +513,8 @@ def writeHistos = {
 
     // print some stats
     /*
+    nElecTotal = nElec*.value.sum()
+    println "\nnumber of trigger electrons: $nElecTotal" 
     println """number of electrons that satisified FD trigger cuts, but were not analyzed...
     ...because they had subdominant E: $caseCountNtrigGT1
     ...because there was a higher-E electron satisfying FT cuts: $caseCountNFTwithTrig""" 

@@ -37,8 +37,8 @@ inList.each { println it }
 // subroutine to transform an object name to a monitor name
 def objToMonName = { name ->
   // strip segment number (and standard dev)
-  def tok = name.tokenize('_')
-  name = tok[0..-3].join('_')
+  def tokN = name.tokenize('_')
+  name = tokN[0..-3].join('_')
   return name
 }
 
@@ -54,7 +54,6 @@ def objToMonTitle = { title ->
 // - not enough statistics; disabled
 /*
 def dataFile = new File("outdat.${dataset}/data_table.dat")
-def tok
 def fcTree = [:]
 def fcrun,fcfile,fcp,fcm,ufcp,ufcm
 if(!(dataFile.exists())) throw new Exception("data_table.dat not found")
@@ -131,7 +130,8 @@ def buildAsymGrid = { tObj,nb ->
 }
 
 // build asymGraph: a graph of the asymmetry, which will be used for the fit
-// - it is the difference between asymGrid for hel+ and asymGrid for hel-
+// - it is the difference between asymGrid for hel+ and asymGrid for hel-,
+//   divided by the sum
 def buildAsymGraph = { tObj ->
   def grN = objToMonName(tObj.getName())
   if(grN.contains('_hp_'))      grN = grN.replaceAll('_hp_','_')
@@ -152,10 +152,12 @@ def buildAsymGraph = { tObj ->
 
 def monTree = [:]
 
+def tok
 def inTdir = new TDirectory()
 def objList
-def part,hel
-def var
+def part
+def hel
+def varStr
 def varNB
 def varLB,varUB
 def runnum,segnum
@@ -256,9 +258,10 @@ inList.each { inFile ->
         monTree[runnum]['helic']['dist']['heldef']['heldefNumer'] += numer
         monTree[runnum]['helic']['dist']['heldef']['heldefDenom'] += denom
       }
-    }
 
-    if(objN.contains("/helic_distGoodOnly_")) {
+    // cut for rellum from events with FD trigger electrons only
+    //}
+    //if(objN.contains("/helic_distGoodOnly_")) {
 
       // relative luminosity
       T.addLeaf(monTree,[runnum,'helic','dist','rellum','rellumNumer'],{0})
@@ -300,25 +303,25 @@ inList.each { inFile ->
     //---------------------------------
     if(objN.contains("/DIS_")) {
       if(!objN.contains("Q2VsW")) {
-        var = tok[1]
+        varStr = tok[1]
 
-        T.addLeaf(monTree,[runnum,'DIS',var,'aveGr'],{buildMonAveGr(obj)})
-        T.addLeaf(monTree,[runnum,'DIS',var,'aveDist'],{
+        T.addLeaf(monTree,[runnum,'DIS',varStr,'aveGr'],{buildMonAveGr(obj)})
+        T.addLeaf(monTree,[runnum,'DIS',varStr,'aveDist'],{
           varNB = 100
-          if(var=="Q2") { varLB=0; varUB=12; }
-          else if(var=="W") { varLB=0; varUB=6; }
+          if(varStr=="Q2") { varLB=0; varUB=12; }
+          else if(varStr=="W") { varLB=0; varUB=6; }
           else { varLB=0; varUB=1; }
           buildMonAveDist(obj,varNB,varLB,varUB)
         })
 
-        // add <var> point to the monitors
+        // add <varStr> point to the monitors
         ent = obj.integral()
         if(ent>0) {
           aveX = obj.getMean()
           aveXerr = obj.getRMS() / Math.sqrt(ent)
-          monTree[runnum]['DIS'][var]['aveGr'].addPoint(
+          monTree[runnum]['DIS'][varStr]['aveGr'].addPoint(
             segnum, aveX, segnumDev, aveXerr )
-          monTree[runnum]['DIS'][var]['aveDist'].fill(aveX)
+          monTree[runnum]['DIS'][varStr]['aveDist'].fill(aveX)
         }
       }
     }
@@ -327,26 +330,26 @@ inList.each { inFile ->
     //----------------------------
     if(objN.contains("/inclusive_")) {
       part = tok[1]
-      var = tok[2]
-      T.addLeaf(monTree,[runnum,'inclusive',part,var,'aveGr'],{buildMonAveGr(obj)})
-      T.addLeaf(monTree,[runnum,'inclusive',part,var,'aveDist'],{
+      varStr = tok[2]
+      T.addLeaf(monTree,[runnum,'inclusive',part,varStr,'aveGr'],{buildMonAveGr(obj)})
+      T.addLeaf(monTree,[runnum,'inclusive',part,varStr,'aveDist'],{
         varNB = 100
         varLB = 0
         varUB = 0
-        if(var=='p') { varLB=0; varUB=10 }
-        else if(var=='pT') { varLB=0; varUB=4 }
-        else if(var=='z') { varLB=0; varUB=1 }
-        else if(var=='theta') { varLB=0; varUB=Math.toRadians(90.0) }
-        else if(var=='phiH') { varLB=-3.15; varUB=3.15 }
+        if(varStr=='p') { varLB=0; varUB=10 }
+        else if(varStr=='pT') { varLB=0; varUB=4 }
+        else if(varStr=='z') { varLB=0; varUB=1 }
+        else if(varStr=='theta') { varLB=0; varUB=Math.toRadians(90.0) }
+        else if(varStr=='phiH') { varLB=-3.15; varUB=3.15 }
         buildMonAveDist(obj,varNB,varLB,varUB)
       })
       ent = obj.integral()
       if(ent>0) {
         aveX = obj.getMean()
         aveXerr = obj.getRMS() / Math.sqrt(ent)
-        monTree[runnum]['inclusive'][part][var]['aveGr'].addPoint(
+        monTree[runnum]['inclusive'][part][varStr]['aveGr'].addPoint(
           segnum, aveX, segnumDev, aveXerr )
-        monTree[runnum]['inclusive'][part][var]['aveDist'].fill(aveX)
+        monTree[runnum]['inclusive'][part][varStr]['aveDist'].fill(aveX)
       }
     }
 
@@ -363,7 +366,10 @@ inList.each { inFile ->
       def yp = grP.getBinContent(bin)
       def ym = grM.getBinContent(bin)
       def xval = grP.getAxis().getBinCenter(bin)
-      T.leaf.addPoint(xval,(yp-ym)/(yp+ym),0.0,1.0/Math.sqrt(yp+ym))
+      if(yp+ym>0)
+        T.leaf.addPoint(xval,(yp-ym)/(yp+ym),0.0,1.0/Math.sqrt(yp+ym))
+      else
+        T.leaf.addPoint(xval,0.0,0.0,1.0)
     }
     def fitFuncN = T.leaf.getName() + ":fit"
     fitFuncN.replaceAll('hp_asymGrid','fitFunc')

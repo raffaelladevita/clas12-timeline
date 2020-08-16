@@ -524,6 +524,7 @@ def writeHistos = {
   }
   else {
     System.err << "WARNING: empty segment (segmentTmp=$segmentTmp)\n"
+    System.err << " if all segments in a run are empty, there will be more errors later!"
   }
 
   // reset number of trigger electrons counter and FC lists

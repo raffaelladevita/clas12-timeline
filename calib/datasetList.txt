@@ -1,1 +1,1 @@
-rga_v2.2.26 ../www/rga/pass0/v2.2.26 ../www/dilks/calib
+rga_v2.2.26 rga/pass0/v2.2.26 dilks/calib

@@ -1,12 +1,14 @@
 #!/bin/bash
 
 export CLASQA=$(dirname $(realpath $0))
+export CLASQAWWW="${CLASQA}/../www"
 JYPATH="${JYPATH}:${CLASQA}"
 export JYPATH=$(echo $JYPATH | sed 's/^://')
 
 echo "Environment:"
 env | grep -w COATJAVA
 env | grep -w CLASQA
+env | grep -w CLASQAWWW
 env | grep -w JYPATH
 
 # proposed workaround to include extra options

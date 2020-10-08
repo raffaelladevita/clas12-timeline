@@ -1,6 +1,7 @@
 import org.jlab.groot.data.TDirectory
 import org.jlab.groot.data.GraphErrors
 import org.jlab.groot.data.H1F
+import org.jlab.groot.math.F1D
 import java.lang.Math.*
 import Tools
 Tools T = new Tools()
@@ -38,7 +39,9 @@ if(!datasetFound) throw new Exception("unknown dataset \"$dataset\"")
 // -leaf name: graph name
 // -leaf: closure for QA cuts
 // -- note: relevant units are in comment
+// also define tree "L", which lists bound lines to draw
 def B = [:]
+def L = [:]
 // FD ********************************
 (1..6).each{ secnum ->
   def s = 'sec'+secnum
@@ -54,25 +57,38 @@ def B = [:]
   T.addLeaf(B,['ftof','ftof_time_p2_sigma',s],{{ v -> v*1e-9 < 325e-12}}) // s
 }
 // CD ********************************
-// CTOF
+// CTOF -------------
 T.addLeaf(B,['ctof','ctof_edep','Edep'],{{ v -> v>5.7 && v<6.3 }}) // MeV
-T.addLeaf(B,['ctof','ctof_time_mean','mean'],{{ v -> Math.abs(v*1e-9) < 20e-12 }}) //s
-T.addLeaf(B,['ctof','ctof_time_sigma','sigma'],{{ v -> v*1e-9 < 115e-12 }}) //s
+T.addLeaf(L,['ctof','ctof_edep','Edep'],{[5.7,6.3]}) // MeV
+//
+T.addLeaf(B,['ctof','ctof_time_mean','mean'],{{ v -> Math.abs(v) < 0.020 }}) //ns
+T.addLeaf(L,['ctof','ctof_time_mean','mean'],{[-0.020,0.020]}) //ns
+//
+T.addLeaf(B,['ctof','ctof_time_sigma','sigma'],{{ v -> v < 0.115 }}) //ns
+T.addLeaf(L,['ctof','ctof_time_sigma','sigma'],{[0.115]}) //ns
 // ***********************************
 println "=== TIMELINES ========================="
 T.exeLeaves(B,{println T.leafPath})
 println "======================================="
 
 
+// general closures
+def buildLine = { g,name,v ->
+  new F1D(
+    g.getName()+":"+name,
+    Double.toString(v),
+    g.getDataX(0),
+    g.getDataX(g.getDataSize(0)-1)
+  )
+}
 
 
 // apply boundaries, for each closure defined above
 // - loops through B tree, and read in corresponding input timeline
-// - create boolean timeline, for whether or not a calibration QA constraint
-//   passes
-// - loop through the input timeline, test constraints, add result to boolean
-//   timeline
-// - store boolean timeline in a tree "TL" with same structure as "T"
+// - create bad timeline, for runs where a calibration QA constraint fails
+// - loop through the input timeline, test constraints, add result to bad
+//   timeline as necessary
+// - store bad timeline in a tree "TL" with same structure as "T"
 def inTdir = new TDirectory()
 def gr
 def TL = [:]
@@ -89,13 +105,13 @@ T.exeLeaves(B,{
   inTdir.readFile(fileN)
   gr = inTdir.getObject("/timelines/${graphN}")
 
-  // define output boolean timeline
+  // define output bad timeline
   T.addLeaf(TL,graphPath,{
     def g = new GraphErrors()
-    g.setName(gr.getName()+"_in_bounds")
-    g.setTitle("QA for "+gr.getTitle())
+    g.setName(gr.getName()+"__bad")
+    g.setTitle(gr.getTitle())
     gr.setTitleX(gr.getTitleX())
-    gr.setTitleY(gr.getTitleY()+" in bounds")
+    gr.setTitleY(gr.getTitleY())
     return g
   })
 
@@ -106,15 +122,21 @@ T.exeLeaves(B,{
     def run = gr.getDataX(i)
     def val = gr.getDataY(i)
     def inbound = checkBounds(val)
-    if(!inbound) println "OB "+graphPath+" $run $val\n"
+    if(!inbound) {
+      println "OB "+graphPath+" $run $val\n"
+      T.getLeaf(TL,graphPath).addPoint(run,val,0,0)
+    }
 
     // set output boolean; apply aesthetic offset for FD sectors
+    // deprecated: for boolean timeline
+    /*
     def boolval = inbound ? 1:0
     if(gr.getName().contains("sec")) {
       def sector = gr.getName().find(/\d+/).toInteger()
       boolval += sector*0.03
     }
     T.getLeaf(TL,graphPath).addPoint(run,boolval,0,0)
+    */
   }
 })
 
@@ -129,7 +151,14 @@ TL.each{ det, detTr -> // loop through detector directories
     // write graphs
     outTdir.mkdir("/timelines")
     outTdir.cd("/timelines")
-    graphTr.each{ graphName, graph -> outTdir.addDataSet(graph) }
+    graphTr.each{ graphName, graph -> 
+      outTdir.addDataSet(graph)
+      /*
+      T.getLeaf(L,[det,hipoFile,graphName]).eachWithIndex{ num,idx ->
+        outTdir.addDataSet(buildLine(graph,"l$idx",num))
+      }
+      */
+    }
 
     // copy TDirectories for each run from input hipo file
     def inHipoN = "${indir}/${det}/${hipoFile}.hipo"
@@ -141,6 +170,9 @@ TL.each{ det, detTr -> // loop through detector directories
         outTdir.mkdir("/$rundir")
         outTdir.cd("/$rundir")
         outTdir.addDataSet(inTdir.getObject(it))
+      } else {
+        outTdir.cd("/timelines")
+        outTdir.addDataSet(inTdir.getObject(it))
       }
     }
     
@@ -148,7 +180,7 @@ TL.each{ det, detTr -> // loop through detector directories
     // create output hipo file
     def outHipoDir = "${outdir}/${det}"
     "mkdir -p $outHipoDir".execute()
-    "cp -v $inHipoN ${outHipoDir}/".execute()
+    //"cp -v $inHipoN ${outHipoDir}/".execute()
     def outHipoN = "${outHipoDir}/${hipoFile}_QA.hipo"
     File outHipoFile = new File(outHipoN)
     if(outHipoFile.exists()) outHipoFile.delete()

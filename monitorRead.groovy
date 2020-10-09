@@ -20,7 +20,6 @@ Tools T = new Tools()
 
 // OPTIONS
 def segmentSize = 10000 // number of events in each segment
-def EBEAM = 10.6 // beam energy (shouldn't be hard-coded... TODO)
 def inHipoType = "dst" // options: "dst", "skim"
 
 
@@ -28,6 +27,7 @@ def inHipoType = "dst" // options: "dst", "skim"
 def inHipo = "skim/skim4_5052.hipo" // directory of DST files, or a single SKIM file
 if(args.length>=1) inHipo = args[0]
 if(args.length>=2) inHipoType = args[1]
+
 
 
 // get hipo file names
@@ -63,6 +63,35 @@ else if(inHipoType=="dst") {
   runnum = inHipo.tokenize('/')[-1].toInteger()
 }
 println "runnum=$runnum"
+
+
+// RUN GROUP DEPENDENT SETTINGS //////////////////////////
+def RG = "unknown"
+if(runnum>=5032 && runnum<=5262) RG="RGA" // inbending1
+else if(runnum>=5300 && runnum<=5666) RG="RGA" // inbending1 + outbending
+else if(runnum>=5674 && runnum<=6000) RG="RGK" // 6.5+7.5 GeV
+else if(runnum>=6120 && runnum<=6604) RG="RGB" // spring
+else System.err << "WARNING: unknown run group; using default run-group-dependent settings (see monitorRead.groovy)\n"
+
+// helFlip: if true, REC::Event.helicity has opposite sign from reality
+def helFlip = false
+if(RG=="RGA") helFlip = true
+
+// beam energy // TODO: get this from EPICS instead
+def EBEAM = 10.6041 // RGA default
+if(RG=="RGB") {
+  if(runnum>=6120 && runnum<=6399) EBEAM = 10.5986
+  else if(runnum>=6409 && runnum<=6604) EBEAM = 10.1998
+  else System.err << "ERROR: unknown beam energy\n"
+}
+else if(RG=="RGK") {
+  if(runnum>=5674 && runnum<=5870) EBEAM = 7.546
+  else if(runnum>=5875 && runnum<=6000) EBEAM = 6.535
+  else System.err << "ERROR: unknown beam energy\n"
+}
+
+//////////////////////////////////////////////////////////
+
 
 
 // prepare output table for electron count and FC charge
@@ -625,21 +654,15 @@ inHipoList.each { inHipoFile ->
 
 
     // get helicity and fill helicity distribution
-    helicity = eventBank.getByte('helicity',0)
-    histTree.helic.dist.fill(helicity)
-    helDefined = true
+    if(event.hasBank("REC::Event")) helicity = eventBank.getByte('helicity',0)
+    else helicity = 0 // (undefined)
+    if(helFlip) helicity *= -1 // flip helicity (needed for RGA pass1)
     switch(helicity) {
-      case 1:
-        helStr = 'hm'
-        break
-      case -1:
-        helStr = 'hp'
-        break
-      default:
-        helDefined = false
-        //helStr = 'hp' // override
-        break
+      case 1:  helStr='hp'; helDefined=true; break
+      case -1: helStr='hm'; helDefined=true; break
+      default: helDefined = false; helicity = 0; break
     }
+    histTree.helic.dist.fill(helicity)
 
     
     // get FC charge

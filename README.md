@@ -77,6 +77,8 @@ First step is to read DST or Skim files, producing hipo files and data tables
     number and segment(file) number is done correctly
     * use `dst` for DST files
     * use `skim` for skim files
+  * you may want to check the "RUN GROUP DEPENDENT SETTINGS" in the code, to make sure
+    certain settings (e.g., beam energy) are correct for your run group
   * Outputs:
     * `outdat/data_table_${run}.dat`, which is a data table with the following columns:
       * run number

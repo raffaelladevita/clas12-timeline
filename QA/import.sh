@@ -16,7 +16,7 @@ fi
 cp -v $qatree qa.${dataset}/qaTree.json
 rm qa
 ln -sv qa.${dataset} qa
-run-groovy parseQaTree.groovy
+run-groovy $CLASQA_JAVA_OPTS parseQaTree.groovy
 echo ""
 echo "imported $qatree to local area, and parsed"
 echo "view qa/qaTable.dat for human readable version"

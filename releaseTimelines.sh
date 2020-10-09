@@ -15,4 +15,4 @@ rm -r ${wwwReleaseDir}/${dataset}*
 cp -rv ${wwwLocalDir}/${dataset}* ${wwwReleaseDir}/
 cp outdat.${dataset}/qaTree.json ${wwwReleaseDir}/${dataset}_QA/
 
-run-groovy indexPage.groovy $wwwReleaseDir
+run-groovy $CLASQA_JAVA_OPTS indexPage.groovy $wwwReleaseDir

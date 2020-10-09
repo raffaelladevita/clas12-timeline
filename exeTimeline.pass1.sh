@@ -23,13 +23,13 @@ exe ./datasetOrganize.sh
 
 # loop over datasets
 # trigger electrons monitor
-exe run-groovy qaPlot.groovy $dataset
-exe run-groovy qaCut.groovy $dataset
+exe run-groovy $CLASQA_JAVA_OPTS qaPlot.groovy $dataset
+exe run-groovy $CLASQA_JAVA_OPTS qaCut.groovy $dataset
 # FT electrons
-exe run-groovy qaPlot.groovy $dataset FT
-exe run-groovy qaCut.groovy $dataset FT
+exe run-groovy $CLASQA_JAVA_OPTS qaPlot.groovy $dataset FT
+exe run-groovy $CLASQA_JAVA_OPTS qaCut.groovy $dataset FT
 # general monitor
-exe run-groovy monitorPlot.groovy $dataset
+exe run-groovy $CLASQA_JAVA_OPTS monitorPlot.groovy $dataset
 # deploy timelines to dev www
 exe ./deployTimelines.sh $dataset $dataset
 

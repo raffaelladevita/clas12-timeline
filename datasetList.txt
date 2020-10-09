@@ -4,4 +4,5 @@
 #rgb_spring 6150 6603 /volatile/clas12/rg-b/production/recon/pass0/v21.8.1/mon/recon
 #rgb_fall 11023 11309 /set/path/here
 #rgb_winter 11324 11571 /set/path/here
-rgk_pass1 5674 5870 /lustre19/expphy/cache/clas12/rg-k/production/recon/fall2018/torus+1/7546MeV/pass1/v0/dst/recon
+rgk_7 5674 5870 /lustre19/expphy/cache/clas12/rg-k/production/recon/fall2018/torus+1/7546MeV/pass1/v0/dst/recon
+rgk_6 5875 6000 /lustre19/expphy/cache/clas12/rg-k/production/recon/fall2018/torus+1/6535MeV/pass1/v0/dst/recon 

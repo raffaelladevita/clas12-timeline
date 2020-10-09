@@ -23,7 +23,7 @@ Data monitoring tools for CLAS run QA
     `run-groovy`, from `coatjava`
 
 ## PASS1 Procedure for Automatic QA
-* `exeSlurm.pass1.sh $dataset`: runs `monitorRead.groovy` on DSTs using slurm
+* `exeSlurm.sh $dataset`: runs `monitorRead.groovy` on DSTs using slurm
   * `$dataset` is specified in `datasetList.txt`, along with a range of runs
     * the syntax of this file is `$dataset $firstRun $lastRun`
     * several scripts use this file; some loop over all datasets, whereas
@@ -35,14 +35,14 @@ Data monitoring tools for CLAS run QA
       to the appropriate DST directory
   * wait for slurm jobs to finish
   * execute `errorPrint.sh` to inspect error logs
-* `exeTimeline.pass1.sh $dataset`, which does the following:
+* `exeTimelines.sh $dataset`, which does the following:
   * runs `qaPlot.groovy` (on electron trigger and FT)
   * runs `qaCut.groovy` (on electron trigger and FT)
   * runs `datasetOrganize.sh`
   * runs `monitorPlot.groovy`
   * copies timelines to webserver using `deployTimelines.sh`
   * if any of these scripts throw errors, they will be redirected and printed at the end
-    of `exeTimeline.pass1.sh`
+    of `exeTimelines.sh`
     * if you see any errors for a script, it's best to rerun that script independently
       to diagnose the problem
 * perform the QA (see QA procedure below)
@@ -72,7 +72,7 @@ First step is to read DST or Skim files, producing hipo files and data tables
 * `groovy monitorRead.groovy __hipo_file_(directory)__ skim(dst)`
   * It is better to run this using `slurm`, but this can be run on a single skim file or
     directory of one run's DST files
-    * see the `exeSlurm*.sh` scripts for example job submission scripts
+    * see `exeSlurm.sh` for example job submission scripts
   * the 2nd argument, `inHipoType` needs to be specified so that determination of run
     number and segment(file) number is done correctly
     * use `dst` for DST files

@@ -27,6 +27,7 @@ else {
 List of Commands:
   """)
   usage.each{ println("- "+it.value) }
+  println("\ntype any command without arguments for usage for that command\n")
   return
 }
 

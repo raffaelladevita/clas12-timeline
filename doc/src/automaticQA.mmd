@@ -1,0 +1,31 @@
+graph TD;
+    dst{{DSTs}}:::data --> monitorRead[monitorRead.groovy]:::exeSlurm;
+    monitorRead --> monitorReadOut{{outdat/data_table_$run.dat<br>outmon/monitor_$run.hipo}}:::data;
+    monitorReadOut --> do[datasetOrganize.sh]:::exeTimeline;
+    do --> dm{{outmon.$dataset/monitor_$run.hipo}}:::data
+    do --> dt{{outdat.$dataset/data_table.dat}}:::data
+    
+    dm --> monitorPlot[monitorPlot.groovy]:::exeTimeline;
+    monitorPlot --> tl{{outmon.$dataset/$timeline.hipo}}:::timeline;
+    
+    dt -.-> |disabled|monitorPlot
+    dt --> qaPlot[qaPlot.groovy]:::exeTimeline;
+    dt --> man[create/edit<br>epochs.$dataset.txt<br>see mkTree.sh]:::manual;
+    qaPlot --> monitorElec{{outmon.$dataset/monitorElec.hipo}}:::data;
+    monitorElec --> qaCut[qaCut.groovy]:::exeTimeline;
+    man --> qaCut;
+    qaCut --> tl;
+    qaCut --> qaTree{{outdat.$dataset/qaTree.json}}:::data
+    qaTree --> cd[QA subdirectory]
+    
+    tl --> deploy[deployTimelines.sh]:::exeTimeline;
+    
+ 
+    
+    
+    classDef data fill:#ff8;
+    classDef exeSlurm fill:#8f8;
+    classDef exeTimeline fill:#bff;
+    classDef manual fill:#fbb;
+    classDef timeline fill:#8af;
+    classDef qa fill:#f8f;

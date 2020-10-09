@@ -13,7 +13,7 @@ if [ $# -eq 2 ]; then
 else
   qatree=../outdat.${dataset}/qaTree.json
 fi
-cp -v $qatree qa.${dataset}/
+cp -v $qatree qa.${dataset}/qaTree.json
 rm qa
 ln -sv qa.${dataset} qa
 run-groovy parseQaTree.groovy

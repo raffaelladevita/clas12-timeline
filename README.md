@@ -4,7 +4,7 @@ Data monitoring tools for CLAS run QA
 * Tracks the electron trigger count, normalized by the Faraday cup charge
 * Also implements helicity monitoring, by tracking inclusive beam spin asymmetries
 * Accepts DST or skim files
-* [docDiagram.pdf](docDiagram.pdf) shows a flowcharts of the scripts and I/O
+* [doc/automaticQA.jpeg](doc/automaticQA.jpeg) shows a flowcharts of the scripts and I/O
 * The variable `${dataset}` will be used throughout as a name specifying the data set to
   be analyzed; this name is for organization purposes, for those who want to
   monitor several different sets of data
@@ -22,7 +22,7 @@ Data monitoring tools for CLAS run QA
   * note: `JYPATH` is added to the classpath for groovy called via
     `run-groovy`, from `coatjava`
 
-## PASS1 Procedure
+## PASS1 Procedure for Automatic QA
 * `exeSlurm.pass1.sh $dataset`: runs `monitorRead.groovy` on DSTs using slurm
   * `$dataset` is specified in `datasetList.txt`, along with a range of runs
     * the syntax of this file is `$dataset $firstRun $lastRun`
@@ -49,8 +49,8 @@ Data monitoring tools for CLAS run QA
 * release timeline to main directory: use `releaseTimelines.sh`
 
 
-## Procedure and Script Details
-* The procedure is outlined by [docDiagram.pdf](docDiagram.pdf); this section details
+## Automatic QA Procedure and Script Details
+* The procedure is outlined by [doc/automaticQA.jpeg](doc/automaticQA.jpeg); this section details
   the action of each script, in a suggested order of execution
 
 ### Input files
@@ -222,7 +222,8 @@ generate QA timelines, and a `json` file which is used for the manual followup Q
       the number of electrons
 
 
-## QA procedure
+## Manual QA procedure
+Note: see [doc/manualQA.jpeg](doc/manualQA.jpeg) for a flowchart of the procedure
 * first, make sure you have an automatically generated `qaTree.json`
   * verify your epoch lines are where you want them
     * use `mkTree.sh`

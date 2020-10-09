@@ -6,11 +6,15 @@ if [ $# -ne 2 ]; then
   echo "usage: $0 [dataset] [destinationName]"
   exit
 fi
+if [ -z "$CLASQA" ]; then
+  echo: "ERROR: please source env.sh first"
+  exit
+fi
 
 dataset=$1
 destdir=$2
 
-wwwdir="../wwwDev" # symlink www
+wwwdir="${CLASQAWWW}/$(whoami)"
 
 mkdir -p ${wwwdir}/${destdir}
 rm -r ${wwwdir}/${destdir}

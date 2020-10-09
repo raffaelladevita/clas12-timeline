@@ -5,11 +5,15 @@ if [ $# -ne 1 ]; then
   echo "USAGE: $0 [dataset]"
   exit
 fi
+if [ -z "$CLASQA" ]; then
+  echo: "ERROR: please source env.sh first"
+  exit
+fi
 
 dataset=$1
 
-wwwReleaseDir="../wwwRelease"
-wwwLocalDir="../wwwDev"
+wwwReleaseDir="${CLASQAWWW}/rga/pass1/qa"
+wwwLocalDir="${CLASQAWWW}/$(whoami)"
 
 rm -r ${wwwReleaseDir}/${dataset}*
 cp -rv ${wwwLocalDir}/${dataset}* ${wwwReleaseDir}/

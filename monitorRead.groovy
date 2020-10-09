@@ -559,155 +559,149 @@ inHipoList.each { inHipoFile ->
     //if(evCount>100000) break // limiter
     event = reader.getNextEvent()
 
-    if(event.hasBank("REC::Particle") &&
-       event.hasBank("REC::Event") &&
-       event.hasBank("RUN::config") ) {
-
-      // get required banks
-      particleBank = event.getBank("REC::Particle")
-      eventBank = event.getBank("REC::Event")
-      configBank = event.getBank("RUN::config")
-      // get additional banks
-      FTparticleBank = event.getBank("RECFT::Particle")
-      calBank = event.getBank("REC::Calorimeter")
-      scalerBank = event.getBank("RUN::scaler")
+    // get required banks
+    particleBank = event.getBank("REC::Particle")
+    eventBank = event.getBank("REC::Event")
+    configBank = event.getBank("RUN::config")
+    // get additional banks
+    FTparticleBank = event.getBank("RECFT::Particle")
+    calBank = event.getBank("REC::Calorimeter")
+    scalerBank = event.getBank("RUN::scaler")
 
 
-      // get list of PIDs, with list index corresponding to bank row
-      pidList = (0..<particleBank.rows()).collect{ particleBank.getInt('pid',it) }
-      //println "pidList = $pidList"
+    // get list of PIDs, with list index corresponding to bank row
+    pidList = (0..<particleBank.rows()).collect{ particleBank.getInt('pid',it) }
+    //println "pidList = $pidList"
 
 
-      // update segment number, if reading skim file
-      if(inHipoType=="skim") segment = (evCount/segmentSize).toInteger()
+    // update segment number, if reading skim file
+    if(inHipoType=="skim") segment = (evCount/segmentSize).toInteger()
 
-      // if segment number changed, write out filled histos 
-      // and/or create new histos
-      if(segment!=segmentTmp) {
+    // if segment number changed, write out filled histos 
+    // and/or create new histos
+    if(segment!=segmentTmp) {
 
-        // if this isn't the first segment, and if we are reading a skim file,
-        // write out filled histograms; note that if reading a dst file, this
-        // subroutine is instead called at the end of the event loop
-        if(segmentTmp>=0 && inHipoType=="skim") writeHistos()
+      // if this isn't the first segment, and if we are reading a skim file,
+      // write out filled histograms; note that if reading a dst file, this
+      // subroutine is instead called at the end of the event loop
+      if(segmentTmp>=0 && inHipoType=="skim") writeHistos()
 
-        // define new histograms
-        nbins = 50
-        T.exeLeaves( histTree.helic.sinPhi, {
-          T.leaf = buildHist('helic_sinPhi','sinPhiH',T.leafPath,runnum,nbins,-1,1) 
-        })
-        histTree.helic.dist = buildHist('helic_dist','helicity',[],runnum,3,-1,2)
-        histTree.helic.distGoodOnly = buildHist('helic_distGoodOnly','helicity (with electron cuts)',[],runnum,3,-1,2)
-        histTree.DIS.Q2 = buildHist('DIS_Q2','Q^2',[],runnum,2*nbins,0,12)
-        histTree.DIS.W = buildHist('DIS_W','W',[],runnum,2*nbins,0,6)
-        histTree.DIS.x = buildHist('DIS_x','x',[],runnum,2*nbins,0,1)
-        histTree.DIS.y = buildHist('DIS_y','y',[],runnum,2*nbins,0,1)
-        histTree.DIS.Q2VsW = buildHist('DIS_Q2VsW','Q^2 vs W',[],runnum,nbins,0,6,nbins,0,12)
+      // define new histograms
+      nbins = 50
+      T.exeLeaves( histTree.helic.sinPhi, {
+        T.leaf = buildHist('helic_sinPhi','sinPhiH',T.leafPath,runnum,nbins,-1,1) 
+      })
+      histTree.helic.dist = buildHist('helic_dist','helicity',[],runnum,3,-1,2)
+      histTree.helic.distGoodOnly = buildHist('helic_distGoodOnly','helicity (with electron cuts)',[],runnum,3,-1,2)
+      histTree.DIS.Q2 = buildHist('DIS_Q2','Q^2',[],runnum,2*nbins,0,12)
+      histTree.DIS.W = buildHist('DIS_W','W',[],runnum,2*nbins,0,6)
+      histTree.DIS.x = buildHist('DIS_x','x',[],runnum,2*nbins,0,1)
+      histTree.DIS.y = buildHist('DIS_y','y',[],runnum,2*nbins,0,1)
+      histTree.DIS.Q2VsW = buildHist('DIS_Q2VsW','Q^2 vs W',[],runnum,nbins,0,6,nbins,0,12)
 
-        T.exeLeaves( histTree.inclusive, {
-          def lbound=0
-          def ubound=0
-          if(T.key=='p') { lbound=0; ubound=10 }
-          else if(T.key=='pT') { lbound=0; ubound=4 }
-          else if(T.key=='z') { lbound=0; ubound=1 }
-          else if(T.key=='theta') { lbound=0; ubound=Math.toRadians(90.0) }
-          else if(T.key=='phiH') { lbound=-3.15; ubound=3.15 }
-          T.leaf = buildHist('inclusive','',T.leafPath,runnum,nbins,lbound,ubound)
-        })
+      T.exeLeaves( histTree.inclusive, {
+        def lbound=0
+        def ubound=0
+        if(T.key=='p') { lbound=0; ubound=10 }
+        else if(T.key=='pT') { lbound=0; ubound=4 }
+        else if(T.key=='z') { lbound=0; ubound=1 }
+        else if(T.key=='theta') { lbound=0; ubound=Math.toRadians(90.0) }
+        else if(T.key=='phiH') { lbound=-3.15; ubound=3.15 }
+        T.leaf = buildHist('inclusive','',T.leafPath,runnum,nbins,lbound,ubound)
+      })
 
-        // print the histogram names and titles
-        /*
-        if(segmentTmp==-1) {
-          println "---\nhistogram names and titles:"
-          T.printTree(histTree,{ T.leaf.getName() +" ::: "+ T.leaf.getTitle() })
-          println "---"
-        }
-        */
-
-        // update tmp number
-        segmentTmp = segment
+      // print the histogram names and titles
+      /*
+      if(segmentTmp==-1) {
+        println "---\nhistogram names and titles:"
+        T.printTree(histTree,{ T.leaf.getName() +" ::: "+ T.leaf.getTitle() })
+        println "---"
       }
+      */
+
+      // update tmp number
+      segmentTmp = segment
+    }
 
 
-      // get helicity and fill helicity distribution
-      helicity = eventBank.getByte('helicity',0)
-      histTree.helic.dist.fill(helicity)
-      helDefined = true
-      switch(helicity) {
-        case 1:
-          helStr = 'hm'
-          break
-        case -1:
-          helStr = 'hp'
-          break
-        default:
-          helDefined = false
-          //helStr = 'hp' // override
-          break
+    // get helicity and fill helicity distribution
+    helicity = eventBank.getByte('helicity',0)
+    histTree.helic.dist.fill(helicity)
+    helDefined = true
+    switch(helicity) {
+      case 1:
+        helStr = 'hm'
+        break
+      case -1:
+        helStr = 'hp'
+        break
+      default:
+        helDefined = false
+        //helStr = 'hp' // override
+        break
+    }
+
+    
+    // get FC charge
+    if(scalerBank.rows()>0) {
+      fcup = scalerBank.getFloat("fcup",0) // ungated charge
+      //fcupgated = scalerBank.getFloat("fcupgated",0) // do not use!
+      UFClist << fcup
+      //FClist << fcupgated
+      /*
+      if(helDefined) {
+        UFClistHel[helStr] << fcup
+        //FClistHel[helStr] << fcupgated
       }
-
-      
-      // get FC charge
-      if(scalerBank.rows()>0) {
-        fcup = scalerBank.getFloat("fcup",0) // ungated charge
-        //fcupgated = scalerBank.getFloat("fcupgated",0) // do not use!
-        UFClist << fcup
-        //FClist << fcupgated
-        /*
-        if(helDefined) {
-          UFClistHel[helStr] << fcup
-          //FClistHel[helStr] << fcupgated
-        }
-        */
-        LTlist << scalerBank.getFloat("livetime",0) // livetime
-      }
+      */
+      LTlist << scalerBank.getFloat("livetime",0) // livetime
+    }
 
 
-      // get electron list, and increment the number of trigger electrons
-      // - also finds the DIS electron, and calculates x,Q2,W,y,nu
-      eleList = findParticles(11) // (`eleList` is unused)
+    // get electron list, and increment the number of trigger electrons
+    // - also finds the DIS electron, and calculates x,Q2,W,y,nu
+    eleList = findParticles(11) // (`eleList` is unused)
 
 
-      // CUT: if a dis electron was found (see countTriggerElectrons)
-      if(disEleFound) {
+    // CUT: if a dis electron was found (see countTriggerElectrons)
+    if(disEleFound) {
 
-        if(disElectronInTrigger)
-          histTree.helic.distGoodOnly.fill(helicity)
+      if(disElectronInTrigger)
+        histTree.helic.distGoodOnly.fill(helicity)
 
-        // CUT for pions: Q2 and W and y and helicity
-        if( Q2>1 && W>2 && y<0.8 && helDefined) {
+      // CUT for pions: Q2 and W and y and helicity
+      if( Q2>1 && W>2 && y<0.8 && helDefined) {
 
-          // get lists of pions
-          pipList = findParticles(211)
-          pimList = findParticles(-211)
+        // get lists of pions
+        pipList = findParticles(211)
+        pimList = findParticles(-211)
 
-          // calculate pion kinematics and fill histograms
-          // countEvent will be set to true if a pion is added to the histos 
-          countEvent = false
-          fillHistos(pipList,'pip')
-          fillHistos(pimList,'pim')
+        // calculate pion kinematics and fill histograms
+        // countEvent will be set to true if a pion is added to the histos 
+        countEvent = false
+        fillHistos(pipList,'pip')
+        fillHistos(pimList,'pim')
 
-          if(countEvent) {
+        if(countEvent) {
 
-            // fill event-level histograms
-            histTree.DIS.Q2.fill(Q2)
-            histTree.DIS.W.fill(W)
-            histTree.DIS.x.fill(x)
-            histTree.DIS.y.fill(y)
-            histTree.DIS.Q2VsW.fill(W,Q2)
+          // fill event-level histograms
+          histTree.DIS.Q2.fill(Q2)
+          histTree.DIS.W.fill(W)
+          histTree.DIS.x.fill(x)
+          histTree.DIS.y.fill(y)
+          histTree.DIS.Q2VsW.fill(W,Q2)
 
-            // increment event counter
-            evCount++
-            if(evCount % 100000 == 0) println "found $evCount events which contain a pion"
+          // increment event counter
+          evCount++
+          if(evCount % 100000 == 0) println "found $evCount events which contain a pion"
 
-          }
         }
       }
+    }
 
-      // add eventNum to the list of this segment's event numbers
-      eventNum = BigInteger.valueOf(configBank.getInt('event',0))
-      eventNumList.add(eventNum)
-
-    } // end if event has specific banks
+    // add eventNum to the list of this segment's event numbers
+    eventNum = BigInteger.valueOf(configBank.getInt('event',0))
+    eventNumList.add(eventNum)
 
   } // end event loop
   reader.close()

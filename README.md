@@ -29,7 +29,8 @@ Data monitoring tools for CLAS run QA
     * several scripts use this file; some loop over all datasets, whereas
       others require you to specify which dataset
       * for scripts which loop over all datasets, you can restrict them by
-        commenting out lines in `datasetList.txt` (using `#`)
+        commenting out lines in `datasetList.txt` (using `#`); currently
+        there are no such scripts in use
   * you may need to edit `$datadir` to specify the location of DST files
     * by default, it is `../pass1.${dataset}`, which should be a symlink
       to the appropriate DST directory
@@ -112,13 +113,11 @@ First step is to read DST or Skim files, producing hipo files and data tables
 
 
 ### Data Organization
-* use the script `datasetOrganize.sh`
+* use the script `datasetOrganize.sh [dataset]`
   * this will concatenate files from `outdat` into a single file
-    `outdat.${dataset}/data_table.dat`, for each dataset that is *not* commented
-    out in `datasetList.txt`
+    `outdat.${dataset}/data_table.dat`, for the specified dataset
   * it will also generate symlinks from `outmon.${dataset}/monitor*.hipo` to the
-    relevant `outmon/monitor*.hipo` files, for each dataset that is *not* commented
-    out in `datasetList.txt`
+    relevant `outmon/monitor*.hipo` files
 
 
 ### Plotting Scripts

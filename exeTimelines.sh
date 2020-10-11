@@ -19,7 +19,7 @@ function exe {
 }
 
 # organize the data into datasets
-exe ./datasetOrganize.sh
+exe ./datasetOrganize.sh $dataset
 
 # loop over datasets
 # trigger electrons monitor

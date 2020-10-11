@@ -270,20 +270,20 @@ inList.each { inFile ->
         def g = buildMonAveGr(obj)
         def gN = g.getName().replaceAll(/_aveGr$/,'_rellumGr')
         g.setName(gN)
-        g.setTitle('average relative luminosity vs. segment number')
+        g.setTitle('average n+/n- vs. segment number')
         return g
       })
       T.addLeaf(monTree,[runnum,'helic','dist','rellum','rellumDist'],{
         def h = buildMonAveDist(obj,50,0.9,1.1)
         def hN = h.getName().replaceAll(/_aveDist$/,'_rellumDist')
         h.setName(hN)
-        h.setTitle('average relative luminosity distribution')
+        h.setTitle('average n+/n- distribution')
         return h
       })
       if(obj.integral()>0) {
         // use values from helic_dist
-        helP = obj.getBinContent(0) // + helicity is 'helicity==-1' in banks
-        helM = obj.getBinContent(2) // - helicity is 'helicity==+1' in banks
+        helM = obj.getBinContent(0) // helicity = -1
+        helP = obj.getBinContent(2) // helicity = +1
         // use charge from FC (disabled)
         //helP = fcTree[runnum][segnum.toInteger()]['fcP']
         //helM = fcTree[runnum][segnum.toInteger()]['fcM']
@@ -408,7 +408,7 @@ T.exeLeaves(monTree,{
       if(tlPath.contains('helic')) {
         if(tlPath.contains('sinPhi')) tlT = "sinPhiH"
         else if(T.key=='heldefDist') tlT = "defined helicity fraction"
-        else if(T.key=='rellumDist') tlT = "relative luminosity"
+        else if(T.key=='rellumDist') tlT = "n+/n-"
         else if(T.key=='asymGraph') tlT = "beam spin asymmetry: pion sin(phiH) amplitude"
         else tlT = "unknown"
       }
@@ -517,7 +517,7 @@ def hipoWrite = { hipoName, filterList, TLkey ->
 hipoWrite("helicity_sinPhi",['helic','sinPhi'],"timeline")
 hipoWrite("beam_spin_asymmetry",['helic','asym'],"timeline")
 hipoWrite("defined_helicity_fraction",['helic','dist','heldef'],"timeline")
-hipoWrite("relative_luminosity",['helic','dist','rellum'],"timeline")
+hipoWrite("relative_yield",['helic','dist','rellum'],"timeline")
 hipoWrite("q2_W_x_y_means",['DIS'],"timeline")
 hipoWrite("pip_kinematics_means",['inclusive','pip'],"timeline")
 hipoWrite("pim_kinematics_means",['inclusive','pim'],"timeline")

@@ -9,8 +9,8 @@ if(args.length>=1) wwwDirName = args[0]
 def wwwDir = new File(wwwDirName)
 def datasets = []
 wwwDir.traverse(
-  type: groovy.io.FileType.DIRECTORIES ) 
-{ datasets << it.getName() }
+  type: groovy.io.FileType.DIRECTORIES, maxDepth: 0 ) 
+{ if(!it.getName().contains("calib")) datasets << it.getName() }
 datasets.sort()
 println datasets
 

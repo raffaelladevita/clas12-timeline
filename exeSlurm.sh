@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ -z "$CLASQA" ]; then
-  echo: "ERROR: please source env.sh first"
+  echo "ERROR: please source env.sh first"
   exit
 fi
 
@@ -12,6 +12,10 @@ dataset=$1
 runL=$(grep $dataset datasetList.txt | awk '{print $2}')
 runH=$(grep $dataset datasetList.txt | awk '{print $3}')
 datadir=$(grep $dataset datasetList.txt | awk '{print $4}')
+if [ -z "$datadir" ]; then
+  echo "ERROR: dataset not foundin datasetList.txt"
+  exit
+fi
 
 # build list of files, and cleanup outdat and outmon directories
 joblist=joblist.${dataset}.slurm

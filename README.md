@@ -36,6 +36,9 @@ Data monitoring tools for CLAS run QA
       to the appropriate DST directory
   * wait for slurm jobs to finish
   * execute `errorPrint.sh` to inspect error logs
+* integrity check: check if all available data were analyzed
+  * `getListOfDSTs.sh [dataset]`
+  * `integrityCheck.sh [dataset]`
 * `exeTimelines.sh $dataset`, which does the following:
   * runs `qaPlot.groovy` (on electron trigger and FT)
   * runs `qaCut.groovy` (on electron trigger and FT)
@@ -231,6 +234,14 @@ Note: see [doc/manualQA.jpeg](doc/manualQA.jpeg) for a flowchart of the procedur
     * look at "supplemental" `epoch view` timelines
   * if you make changes to the epoch lines, re-run `exeTimelines.sh` to
     generate the updated `qaTree.json`
+* verify all the data have been analyzed by the automatic QA
+  * execute `getListOfDSTs.sh [dataset]` to obtain a list of run numbers and file
+    numbers from the DST file directory; this script takes some time to run
+  * execute `integrityCheck.sh [dataset]` to compare the list of DST files
+    to those which appear in `outdat.$dataset/data_table.dat`; if any DST files
+    do not appear in `data_table.dat`, the check will fail, the missing files
+    will be printed, and it is recommended to re-run the automatic QA, either for
+    those specific runs, or in its entirety
 * `cd QA`; this subdirectory contains code for the "manual QA"
 * `import.sh [dataset]` to import the automatically generated `qaTree.json`
   * by default, this is in `../outdat.${dataset}/qaTree.json`

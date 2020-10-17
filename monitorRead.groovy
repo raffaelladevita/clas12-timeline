@@ -65,7 +65,10 @@ else if(inHipoType=="dst") {
 println "runnum=$runnum"
 
 
+//////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////
 // RUN GROUP DEPENDENT SETTINGS //////////////////////////
+
 def RG = "unknown"
 if(runnum>=5032 && runnum<=5262) RG="RGA" // inbending1
 else if(runnum>=5300 && runnum<=5666) RG="RGA" // inbending1 + outbending
@@ -75,7 +78,7 @@ else System.err << "WARNING: unknown run group; using default run-group-dependen
 
 // helFlip: if true, REC::Event.helicity has opposite sign from reality
 def helFlip = false
-if(RG=="RGA") helFlip = true
+if(RG=="RGA" || RG=="RGB") helFlip = true
 
 // beam energy // TODO: get this from EPICS instead
 def EBEAM = 10.6041 // RGA default
@@ -90,6 +93,23 @@ else if(RG=="RGK") {
   else System.err << "ERROR: unknown beam energy\n"
 }
 
+// gated FC charge workaround
+// - needed if cooked with 6.5.3 or below, or without the 
+//   recharge option
+// - if true, uses ungated FC charge * average livetime as the
+//   gated FC charge
+def FCworkaround = false
+if(RG=="RGA") FCworkaround = true
+if(RG=="RGB") FCworkaround = false
+if(RG=="RGK") FCworkaround = true
+
+// FC attenuation fix
+// RGB runs <6400 had wrong attenuation, need to use
+// fc -> fc*9.96025
+// (this is programmed in below, but mentioned here for documentation)
+
+//////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////
 
 
@@ -201,11 +221,9 @@ def nbins
 def sectors = 0..<6
 def nElec = sectors.collect{0}
 def nElecFT = 0
-def fcup, fcupgated
 def LTlist = []
+def FClist = []
 def UFClist = []
-def UFClistSorted = []
-def UFClistHel = ['hp':[],'hm':[]]
 def rellumG, rellumU
 def detIdEC = DetectorType.ECAL.getDetectorId()
 def Q2
@@ -486,50 +504,27 @@ def writeHistos = {
     def aveLivetime = LTlist.size()>0 ? LTlist.sum() / LTlist.size() : 0
     def ufcStart = UFClist.min()
     def ufcStop = UFClist.max()
-    def fcStart = ufcStart * aveLivetime
-    def fcStop = ufcStop * aveLivetime
+    def fcStart
+    def fcStop
+    if(FCworkaround) {
+      fcStart = ufcStart * aveLivetime
+      fcStop = ufcStop * aveLivetime
+    } else {
+      fcStart = FClist.min()
+      fcStop = FClist.max()
+    }
     if(fcStart>fcStop || ufcStart>ufcStop) {
       System.err << "WARNING: faraday cup start > stop for" <<
         " run=${runnum} file=${segmentNum}\n"
     }
 
-    // FC charge from each helicity state
-    // - disabled for now (not so useful...)
-    /*
-    println "computing relative luminosity from FC charge..."
-    UFClistSorted = UFClist.sort()
-    def ufcPrev = 0
-    def ufcP = 0
-    def ufcM = 0
-    def fcP = 0
-    def fcM = 0
-    UFClistSorted.eachWithIndex{ ufc,i ->
-      if(i==0) ufcPrev = ufc // unfortunately, 1st event is forced to be ignored
-      else {
-        def fcount = 0
-        if(ufc in UFClistHel.hp) {
-          ufcP += ufc-ufcPrev
-          fcP += (ufc-ufcPrev) * aveLivetime
-          fcount++
-        }
-        if(ufc in UFClistHel.hm) {
-          ufcM += ufc-ufcPrev
-          fcM += (ufc-ufcPrev) * aveLivetime
-          fcount++
-        } 
-        if(fcount>1) System.err << "WARNING: double-count in relative luminosity\n"
-        if(ufc<=ufcPrev) System.err << "WARNING: UFClistSorted is not sorted or has a duplicate\n"
-        ufcPrev = ufc
-      }
+    // RGB attenuation correction
+    if(RG=="RGB" && runnum<6400) {
+      fcStart *= 9.96025
+      fcStop *= 9.96025
+      ufcStart *= 9.96025
+      ufcStop *= 9.96025
     }
-    rellumU = ufcP>0 ? ufcP/ufcM : 0 // ungated
-    rellumG = fcP>0 ? fcP/fcM : 0 // gated
-    println "--> relative luminosity:"
-    println "    gated = $rellumG"
-    println "  ungated = $rellumU"
-    println " difference = "+(rellumU-rellumG)
-    */
-
 
     // write number of electrons and FC charge to datfile
     sectors.each{ sec ->
@@ -560,9 +555,7 @@ def writeHistos = {
   nElec = sectors.collect{0}
   nElecFT = 0
   UFClist = []
-  UFClistSorted = []
-  UFClistHel.hp = []
-  UFClistHel.hm = []
+  FClist = []
   LTlist = []
   eventNumList.clear()
 }
@@ -667,16 +660,8 @@ inHipoList.each { inHipoFile ->
     
     // get FC charge
     if(scalerBank.rows()>0) {
-      fcup = scalerBank.getFloat("fcup",0) // ungated charge
-      //fcupgated = scalerBank.getFloat("fcupgated",0) // do not use!
-      UFClist << fcup
-      //FClist << fcupgated
-      /*
-      if(helDefined) {
-        UFClistHel[helStr] << fcup
-        //FClistHel[helStr] << fcupgated
-      }
-      */
+      UFClist << scalerBank.getFloat("fcup",0) // ungated charge
+      FClist << scalerBank.getFloat("fcupgated",0) // gated charge
       LTlist << scalerBank.getFloat("livetime",0) // livetime
     }
 

@@ -34,7 +34,6 @@ done
 # write job descriptor
 slurm=job.${dataset}.slurm
 > $slurm
-rm -v /farm_out/`whoami`/clasqa*
 
 function app { echo "$1" >> $slurm; }
 

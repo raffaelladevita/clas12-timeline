@@ -70,11 +70,14 @@ println "runnum=$runnum"
 // RUN GROUP DEPENDENT SETTINGS //////////////////////////
 
 def RG = "unknown"
-if(runnum>=5032 && runnum<=5262) RG="RGA" // inbending1
+if(runnum>=4763 && runnum<=5001) RG="RGA" // early period
+else if(runnum>=5032 && runnum<=5262) RG="RGA" // inbending1
 else if(runnum>=5300 && runnum<=5666) RG="RGA" // inbending1 + outbending
 else if(runnum>=5674 && runnum<=6000) RG="RGK" // 6.5+7.5 GeV
 else if(runnum>=6120 && runnum<=6604) RG="RGB" // spring
+else if(runnum>=6715 && runnum<=6765) RG="RGA" // spring 19
 else System.err << "WARNING: unknown run group; using default run-group-dependent settings (see monitorRead.groovy)\n"
+println "rungroup = $RG"
 
 // helFlip: if true, REC::Event.helicity has opposite sign from reality
 def helFlip = false
@@ -82,7 +85,10 @@ if(RG=="RGA" || RG=="RGB") helFlip = true
 
 // beam energy // TODO: get this from EPICS instead
 def EBEAM = 10.6041 // RGA default
-if(RG=="RGB") {
+if(RG=="RGA") {
+  if(runnum>=6715 && runnum<=6765) EBEAM = 10.1998 // spring 19
+}
+else if(RG=="RGB") {
   if(runnum>=6120 && runnum<=6399) EBEAM = 10.5986
   else if(runnum>=6409 && runnum<=6604) EBEAM = 10.1998
   else System.err << "ERROR: unknown beam energy\n"
@@ -99,8 +105,8 @@ else if(RG=="RGK") {
 // - if true, uses ungated FC charge * average livetime as the
 //   gated FC charge
 def FCworkaround = false
-if(RG=="RGA") FCworkaround = true
-if(RG=="RGB") FCworkaround = false
+if(RG=="RGA") FCworkaround = false // TEMPORARY FOR TESTING, needs to be true
+if(RG=="RGB") FCworkaround = true
 if(RG=="RGK") FCworkaround = true
 
 // FC attenuation fix

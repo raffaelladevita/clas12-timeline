@@ -99,15 +99,15 @@ else if(RG=="RGK") {
   else System.err << "ERROR: unknown beam energy\n"
 }
 
-// gated FC charge workaround
-// - needed if cooked with 6.5.3 or below, or without the 
-//   recharge option
-// - if true, uses ungated FC charge * average livetime as the
-//   gated FC charge
-def FCworkaround = false
-if(RG=="RGA") FCworkaround = false // TEMPORARY FOR TESTING, needs to be true
-if(RG=="RGB") FCworkaround = true
-if(RG=="RGK") FCworkaround = true
+// gated FC charge determination
+// - 0: use workaround method: ungated FC charge * average livetime
+//      - needed if cooked with 6.5.3 or below, or without the recharge option
+// - 1: use RUN::scaler:fcup - should be ok if data cooked with recharge option
+// - 2: use REC::Event:beamCharge - useful if RUN::scaler is unavailable
+def FCmode = 1
+if(RG=="RGA") FCmode = 0
+if(RG=="RGB") FCmode = 0
+if(RG=="RGK") FCmode = 0
 
 // FC attenuation fix
 // RGB runs <6400 had wrong attenuation, need to use
@@ -471,7 +471,7 @@ def writeHistos = {
   eventNumMax = eventNumList.max()
 
   // proceed only if there are data to write
-  if(eventNumList.size()>0 && UFClist.size()>0) {
+  if(eventNumList.size()>0) {
 
     // get segment number
     if(inHipoType=="skim") {
@@ -506,18 +506,33 @@ def writeHistos = {
 
 
     // get FC charge
-    LTlist.removeAll{it<0} // remove undefined livetime values
-    def aveLivetime = LTlist.size()>0 ? LTlist.sum() / LTlist.size() : 0
-    def ufcStart = UFClist.min()
-    def ufcStop = UFClist.max()
+    def ufcStart
+    def ufcStop
+    if(UFClist.size()>0) {
+      ufcStart = UFClist.min()
+      ufcStop = UFClist.max()
+    } else {
+      System.err << "WARNING: empty UFClist for run=${runnum} file=${segmentNum}\n"
+      ufcStart = 0
+      ufcStop = 0
+    }
+
     def fcStart
     def fcStop
-    if(FCworkaround) {
-      fcStart = ufcStart * aveLivetime
-      fcStop = ufcStop * aveLivetime
-    } else {
-      fcStart = FClist.min()
-      fcStop = FClist.max()
+    LTlist.removeAll{it<0} // remove undefined livetime values
+    def aveLivetime = LTlist.size()>0 ? LTlist.sum() / LTlist.size() : 0
+    if(FCmode==0) {
+      fcStart = ufcStart * aveLivetime // workaround method
+      fcStop = ufcStop * aveLivetime // workaround method
+    } else if(FCmode==1 || FCmode==2) {
+      if(FClist.size()>0) {
+        fcStart = FClist.min()
+        fcStop = FClist.max()
+      } else {
+        System.err << "WARNING: empty FClist for run=${runnum} file=${segmentNum}\n"
+        fcStart = 0
+        fcStop = 0
+      }
     }
     if(fcStart>fcStop || ufcStart>ufcStop) {
       System.err << "WARNING: faraday cup start > stop for" <<
@@ -667,8 +682,13 @@ inHipoList.each { inHipoFile ->
     // get FC charge
     if(scalerBank.rows()>0) {
       UFClist << scalerBank.getFloat("fcup",0) // ungated charge
-      FClist << scalerBank.getFloat("fcupgated",0) // gated charge
       LTlist << scalerBank.getFloat("livetime",0) // livetime
+      if(FCmode==1) {
+        FClist << scalerBank.getFloat("fcupgated",0) // gated charge
+      }
+    }
+    if(FCmode==2 && eventBank.rows()>0) {
+      FClist << eventBank.getFloat("beamCharge",0) // gated charge
     }
 
 

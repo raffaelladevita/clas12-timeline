@@ -11,9 +11,15 @@ if [ -z "$CLASQA" ]; then
 fi
 
 dataset=$1
+rungroup=$(echo $dataset|sed 's/_.*$//g')
 
-wwwReleaseDir="${CLASQAWWW}/rga/pass1/qa"
+wwwReleaseDir="${CLASQAWWW}/${rungroup}/pass1/qa"
 wwwLocalDir="${CLASQAWWW}/$(whoami)"
+
+echo "dataset=$dataset"
+echo "rungroup=$rungroup"
+echo "wwwReleaseDir=$wwwReleaseDir"
+echo "wwwLocalDir=$wwwLocalDir"
 
 rm -r ${wwwReleaseDir}/${dataset}*
 cp -rv ${wwwLocalDir}/${dataset}* ${wwwReleaseDir}/

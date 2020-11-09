@@ -7,7 +7,7 @@ if [ $# -ne 2 ]; then
   exit
 fi
 if [ -z "$CLASQA" ]; then
-  echo: "ERROR: please source env.sh first"
+  echo "ERROR: please source env.sh first"
   exit
 fi
 

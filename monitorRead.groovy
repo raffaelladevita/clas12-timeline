@@ -75,7 +75,7 @@ else if(runnum>=5032 && runnum<=5262) RG="RGA" // inbending1
 else if(runnum>=5300 && runnum<=5666) RG="RGA" // inbending1 + outbending
 else if(runnum>=5674 && runnum<=6000) RG="RGK" // 6.5+7.5 GeV
 else if(runnum>=6120 && runnum<=6604) RG="RGB" // spring
-else if(runnum>=6715 && runnum<=6765) RG="RGA" // spring 19
+else if(runnum>=6715 && runnum<=6780) RG="RGA" // spring 19
 else if(runnum>=11093 && runnum<=11300) RG="RGB" // fall
 else System.err << "WARNING: unknown run group; using default run-group-dependent settings (see monitorRead.groovy)\n"
 println "rungroup = $RG"

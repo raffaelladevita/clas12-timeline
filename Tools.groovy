@@ -186,4 +186,7 @@ class Tools {
   // pretty printer
   def pPrint = { str -> JsonOutput.prettyPrint(JsonOutput.toJson(str)) }
 
+  // print text output
+  def printStatus = { str -> println "STATUS: $str" }
+  def printError = { str -> System.err << "ERROR: $str\n" }
 }

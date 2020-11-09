@@ -228,8 +228,6 @@ T.exeLeaves(B,{
   })
 
 
-T.exeLeaves(TL,{println T.leafPath; println T.leaf})
-
   // loop over runs
   gr.getDataSize(0).times { i ->
 

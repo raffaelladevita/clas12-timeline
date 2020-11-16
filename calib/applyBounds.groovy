@@ -185,9 +185,9 @@ println "======================================="
 
 
 // general closures
-def buildLine = { g,name,v ->
+def buildLine = { g,name,color,v ->
   new F1D(
-    g.getName()+":"+name,
+    ['same',g.getName(),name,color].join(':'),
     Double.toString(v),
     g.getDataX(0),
     g.getDataX(g.getDataSize(0)-1)
@@ -264,14 +264,7 @@ TL.each{ det, detTr -> // loop through detector directories
     // write graphs
     outTdir.mkdir("/timelines")
     outTdir.cd("/timelines")
-    graphTr.each{ graphName, graph -> 
-      outTdir.addDataSet(graph)
-      /*
-      T.getLeaf(L,[det,hipoFile,graphName]).eachWithIndex{ num,idx ->
-        outTdir.addDataSet(buildLine(graph,"l$idx",num))
-      }
-      */
-    }
+    graphTr.each{ graphName, graph -> outTdir.addDataSet(graph) }
 
     // copy TDirectories for each run from input hipo file
     def inHipoN = "${indir}/${det}/${hipoFile}.hipo"
@@ -285,9 +278,16 @@ TL.each{ det, detTr -> // loop through detector directories
         outTdir.addDataSet(inTdir.getObject(it))
       } else {
         outTdir.cd("/timelines")
-        outTdir.addDataSet(inTdir.getObject(it))
+        def graphName = it.replaceAll(/^.*\//,'')
+        def graph = inTdir.getObject(it)
+        outTdir.addDataSet(graph)
+        // add cut lines
+        T.getLeaf(L,[det,hipoFile,graphName]).eachWithIndex{ num,idx ->
+          outTdir.addDataSet(buildLine(graph,"l$idx",idx==0?'red':'blue',num))
+        }
       }
     }
+
     
 
     // create output hipo file

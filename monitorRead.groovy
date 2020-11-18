@@ -92,6 +92,7 @@ if(RG=="RGB") {
 def EBEAM = 10.6041 // RGA default
 if(RG=="RGA") {
   if(runnum>=6715 && runnum<=6765) EBEAM = 10.1998 // spring 19
+  else EBEAM = 10.6041
 }
 else if(RG=="RGB") {
   if(runnum>=6120 && runnum<=6399) EBEAM = 10.5986 // spring

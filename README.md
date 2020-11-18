@@ -36,9 +36,9 @@ Data monitoring tools for CLAS run QA
       to the appropriate DST directory
   * wait for slurm jobs to finish
   * execute `errorPrint.sh` to inspect error logs
-* integrity check: check if all available data were analyzed
-  * `getListOfDSTs.sh [dataset]`
-  * `integrityCheck.sh [dataset]`
+  * `exeSlurm.sh` also has the ability to read files from the tape silo; however, while
+    this feature has been programmed in, it has never been used and is NOT tested! It
+    likely does not work yet, but the general idea is programmed in
 * `exeTimelines.sh $dataset`, which does the following:
   * runs `qaPlot.groovy` (on electron trigger and FT)
   * runs `qaCut.groovy` (on electron trigger and FT)
@@ -49,7 +49,11 @@ Data monitoring tools for CLAS run QA
     of `exeTimelines.sh`
     * if you see any errors for a script, it's best to rerun that script independently
       to diagnose the problem
-* perform the QA (see QA procedure below)
+* integrity check: check if all available data were analyzed (must be done AFTER
+  `exeTimelines.sh`)
+  * `getListOfDSTs.sh [dataset]` (takes some time to run)
+  * `integrityCheck.sh [dataset]`
+* perform the manual QA (see QA procedure below)
 * release timeline to main directory: use `releaseTimelines.sh`
 
 

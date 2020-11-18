@@ -5,8 +5,17 @@ if [ -z "$CLASQA" ]; then
   exit
 fi
 
-if [ $# -ne 1 ];then echo "USAGE: $0 [dataset]"; exit; fi
+if [ $# -lt 1 ]; then
+  echo "USAGE: $0 [dataset]"
+  echo "optional: if you specify a second argument, it will use files from tape"
+  echo "          (warning: this feature has never been tested, and needs development!)"
+  exit
+fi
 dataset=$1
+usetape=0
+if [ $# -eq 2 ]; then usetape=1; fi
+echo "dataset=$dataset"
+echo "usetape=$usetape"
 
 
 runL=$(grep $dataset datasetList.txt | awk '{print $2}')
@@ -17,6 +26,10 @@ if [ -z "$datadir" ]; then
   exit
 fi
 
+if [ $usetape -eq 1 ]; then
+  datadir=$(echo $datadir | sed 's/^\/cache/\/mss/g')
+fi
+
 # build list of files, and cleanup outdat and outmon directories
 joblist=joblist.${dataset}.slurm
 > $joblist
@@ -24,7 +37,15 @@ for rundir in `ls -d ${datadir}/*/ | sed 's/\/$//'`; do
   run=$(echo $rundir | sed 's/^.*\/0*//g')
   if [ $run -ge $runL -a $run -le $runH ]; then
     echo "--- found dir=$rundir  run=$run"
-    echo "run-groovy $CLASQA_JAVA_OPTS monitorRead.groovy $rundir dst" >> $joblist
+    if [ $usetape -eq 1 ]; then
+      scratchdir="/scratch/slurm/$(whoami)/${run}"
+      cmd="mkdir -P $scratchdir && jget ${rundir}/* ${scratchdir}/"
+      cmd="$cmd && run-groovy $CLASQA_JAVA_OPTS monitorRead.groovy $scratchdir dst"
+      cmd="$cmd && rm -r $scratchdir"
+    else
+      cmd="run-groovy $CLASQA_JAVA_OPTS monitorRead.groovy $rundir dst"
+    fi
+    echo "$cmd" >> $joblist
     rm -v outdat/*${run}.dat
     rm -v outmon/*${run}.hipo
   fi

@@ -113,11 +113,16 @@ def L = [:]
   // DC ----------------------------------------------------------------------
   (1..6).each{ slnum ->
     def sl = 'sl'+slnum // super layer
-    T.addLeaf(B,['dc','dc_residuals_sec_sl_mean',sec+' '+sl],{{ v -> v>0.0225 && v<0.0450 }}) // cm
-    T.addLeaf(L,['dc','dc_residuals_sec_sl_mean',sec+' '+sl],{[0.0225,0.0450]}) // cm
+    T.addLeaf(B,['dc','dc_residuals_sec_sl_mean',sec+' '+sl],{{ v -> v>-0.005 && v<0.005 }}) // cm
+    T.addLeaf(L,['dc','dc_residuals_sec_sl_mean',sec+' '+sl],{[-0.005,0.005]}) // cm
     //
-    T.addLeaf(B,['dc','dc_residuals_sec_sl_sigma',sec+' '+sl],{{ v -> v<0.0250 }}) // cm // CORRECT?
-    T.addLeaf(L,['dc','dc_residuals_sec_sl_sigma',sec+' '+sl],{[0.0250]}) // cm // CORRECT?
+    if(slnum==1 || slnum==2) // R1
+      T.addLeaf(B,['dc','dc_residuals_sec_sl_sigma',sec+' '+sl],{{ v -> v<0.0300 }}) // cm
+    else if(slnum==3 || slnum==4) // R2
+      T.addLeaf(B,['dc','dc_residuals_sec_sl_sigma',sec+' '+sl],{{ v -> v<0.0400 }}) // cm
+    else if(slnum==5 || slnum==6) // R3
+      T.addLeaf(B,['dc','dc_residuals_sec_sl_sigma',sec+' '+sl],{{ v -> v<0.0300 }}) // cm
+    T.addLeaf(L,['dc','dc_residuals_sec_sl_sigma',sec+' '+sl],{[0.0300,0.0400]}) // cm
   }
 }
 // FT ------------------------------------------------------------------------
@@ -283,11 +288,10 @@ TL.each{ det, detTr -> // loop through detector directories
         outTdir.addDataSet(graph)
         // add cut lines
         T.getLeaf(L,[det,hipoFile,graphName]).eachWithIndex{ num,idx ->
-          outTdir.addDataSet(buildLine(graph,"l$idx",idx==0?'red':'blue',num))
+          outTdir.addDataSet(buildLine(graph,"l$idx",'gray',num))
         }
       }
     }
-
     
 
     // create output hipo file

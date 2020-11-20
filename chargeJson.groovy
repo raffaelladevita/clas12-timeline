@@ -39,6 +39,7 @@ dataFile.eachLine { line ->
   ufcStart = tok[r++].toBigDecimal()
   ufcStop = tok[r++].toBigDecimal()
   
+  // fill tree
   if(sector==1) {
     println "add $runnum $filenum"
     T.addLeaf(chargeTree,[runnum,filenum],
@@ -48,6 +49,7 @@ dataFile.eachLine { line ->
       ]}
     )
   }
+  T.addLeaf(chargeTree,[runnum,filenum,'nElec',sector],{nElec})
 }
 
 chargeTree.each { chargeRun, chargeRunTree -> chargeRunTree.sort{it.key.toInteger()} }

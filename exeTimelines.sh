@@ -21,6 +21,9 @@ function exe {
 # organize the data into datasets
 exe ./datasetOrganize.sh $dataset
 
+# produce chargeTree.json
+exe run-groovy $CLASQA_JAVA_OPTS buildChargeTree.groovy $dataset
+
 # loop over datasets
 # trigger electrons monitor
 exe run-groovy $CLASQA_JAVA_OPTS qaPlot.groovy $dataset

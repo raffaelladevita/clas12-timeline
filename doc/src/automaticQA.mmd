@@ -11,6 +11,9 @@ graph TD;
     dt -.-> |disabled|monitorPlot
     dt --> qaPlot[qaPlot.groovy]:::exeTimeline;
     dt --> man[create/edit<br>epochs.$dataset.txt<br>see mkTree.sh]:::manual;
+    dt --> dj[buildChargeTree.groovy]:::exeTimeline;
+    dj --> ct{{outdat.$dataset/chargeTree.json}}:::data;
+
     qaPlot --> monitorElec{{outmon.$dataset/monitorElec.hipo}}:::data;
     monitorElec --> qaCut[qaCut.groovy]:::exeTimeline;
     man --> qaCut;

@@ -42,148 +42,72 @@ if(!datasetFound) throw new Exception("unknown dataset \"$dataset\"")
 // also define tree "L", which lists bound lines to draw
 def B = [:]
 def L = [:]
-// FORWARD =====================================================================
-(1..6).each{ secnum ->
-  def sec = 'sec'+secnum
-  // RF ------------------------------------------------------------------------
-  T.addLeaf(B,['rf','rftime_electron_FD_mean',sec],{{ v-> Math.abs(v)<0.010 }}) // ns
-  T.addLeaf(L,['rf','rftime_electron_FD_mean'],{[-0.010,0.010]}) //ns
-  //
-  T.addLeaf(B,['rf','rftime_electron_FD_sigma',sec],{{ v-> v<0.070 }}) // ns
-  T.addLeaf(L,['rf','rftime_electron_FD_sigma'],{[0.070]}) //ns
-  // FTOF ------------------------------------------------------------------------
-  T.addLeaf(B,['ftof','ftof_edep_p1a_midangles',sec],{{ v -> v>9.25 && v<10.5}}) // MeV
-  T.addLeaf(L,['ftof','ftof_edep_p1a_midangles'],{[9.25,10.5]}) // MeV
-  //
-  T.addLeaf(B,['ftof','ftof_edep_p1b_midangles',sec],{{ v -> v>11.25 && v<12.25}}) // MeV
-  T.addLeaf(L,['ftof','ftof_edep_p1b_midangles'],{[11.25,12.25]}) // MeV
-  //
-  T.addLeaf(B,['ftof','ftof_edep_p2',sec],{{ v -> v>9.2 && v<10.2}}) // MeV
-  T.addLeaf(L,['ftof','ftof_edep_p2'],{[9.2,10.2]}) // MeV
-  //
-  T.addLeaf(B,['ftof','ftof_time_p1a_mean',sec],{{ v -> Math.abs(v)<0.025 }}) // ns
-  T.addLeaf(L,['ftof','ftof_time_p1a_mean'],{[-0.025,0.025]}) // ns
-  //
-  T.addLeaf(B,['ftof','ftof_time_p1a_sigma',sec],{{ v -> v<0.125 }}) // ns
-  T.addLeaf(L,['ftof','ftof_time_p1a_sigma'],{[0.125]}) // ns
-  //
-  T.addLeaf(B,['ftof','ftof_time_p1b_mean',sec],{{ v -> Math.abs(v)<0.015 }}) // ns
-  T.addLeaf(L,['ftof','ftof_time_p1b_mean'],{[-0.015,0.15]}) // ns
-  //
-  T.addLeaf(B,['ftof','ftof_time_p1b_sigma',sec],{{ v -> v<0.070 }}) // ns
-  T.addLeaf(L,['ftof','ftof_time_p1b_sigma'],{[0.070]}) // ns
-  //
-  T.addLeaf(B,['ftof','ftof_time_p2_mean',sec],{{ v -> Math.abs(v)<0.050 }}) // ns
-  T.addLeaf(L,['ftof','ftof_time_p2_mean'],{[-0.050,0.050]}) // ns
-  //
-  T.addLeaf(B,['ftof','ftof_time_p2_sigma',sec],{{ v -> v<0.325 }}) // ns
-  T.addLeaf(L,['ftof','ftof_time_p2_sigma'],{[0.325]}) // ns
-  // LTCC ----------------------------------------------------------------------
-  if(secnum==3 || secnum==5) {
-    T.addLeaf(B,['ltcc','ltcc_elec_nphe_sec',sec],{{ v -> v>12 && v<14 }})
-    T.addLeaf(L,['ltcc','ltcc_elec_nphe_sec'],{[12,14]})
-  }
-  // HTCC ----------------------------------------------------------------------
-  T.addLeaf(B,['htcc','htcc_nphe_sec',sec],{{ v -> v>11 && v<13 }})
-  T.addLeaf(L,['htcc','htcc_nphe_sec'],{[11,13]})
-  // ECAL ----------------------------------------------------------------------
-  T.addLeaf(B,['ec','ec_Sampling',sec],{{ v -> v>0.24 && v<0.26 }})
-  T.addLeaf(L,['ec','ec_Sampling'],{[0.24,0.26]})
-  //
-  if(secnum==1) { // (sector independent)
-    T.addLeaf(B,['ec','ec_gg_m_mean','mean'],{{ v -> v>0.131 && v<0.134 }}) // GeV
-    T.addLeaf(L,['ec','ec_gg_m_mean'],{[0.131,0.134]}) // GeV
-    //
-    T.addLeaf(B,['ec','ec_gg_m_sigma','sigma'],{{ v -> v<0.015 }}) // GeV
-    T.addLeaf(L,['ec','ec_gg_m_sigma'],{[0.015]}) // GeV
-    //
-    T.addLeaf(B,['ec','ec_pim_time_mean','mean'],{{ v -> Math.abs(v)<0.040 }}) // ns
-    T.addLeaf(L,['ec','ec_pim_time_mean'],{[-0.040,0.040]}) // ns
-    //
-    T.addLeaf(B,['ec','ec_pim_time_sigma','sigma'],{{ v -> Math.abs(v)<0.200 }}) // ns
-    T.addLeaf(L,['ec','ec_pim_time_sigma'],{[0.200]}) // ns
-    //
-    T.addLeaf(B,['ec','ec_pip_time_mean','mean'],{{ v -> Math.abs(v)<0.040 }}) // ns
-    T.addLeaf(L,['ec','ec_pip_time_mean'],{[-0.040,0.040]}) // ns
-    //
-    T.addLeaf(B,['ec','ec_pip_time_sigma','sigma'],{{ v -> Math.abs(v)<0.200 }}) // ns
-    T.addLeaf(L,['ec','ec_pip_time_sigma'],{[0.200]}) // ns
-    //
-  }
-  // DC ----------------------------------------------------------------------
-  (1..6).each{ slnum ->
-    def sl = 'sl'+slnum // super layer
-    T.addLeaf(B,['dc','dc_residuals_sec_sl_mean',sec+' '+sl],{{ v -> v>-0.005 && v<0.005 }}) // cm
-    T.addLeaf(L,['dc','dc_residuals_sec_sl_mean'],{[-0.005,0.005]}) // cm
-    //
-    if(slnum==1 || slnum==2) // R1
-      T.addLeaf(B,['dc','dc_residuals_sec_sl_sigma',sec+' '+sl],{{ v -> v<0.0300 }}) // cm
-    else if(slnum==3 || slnum==4) // R2
-      T.addLeaf(B,['dc','dc_residuals_sec_sl_sigma',sec+' '+sl],{{ v -> v<0.0400 }}) // cm
-    else if(slnum==5 || slnum==6) // R3
-      T.addLeaf(B,['dc','dc_residuals_sec_sl_sigma',sec+' '+sl],{{ v -> v<0.0300 }}) // cm
-    T.addLeaf(L,['dc','dc_residuals_sec_sl_sigma'],{[0.0300,0.0400]}) // cm
-  }
-}
-// FT ------------------------------------------------------------------------
-T.addLeaf(B,['ft','ftc_pi0_mass_mean','mean'],{{ v -> v>134 && v<136 }}) // MeV
-T.addLeaf(L,['ft','ftc_pi0_mass_mean'],{[134,136]}) // MeV
-//
-T.addLeaf(B,['ft','ftc_pi0_mass_sigma','sigma'],{{ v -> v<5 }}) // MeV
-T.addLeaf(L,['ft','ftc_pi0_mass_sigma'],{[5]}) // MeV
-//
-T.addLeaf(B,['ft','fth_MIPS_energy','layer1'],{{ v -> v>1.2 && v<1.35 }}) // MeV
-T.addLeaf(B,['ft','fth_MIPS_energy','layer2'],{{ v -> v>2.7 && v<2.9 }}) // MeV
-T.addLeaf(L,['ft','fth_MIPS_energy'],{[1.2,1.35,2.7,2.9]}) // MeV
-//
-T.addLeaf(B,['ft','fth_MIPS_time_mean','layer1'],{{ v -> v>-0.200 && v<0.200 }}) // ns
-T.addLeaf(B,['ft','fth_MIPS_time_mean','layer2'],{{ v -> v>-0.200 && v<0.200 }}) // ns
-T.addLeaf(L,['ft','fth_MIPS_time_mean'],{[-0.200,0.200]}) // ns
-//
-T.addLeaf(B,['ft','fth_MIPS_time_sigma','layer1'],{{ v -> v<1.35 }}) // ns
-T.addLeaf(B,['ft','fth_MIPS_time_sigma','layer2'],{{ v -> v<1.1 }}) // ns
-T.addLeaf(L,['ft','fth_MIPS_time_sigma'],{[1.35,1.1]}) // ns
-// RICH -----------------------------------------------------------------------
-T.addLeaf(B,['rich','rich_time_fwhm_max','fwhm_max'],{{ v -> v<1 }}) // ns
-T.addLeaf(L,['rich','rich_time_fwhm_max'],{[1]}) // ns
 
-// CENTRAL =====================================================================
-// CTOF ------------------------------------------------------------------------
-T.addLeaf(B,['ctof','ctof_edep','Edep'],{{ v -> v>5.7 && v<6.3 }}) // MeV
-T.addLeaf(L,['ctof','ctof_edep'],{[5.7,6.3]}) // MeV
-//
-T.addLeaf(B,['ctof','ctof_time_mean','mean'],{{ v -> Math.abs(v)<0.020 }}) // ns
-T.addLeaf(L,['ctof','ctof_time_mean'],{[-0.020,0.020]}) // ns
-//
-T.addLeaf(B,['ctof','ctof_time_sigma','sigma'],{{ v -> v<0.115 }}) // ns
-T.addLeaf(L,['ctof','ctof_time_sigma'],{[0.115]}) // ns
-// CND ------------------------------------------------------------------------
-(1..3).each{ layernum ->
-  def layer = 'layer'+layernum
-  T.addLeaf(B,['cnd','cnd_dEdz_mean',layer+' mean'],{{ v -> v>1.75 && v<2.25 }}) // MeV/cm
-  T.addLeaf(L,['cnd','cnd_dEdz_mean'],{[1.75,2.25]}) // MeV/cm
-  //
-  T.addLeaf(B,['cnd','cnd_dEdz_sigma',layer+' sigma'],{{ v -> v<0.300 }}) // MeV/cm
-  T.addLeaf(L,['cnd','cnd_dEdz_sigma'],{[0.300]}) // MeV/cm
-  //
-  T.addLeaf(B,['cnd','cnd_time_neg_vtP_mean',layer+' mean'],{{ v -> Math.abs(v)<0.100 }}) // ns
-  T.addLeaf(L,['cnd','cnd_time_neg_vtP_mean'],{[-0.100,0.100]}) // ns
-  //
-  T.addLeaf(B,['cnd','cnd_time_neg_vtP_sigma',layer+' sigma'],{{ v -> v<0.300 }}) // ns
-  T.addLeaf(L,['cnd','cnd_time_neg_vtP_sigma'],{[0.300]}) // ns
-  //
-  T.addLeaf(B,['cnd','cnd_zdiff_mean',layer+' mean'],{{ v -> Math.abs(v)<0.4 }}) // cm
-  T.addLeaf(L,['cnd','cnd_zdiff_mean'],{[-0.4,0.4]}) // cm
-  //
-  T.addLeaf(B,['cnd','cnd_zdiff_sigma',layer+' sigma'],{{ v -> v<4 }}) // cm
-  T.addLeaf(L,['cnd','cnd_zdiff_sigma'],{[4]}) // cm
+// loop through cuts list
+def cutsFile = new File("cuts.txt")
+def tok
+if(!(cutsFile.exists())) throw new Exception("cuts.txt not found")
+def lastWord = { str -> str.tokenize('_')[-1] }
+cutsFile.eachLine { line ->
+  tok = line.tokenize(' ')
+  if(tok.size()==0) return
+  cutPath = tok[0..-4]
+  def det = cutPath[0]
+  def timeline = cutPath[1]
+  def spec = cutPath.size()>2 ? cutPath[2] : ''
+  def lbound = tok[-3].toDouble()
+  def ubound = tok[-2].toDouble()
+  def units = tok[-1]
+
+  // add cuts to graph
+  def addCut = { graphN ->
+    T.addLeaf(B,[det,timeline,graphN],{[lbound,ubound]})
+    T.addLeaf(L,[det,timeline],{[]})
+    T.getLeaf(L,[det,timeline]).push(lbound)
+    T.getLeaf(L,[det,timeline]).push(ubound)
+  }
+
+  // graph name convention varies among detector timelines, such as including
+  // sector dependence, or layer dependence, or a timeline with a single graph;
+  // - here we parse the detector and timeline names and determine which graph(s)
+  //   the cut bounds apply to
+  if(det=='ft') addCut(timeline.contains('ftc') ? lastWord(timeline) : spec)
+  else if(det=='rich') addCut('fwhm_max')
+  else if(det=='ctof') addCut(timeline.contains('edep') ? 'Edep' : lastWord(timeline))
+  else if(det=='cnd') {
+    (1..3).each{ layernum -> addCut('layer'+layernum+' '+lastWord(timeline)) }
+  }
+  else { // sector dependent detectors
+    (1..6).each{ secnum ->
+      def sec = 'sec'+secnum
+      if(det=='rf') addCut(sec)
+      else if(det=='ftof') addCut(sec)
+      else if(det=='ltcc' && (secnum==3 || secnum==5)) addCut(sec)
+      else if(det=='htcc') addCut(sec)
+      else if(det=='ec') {
+        if(timeline=='ec_Sampling') addCut(sec)
+        else if(secnum==1) addCut(lastWord(timeline)) // sector independent
+      }
+      else if(det=='dc') {
+        (1..6).each{ slnum ->
+          def sl = 'sl'+slnum // super layer
+          if(spec=='R1' && (slnum==1 || slnum==2)) addCut(sec+' '+sl)
+          else if(spec=='R2' && (slnum==3 || slnum==4)) addCut(sec+' '+sl)
+          else if(spec=='R3' && (slnum==5 || slnum==6)) addCut(sec+' '+sl)
+        }
+      }
+    }
+  }
+
 }
+T.exeLeaves(L,{ T.leaf = T.leaf.unique() })
 
 
 // ==============================================================================
+
 println "=== TIMELINES ========================="
 T.exeLeaves(B,{println T.leafPath})
-//println T.pPrint(L)
+println T.pPrint(L)
 println "======================================="
 
 
@@ -207,7 +131,7 @@ T.exeLeaves(B,{
   // setup
   def graphPath = T.leafPath
   def fileN = indir+'/'+graphPath[0,-2].join('/') + ".hipo"
-  def checkBounds = T.leaf
+  def bounds = T.leaf
 
   // read input timeline
   def graphN = graphPath[-1]
@@ -232,7 +156,7 @@ T.exeLeaves(B,{
     // check QA bounds
     def run = gr.getDataX(i)
     def val = gr.getDataY(i)
-    def inbound = checkBounds(val)
+    def inbound = val>=bounds[0] && val<=bounds[1]
     if(!inbound) {
       //T.printStatus("OB "+graphPath+" $run $val")
       T.getLeaf(TL,graphPath).addPoint(run,val,0,0)

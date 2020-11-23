@@ -10,6 +10,8 @@ Data monitoring tools for CLAS run QA
   monitor several different sets of data
 
 # Setup
+0. recommended to use `zsh` or `bash` as your shell; development has been
+   done in `zsh`
 1. set `COATJAVA` environment
   * on `ifarm`:
     * `source /group/clas12/packages/setup.sh`
@@ -21,6 +23,12 @@ Data monitoring tools for CLAS run QA
   * some primary run scripts do this automatically, in case the user forgets
   * note: `JYPATH` is added to the classpath for groovy called via
     `run-groovy`, from `coatjava`
+  * the variable `CLASQAWWW` is the webserver directory to which the output
+    hipo files will be copied; this is a directory which the front-end will
+    read in order to produce the web page version of the timelines. If you are
+    not using this feature, change `CLASQAWWW` to any local directory; if you
+    don't want to edit `env.sh`, then simply create the directory `../www`,
+    which is the default value of `CLASQAWWW`
 
 ## PASS1 Procedure for Automatic QA
 * `exeSlurm.sh $dataset`: runs `monitorRead.groovy` on DSTs using slurm
@@ -55,6 +63,7 @@ Data monitoring tools for CLAS run QA
   * `integrityCheck.sh [dataset]`
 * perform the manual QA (see QA procedure below)
 * release timeline to main directory: use `releaseTimelines.sh`
+  * the variable `$CLASQAWWW` should point to the webserver directory
 
 
 ## Automatic QA Procedure and Script Details

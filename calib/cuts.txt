@@ -10,7 +10,7 @@ ftof  ftof_edep_p1b_midangles    11.25   12.25   MeV
 ftof  ftof_edep_p2               9.2     10.2    MeV
 ftof  ftof_time_p1a_mean         -0.025  0.025   ns
 ftof  ftof_time_p1a_sigma        0       0.125   ns
-ftof  ftof_time_p1b_mean         -0.015  0.15    ns
+ftof  ftof_time_p1b_mean         -0.015  0.015   ns
 ftof  ftof_time_p1b_sigma        0       0.070   ns
 ftof  ftof_time_p2_mean          -0.050  0.050   ns
 ftof  ftof_time_p2_sigma         0       0.325   ns

@@ -198,8 +198,18 @@ TL.each{ det, detTr -> // loop through detector directories
 
     // add cut lines
     outTdir.cd("/timelines")
-    T.getLeaf(L,[det,hipoFile]).each{ num ->
-      outTdir.addDataSet(buildLine(num,'gray'))
+    T.getLeaf(L,[det,hipoFile]).eachWithIndex{ num,idx ->
+      println "LINE: $det $hipoFile $num"
+      def lineColor = 'black'
+      if(hipoFile=="fth_MIPS_energy") {
+        def lineColors = ['red','red','blue','blue']
+        lineColor = lineColors[idx]
+      }
+      else if(hipoFile=="fth_MIPS_time_sigma") {
+        def lineColors = ['black','red','blue']
+        lineColor = lineColors[idx]
+      }
+      outTdir.addDataSet(buildLine(num,lineColor))
     }
 
     

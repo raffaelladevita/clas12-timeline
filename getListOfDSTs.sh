@@ -16,7 +16,10 @@ if [ -z "$datadir" ]; then
   echo "ERROR: dataset not foundin datasetList.txt"
   exit
 fi
+datadir=$(echo $datadir | sed 's/^\/cache/\/mss/g')
 echo "datadir=$datadir"
+ls $datadir
+
 
 find $datadir -name "*.hipo" -print | sed 's/^.*\/rec_clas_//g' > dstfilelist.tmp
 

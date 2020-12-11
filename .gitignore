@@ -20,3 +20,4 @@ dst
 monsub*/*
 .~lock*
 calib/www
+QA/qa

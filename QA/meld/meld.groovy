@@ -21,6 +21,8 @@ def meldList
 def meldListOR
 def defectMask
 def comment
+def runQAold
+def fileQAold
 
 // loop through new qaTree runs
 // run number loop
@@ -34,10 +36,14 @@ qaTreeNew.each{ runnum, fileTree ->
     qaTreeMelded[runnum][filenum] = [:]
     
     // get QA info from old qaTree
-    fileQAold = qaTreeOld[runnum][filenum]
+    runQAold = qaTreeOld[runnum]
+    if(runQAold!=null) fileQAold = qaTreeOld[runnum][filenum]
+    else fileQAold = null
 
-    // get the comment from the old qaTree file
-    comment = T.getLeaf(fileQAold,['comment'])
+    // get the comment from the old qaTree file, if it exists; if not
+    // grab the comment from the new qaTree file
+    if(fileQAold!=null) comment = T.getLeaf(fileQAold,['comment'])
+    else comment = T.getLeaf(fileQAnew,['comment'])
     if(comment==null) comment=""
     qaTreeMelded[runnum][filenum]['comment'] = comment
 
@@ -61,15 +67,17 @@ qaTreeNew.each{ runnum, fileTree ->
       }
 
       // meld old defect bits
-      defectListOld = T.getLeaf(fileQAold,['sectorDefects',sector])
-      defectListOld.each{ defect ->
-        if(defect==T.bit("SectorLoss")) {
-          meldList << defect
-          meldList.removeAll(T.bit("TotalOutlier"))
-          meldList.removeAll(T.bit("TerminalOutlier"))
-          meldList.removeAll(T.bit("MarginalOutlier"))
+      if(fileQAold!=null) {
+        defectListOld = T.getLeaf(fileQAold,['sectorDefects',sector])
+        defectListOld.each{ defect ->
+          if(defect==T.bit("SectorLoss")) {
+            meldList << defect
+            meldList.removeAll(T.bit("TotalOutlier"))
+            meldList.removeAll(T.bit("TerminalOutlier"))
+            meldList.removeAll(T.bit("MarginalOutlier"))
+          }
+          if(defect==T.bit("Misc")) meldList << defect
         }
-        if(defect==T.bit("Misc")) meldList << defect
       }
 
 

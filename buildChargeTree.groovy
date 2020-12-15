@@ -5,7 +5,7 @@ Tools T = new Tools()
 
 //----------------------------------------------------------------------------------
 // ARGUMENTS:
-def dataset = 'inbending1'
+def dataset = 'rga_inbending'
 if(args.length>=1) dataset = args[0]
 //----------------------------------------------------------------------------------
 
@@ -44,8 +44,10 @@ dataFile.eachLine { line ->
     println "add $runnum $filenum"
     T.addLeaf(chargeTree,[runnum,filenum],
       {[
-        'fcCharge':fcStop-fcStart,
-        'ufcCharge':ufcStop-ufcStart
+        'fcChargeMin':fcStart,
+        'fcChargeMax':fcStop,
+        'ufcChargeMin':ufcStart,
+        'ufcChargeMax':ufcStop
       ]}
     )
   }

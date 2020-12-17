@@ -73,6 +73,7 @@ void readTree(TString dataset="fall18") {
       if(UF>0) UFtot += UF;
     };
   };
+  //maxNF = 15; // override maxNF
   printf("--------------------------------------------\n");
   printf("total gated FC charge = %.1f mC\n",Ftot*1e-6);
   printf("total ungated FC charge = %.1f mC\n",UFtot*1e-6);

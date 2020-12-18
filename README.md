@@ -295,6 +295,15 @@ Note: see [doc/manualQA.jpeg](doc/manualQA.jpeg) for a flowchart of the procedur
         stored
   * you should also look through each timeline for any issues that may have slipped under
     the radar; revise `qaTree.json` using `modify.sh` as needed
+    * in particular, check for any spin asymmetry that has the wrong sign,
+      especially the piPlus BSA; a significant asymmetry with the wrong sign
+      indicates the helicity has the wrong sign
+    * check stddev timelines; usually a high standard deviation indicates a
+      step or change in the data, or merely a short, low statistics run
+    * check fraction of events with defined helicity; if it's low it could
+      indicate a problem; so far in all cases we have checked and there are no
+      issues with the reported beam spin asymmetry, but it is useful to
+      document these cases with the Misc defect bit
 * after scanning through `qaTable.dat` and revising `qaTree.json`, return to the parent
 directory and call `exeQAtimelines.sh` to produce the updated QA timelines
   * these QA timelines are stored in `outmon.${dataset}.qa`
@@ -302,6 +311,8 @@ directory and call `exeQAtimelines.sh` to produce the updated QA timelines
     the new QA timeline directory, which can then be deployed to the webservers
   * this final `qaTree.json` is stored in the 
     [`clasqaDB` repository](https://github.com/c-dilks/clasqaDB)
+    and should be copied there, along with `chargeTree.json`
+    * remember to run `util/syncCheck.groovy` in `clasqaDB`
   * the scripts which copy timelines to the webserver (`deployTimelines.sh` and
     `releaseTimelines.sh`) will copy the new `outmon.${dataset}.qa` directory's
     timelines, but you must call these scripts manually

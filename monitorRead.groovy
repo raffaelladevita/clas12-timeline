@@ -75,7 +75,7 @@ else if(runnum>=5032 && runnum<=5262) RG="RGA" // inbending1
 else if(runnum>=5300 && runnum<=5666) RG="RGA" // inbending1 + outbending
 else if(runnum>=5674 && runnum<=6000) RG="RGK" // 6.5+7.5 GeV
 else if(runnum>=6120 && runnum<=6604) RG="RGB" // spring
-else if(runnum>=6715 && runnum<=6780) RG="RGA" // spring 19
+else if(runnum>=6616 && runnum<=6783) RG="RGA" // spring 19
 else if(runnum>=11093 && runnum<=11300) RG="RGB" // fall
 else System.err << "WARNING: unknown run group; using default run-group-dependent settings (see monitorRead.groovy)\n"
 println "rungroup = $RG"
@@ -83,22 +83,20 @@ println "rungroup = $RG"
 // helFlip: if true, REC::Event.helicity has opposite sign from reality
 def helFlip = false
 if(RG=="RGA") helFlip = true
-if(RG=="RGB") {
-  if(runnum>=6120 && runnum<=6604) helFlip = true
-  else helFlip = false
-}
+if(RG=="RGB") helFlip = true
+if(RG=="RGK") helFlip = false
 
 // beam energy // TODO: get this from EPICS instead
 def EBEAM = 10.6041 // RGA default
 if(RG=="RGA") {
-  if(runnum>=6715 && runnum<=6765) EBEAM = 10.1998 // spring 19
+  if(runnum>=6616 && runnum<=6783) EBEAM = 10.1998 // spring 19
   else EBEAM = 10.6041
 }
 else if(RG=="RGB") {
   if(runnum>=6120 && runnum<=6399) EBEAM = 10.5986 // spring
   else if(runnum>=6409 && runnum<=6604) EBEAM = 10.1998 // spring
   else if(runnum>=11093 && runnum<=11283) EBEAM = 10.4096 // fall
-  else if(runnum>=11284 && runnum<=11300) EBEAM = 4.17179 // fall
+  else if(runnum>=11284 && runnum<=11300) EBEAM = 4.17179 // fall BAND_FT
   else System.err << "ERROR: unknown beam energy\n"
 }
 else if(RG=="RGK") {
@@ -113,8 +111,14 @@ else if(RG=="RGK") {
 // - 1: use RUN::scaler:fcup - should be ok if data cooked with recharge option
 // - 2: use REC::Event:beamCharge - useful if RUN::scaler is unavailable
 def FCmode = 1
-if(RG=="RGA") FCmode = 0
-if(RG=="RGB") FCmode = 0
+if(RG=="RGA") {
+  FCmode = 0
+  if(runnum>=6616 && runnum<=6783) FCmode=1 // spring19
+}
+if(RG=="RGB") {
+  FCmode = 0
+  if(runnum>=11093 && runnum<=11300) FCmode=1 // fall
+}
 if(RG=="RGK") FCmode = 0
 
 // FC attenuation fix

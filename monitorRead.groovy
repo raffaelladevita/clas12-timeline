@@ -83,7 +83,10 @@ println "rungroup = $RG"
 // helFlip: if true, REC::Event.helicity has opposite sign from reality
 def helFlip = false
 if(RG=="RGA") helFlip = true
-if(RG=="RGB") helFlip = true
+if(RG=="RGB") {
+  helFlip = true
+  if(runnum>=11093 && runnum<=11283) helFlip = false; // fall, 10.4 GeV period only
+};
 if(RG=="RGK") helFlip = false
 
 // beam energy // TODO: get this from EPICS instead
@@ -115,10 +118,7 @@ if(RG=="RGA") {
   FCmode = 0
   if(runnum>=6616 && runnum<=6783) FCmode=1 // spring19
 }
-if(RG=="RGB") {
-  FCmode = 0
-  if(runnum>=11093 && runnum<=11300) FCmode=1 // fall
-}
+if(RG=="RGB") FCmode = 0
 if(RG=="RGK") FCmode = 0
 
 // FC attenuation fix

@@ -47,6 +47,17 @@ Data monitoring tools for CLAS run QA
   * `exeSlurm.sh` also has the ability to read files from the tape silo; however, while
     this feature has been programmed in, it has never been used and is NOT tested! It
     likely does not work yet, but the general idea is programmed in
+  * resubmit failed jobs, e.g., those that exceeded time limit on a slow node:
+    * get list of run numbers to be resubmitted: 
+      `errorPrint.sh | cut -d':' -f1 | uniq | sed 's/err$/out/g' | xargs grep -i runnum`
+    * copy relevant lines of `joblist.${dataset}.slurm` to file `joblist.resubmit.slurm`
+    * copy `job.${dataset}.slurm` to `job.resubmit.slurm`, then update the array size
+      and `joblist` file name
+    * delete logs from previous slurm submission
+    * submit `job.${dataset}.slurm` to slurm
+      * note: `monitorRead.groovy` will overwrite any partial files left behind by jobs
+        which were terminated prematurely, there is no need to delete them prior to
+        resubmission
 * `exeTimelines.sh $dataset`, which does the following:
   * runs `qaPlot.groovy` (on electron trigger and FT)
   * runs `qaCut.groovy` (on electron trigger and FT)

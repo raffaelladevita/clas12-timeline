@@ -7,3 +7,4 @@ rgk_7 5674 5870 /lustre19/expphy/cache/clas12/rg-k/production/recon/fall2018/tor
 rgk_6 5875 6000 /lustre19/expphy/cache/clas12/rg-k/production/recon/fall2018/torus+1/6535MeV/pass1/v0/dst/recon 
 rga_pass0_early 4763 5001 /cache/clas12/rg-a/production/recon/fall2018/torus-1/pass1/v0b/dst/recon
 rga_pass0_spring19 6715 6780 /volatile/clas12/rg-a/production/pass0/Sping19/pass1Test2/dst/recon
+rgb_pass0_winter 11323 11571 /volatile/clas12/rg-b/production/recon/pass0/v25.10/mon/recon

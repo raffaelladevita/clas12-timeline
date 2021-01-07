@@ -86,7 +86,8 @@ def helFlip = false
 if(RG=="RGA") helFlip = true
 if(RG=="RGB") {
   helFlip = true
-  if(runnum>=11093 && runnum<=11283) helFlip = false; // fall, 10.4 GeV period only
+  if(runnum>=11093 && runnum<=11283) helFlip = false // fall, 10.4 GeV period only
+  else if(runnum>=11323 && runnum<=11571) helFlip = false // winter
 };
 if(RG=="RGK") helFlip = false
 
@@ -114,7 +115,7 @@ else if(RG=="RGK") {
 // gated FC charge determination
 // - 0: use workaround method: ungated FC charge * average livetime
 //      - needed if cooked with 6.5.3 or below, or without the recharge option
-// - 1: use RUN::scaler:fcup - should be ok if data cooked with recharge option
+// - 1: use RUN::scaler:fcupgated - should be ok if data cooked with recharge option
 // - 2: use REC::Event:beamCharge - useful if RUN::scaler is unavailable
 def FCmode = 1
 if(RG=="RGA") {

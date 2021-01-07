@@ -321,7 +321,7 @@ directory and call `exeQAtimelines.sh` to produce the updated QA timelines
   * it copies the revised`qaTree.json` (`QA/qa.${dataset}/qaTree.json`) to
     the new QA timeline directory, which can then be deployed to the webservers
   * this final `qaTree.json` is stored in the 
-    [`clasqaDB` repository](https://github.com/c-dilks/clasqaDB)
+    [`clasqaDB` repository](https://github.com/JeffersonLab/clasqaDB)
     and should be copied there, along with `chargeTree.json`
     * remember to run `util/syncCheck.groovy` in `clasqaDB`
   * the scripts which copy timelines to the webserver (`deployTimelines.sh` and

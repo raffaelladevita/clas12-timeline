@@ -119,8 +119,11 @@ else if(RG=="RGK") {
 // - 2: use REC::Event:beamCharge - useful if RUN::scaler is unavailable
 def FCmode = 1
 if(RG=="RGA") {
-  FCmode = 0
-  if(runnum>=6616 && runnum<=6783) FCmode=1 // spring19
+  FCmode = 0 // fall inbending+outbending
+  if(runnum>=6616 && runnum<=6783) { // spring19
+    if(runnum==6724) FCmode=0; // fcupgated charge spike in file 230
+    else FCmode=1;
+  };
 }
 if(RG=="RGB") FCmode = 0
 if(RG=="RGK") FCmode = 0

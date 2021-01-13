@@ -571,7 +571,7 @@ def writeHistos = {
       datfileWriter << [ runnum, segmentNum ].join(' ') << ' '
       datfileWriter << [ eventNumMin, eventNumMax ].join(' ') << ' '
       datfileWriter << [ sec+1, nElec[sec], nElecFT ].join(' ') << ' '
-      datfileWriter << [ fcStart, fcStop, ufcStart, ufcStop ].join(' ') << '\n'
+      datfileWriter << [ fcStart, fcStop, ufcStart, ufcStop, aveLivetime ].join(' ') << '\n'
       //datfileWriter << [ fcP, fcM, ufcP, ufcM ].join(' ') << '\n'
     }
 

@@ -15,6 +15,7 @@ def runnum, filenum, eventNumMin, eventNumMax, sector
 def nElec, nElecFT
 def fcStart, fcStop
 def ufcStart, ufcStop
+def livetime
 def fcCharge
 def ufcCharge
 def chargeTree = [:] // [runnum][filenum] -> charge
@@ -38,6 +39,7 @@ dataFile.eachLine { line ->
   fcStop = tok[r++].toBigDecimal()
   ufcStart = tok[r++].toBigDecimal()
   ufcStop = tok[r++].toBigDecimal()
+  livetime = tok.size()>11 ? tok[r++].toBigDecimal() : -1
   
   // fill tree
   if(sector==1) {
@@ -47,7 +49,8 @@ dataFile.eachLine { line ->
         'fcChargeMin':fcStart,
         'fcChargeMax':fcStop,
         'ufcChargeMin':ufcStart,
-        'ufcChargeMax':ufcStop
+        'ufcChargeMax':ufcStop,
+        'livetime':livetime
       ]}
     )
   }

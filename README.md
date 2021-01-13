@@ -4,8 +4,8 @@ Data monitoring tools for CLAS run QA
 * Tracks the electron trigger count, normalized by the Faraday cup charge
 * Also implements helicity monitoring, by tracking inclusive beam spin asymmetries
 * Accepts DST or skim files
-* [doc/index.html](http://c-dilks.github.io/clasqa) provide visual
-  documentation in the form of flowcharts of the scripts and input/output
+* See [flowchart documentation](http://c-dilks.github.io/clasqa) for a visual 
+  representation of the scripts, input, and output
 * The variable `${dataset}` will be used throughout as a name specifying the data set to
   be analyzed; this name is for organization purposes, for those who want to
   monitor several different sets of data

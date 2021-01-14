@@ -1,10 +1,12 @@
-// study differences between charge calculated from RUN::scaler bank, via
-// 1. fcupgated
-// 2. <livetime>*fcup
+// study differences between charge calculated from RUN::scaler bank, via:
+//   1. fcupgated
+//   2. <livetime>*fcup
 // input: tree.root, produced by mkTree.sh
+// see monitorRead.groovy, FCmode setting, to know which charge is used
 
 void studyCharge(TString infileN="tree.root") {
 
+  // open tree.root
   TFile * infile = new TFile(infileN,"READ");
   TTree * tr = (TTree*) infile->Get("tr");
   Float_t fcstart,fcstop,ufcstart,ufcstop,livetime;
@@ -18,52 +20,52 @@ void studyCharge(TString infileN="tree.root") {
   tr->SetBranchAddress("sector",&sector);
 
   // per file ------------------------
-  TH1D * h1 = new TH1D("h1","fcupgated - <livetime>*fcup, per file",1000,-3000,3000);
-  TH1D * h2 = new TH1D("h2","fcupgated - <livetime>*fcup, per file",200,-50,50);
+  TH1D * h1 = new TH1D("h1","fcupgated - <livetime>*fcup, per file, zoomed",200,-100,100);
+  TH1D * h2 = new TH1D("h2","fcupgated - <livetime>*fcup, per file",1000,-3000,3000);
   TH2D * h3 = new TH2D("h3","fcupgated vs. <livetime>*fcup, per file;<livetime>*fcup;fcupgated",
-    100,0,-3000,
-    100,0,-3000);
+    100,0,3000,
+    100,0,3000);
   // per run ------------------------
-  TH1D * r1 = new TH1D("r1","fcupgated - <livetime>*fcup, per run",1000,-200e3,200e3);
-  TH1D * r2 = new TH1D("r2","fcupgated - <livetime>*fcup, per run",200,-50,50);
+  TH1D * r1 = new TH1D("r1","fcupgated - <livetime>*fcup, per run, zoomed",100,-10e3,10e3);
+  TH1D * r2 = new TH1D("r2","fcupgated - <livetime>*fcup, per run",1000,-200e3,200e3);
   TH2D * r3 = new TH2D("r3","fcupgated vs. <livetime>*fcup, per run;<livetime>*fcup;fcupgated",
-    100,0,-6000e3,
-    100,0,-6000e3);
+    100,0,1000e3,
+    100,0,1000e3);
 
 
   // LOOP
   Int_t runnumTmp=-1;
   Double_t chargeFC;
-  Double_t chargeUFCG;
+  Double_t chargeUFCLT;
   Double_t chargeFCrun=0;
-  Double_t chargeUFCGrun=0;
+  Double_t chargeUFCLTrun=0;
   Double_t chargeFCtot=0;
-  Double_t chargeUFCGtot=0;
+  Double_t chargeUFCLTtot=0;
   for(int i=0; i<tr->GetEntries(); i++) {
     tr->GetEntry(i);
 
     if(sector!=1) continue;
 
     chargeFC = fcstop-fcstart;
-    chargeUFCG = livetime*(ufcstop-ufcstart);
+    chargeUFCLT = livetime*(ufcstop-ufcstart);
 
     chargeFCrun += chargeFC;
-    chargeUFCGrun += chargeUFCG;
+    chargeUFCLTrun += chargeUFCLT;
 
     chargeFCtot += chargeFC;
-    chargeUFCGtot += chargeUFCG;
+    chargeUFCLTtot += chargeUFCLT;
 
-    h1->Fill(chargeFC-chargeUFCG);
-    h2->Fill(chargeFC-chargeUFCG);
-    h3->Fill(chargeUFCG,chargeFC);
+    h1->Fill(chargeFC-chargeUFCLT);
+    h2->Fill(chargeFC-chargeUFCLT);
+    h3->Fill(chargeUFCLT,chargeFC);
 
     if(runnumTmp<0) runnumTmp=runnum;
     if(runnum!=runnumTmp) {
-      r1->Fill(chargeFCrun-chargeUFCGrun);
-      r2->Fill(chargeFCrun-chargeUFCGrun);
-      r3->Fill(chargeUFCGrun,chargeFCrun);
+      r1->Fill(chargeFCrun-chargeUFCLTrun);
+      r2->Fill(chargeFCrun-chargeUFCLTrun);
+      r3->Fill(chargeUFCLTrun,chargeFCrun);
       chargeFCrun=0;
-      chargeUFCGrun=0;
+      chargeUFCLTrun=0;
       runnumTmp=runnum;
     };
   };
@@ -84,9 +86,9 @@ void studyCharge(TString infileN="tree.root") {
 
 
   // compute total charge, and compare
-  printf("fcupgated total charge: %f nC\n",chargeFCtot);
-  printf("<livetime>*fcup total charge: %f nC\n",chargeUFCGtot);
-  printf("difference: %f\n",chargeFCtot-chargeUFCGtot);
+  printf("fcupgated total charge: %f mC\n",chargeFCtot/1e6);
+  printf("<livetime>*fcup total charge: %f mC\n",chargeUFCLTtot/1e6);
+  printf("difference: %f mC\n",(chargeFCtot-chargeUFCLTtot)/1e6);
 
 
   // compare total charge of runs, rather than charge per file, since longer duration charge should be more accurate

@@ -572,7 +572,6 @@ def writeHistos = {
       datfileWriter << [ eventNumMin, eventNumMax ].join(' ') << ' '
       datfileWriter << [ sec+1, nElec[sec], nElecFT ].join(' ') << ' '
       datfileWriter << [ fcStart, fcStop, ufcStart, ufcStop, aveLivetime ].join(' ') << '\n'
-      //datfileWriter << [ fcP, fcM, ufcP, ufcM ].join(' ') << '\n'
     }
 
     // print some stats

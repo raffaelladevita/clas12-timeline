@@ -125,7 +125,7 @@ if(RG=="RGA") {
     else FCmode=1;
   };
 }
-if(RG=="RGB") FCmode = 0
+if(RG=="RGB") FCmode = 1
 if(RG=="RGK") FCmode = 0
 
 // FC attenuation fix

@@ -276,6 +276,9 @@ Note: see [doc/manualQA.jpeg](doc/manualQA.jpeg) for a flowchart of the procedur
 * open `qa/qaTable.dat` in another window; this is the human-readable version of
   the imported `qaTree.json`
 * now scan through `qaTable.dat`, inspecting each run:
+  * tip: if using `vim`, type `:LogiPat !"GOLDEN"` to search for files that are
+    not `GOLDEN`, i.e., for defects; then use `n` and `N` to skip to the next
+    and previous non-golden files, respectively
   * recommended procedures and checks:
     * use [`clas12mon`](https://clas12mon.jlab.org/rga/runs/table/) table to
       look for useful comments; it is helpful to copy/paraphrase any

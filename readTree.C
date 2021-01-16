@@ -2,6 +2,11 @@
 //
 void readTree(TString dataset="fall18") {
 
+  /////////////////////////////
+  // SETTINGS
+  Int_t NBINS = 2000; // number of N/F bins (default=200)
+  /////////////////////////////
+
   // open root file
   gStyle->SetOptStat(0);
   TFile * f = new TFile("tree.root","RECREATE");
@@ -88,7 +93,7 @@ void readTree(TString dataset="fall18") {
     cN = Form("sector%d",s+1);
     cut = Form("sector==%d && fcstop-fcstart>0",s+1);
     rundrawNF = Form("nElec/(fcstop-fcstart):runnum>>rNF%d(%d,%d,%d,%d,%f,%f)",
-      s+1, maxRun-minRun, minRun, maxRun, 200, minNF, maxNF );
+      s+1, maxRun-minRun, minRun, maxRun, NBINS, minNF, maxNF );
     rundrawF = Form("fcstop-fcstart:runnum>>rF%d(%d,%d,%d,%d,%f,%f)",
       s+1, maxRun-minRun, minRun, maxRun, 300, minF, maxF );
     c[s] = new TCanvas(cN,cN,800,800);

@@ -121,11 +121,14 @@ def FCmode = 1
 if(RG=="RGA") {
   FCmode = 0 // fall inbending+outbending
   if(runnum>=6616 && runnum<=6783) { // spring19
+    FCmode=1; // default
     if(runnum==6724) FCmode=0; // fcupgated charge spike in file 230
-    else FCmode=1;
   };
 }
-if(RG=="RGB") FCmode = 1
+if(RG=="RGB") {
+  FCmode = 1 // default
+  if( runnum in [6263, 6350, 6599, 6601, 11119] ) FCmode=0 // fcupgated charge spikes
+}
 if(RG=="RGK") FCmode = 0
 
 // FC attenuation fix

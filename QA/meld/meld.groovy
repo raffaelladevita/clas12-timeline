@@ -70,13 +70,23 @@ qaTreeNew.each{ runnum, fileTree ->
       if(fileQAold!=null) {
         defectListOld = T.getLeaf(fileQAold,['sectorDefects',sector])
         defectListOld.each{ defect ->
+          
           if(defect==T.bit("SectorLoss")) {
             meldList << defect
+            // remove outlier bits
             meldList.removeAll(T.bit("TotalOutlier"))
             meldList.removeAll(T.bit("TerminalOutlier"))
             meldList.removeAll(T.bit("MarginalOutlier"))
           }
-          if(defect==T.bit("Misc")) meldList << defect
+          if(defect==T.bit("Misc")) {
+            meldList << defect
+            // remove all other bits
+            meldList.removeAll(T.bit("TotalOutlier"))
+            meldList.removeAll(T.bit("TerminalOutlier"))
+            meldList.removeAll(T.bit("MarginalOutlier"))
+            meldList.removeAll(T.bit("SectorLoss"))
+            meldList.removeAll(T.bit("LowLiveTime"))
+          }
         }
       }
 

@@ -23,6 +23,7 @@ def defectMask
 def comment
 def runQAold
 def fileQAold
+def deleteComment
 
 // loop through new qaTree runs
 // run number loop
@@ -46,6 +47,7 @@ qaTreeNew.each{ runnum, fileTree ->
     else comment = T.getLeaf(fileQAnew,['comment'])
     if(comment==null) comment=""
     qaTreeMelded[runnum][filenum]['comment'] = comment
+    deleteComment = false
 
     // copy event number range from new qaTree file
     qaTreeMelded[runnum][filenum]['evnumMin'] = fileQAnew['evnumMin']
@@ -79,13 +81,16 @@ qaTreeNew.each{ runnum, fileTree ->
             meldList.removeAll(T.bit("MarginalOutlier"))
           }
           if(defect==T.bit("Misc")) {
-            meldList << defect
-            // remove all other bits
-            meldList.removeAll(T.bit("TotalOutlier"))
-            meldList.removeAll(T.bit("TerminalOutlier"))
-            meldList.removeAll(T.bit("MarginalOutlier"))
-            meldList.removeAll(T.bit("SectorLoss"))
-            meldList.removeAll(T.bit("LowLiveTime"))
+            if(comment.contains("please delete this comment")) deleteComment=true
+            else {
+              meldList << defect
+              // remove all other bits
+              meldList.removeAll(T.bit("TotalOutlier"))
+              meldList.removeAll(T.bit("TerminalOutlier"))
+              meldList.removeAll(T.bit("MarginalOutlier"))
+              meldList.removeAll(T.bit("SectorLoss"))
+              meldList.removeAll(T.bit("LowLiveTime"))
+            }
           }
         }
       }
@@ -113,6 +118,7 @@ qaTreeNew.each{ runnum, fileTree ->
       println "--> comment: $comment"
     }
     qaTreeMelded[runnum][filenum]['defect'] = defectMask
+    if(deleteComment) qaTreeMelded[runnum][filenum]['comment'] = ""
 
   } // end filenum loop
 } // end runnum loop

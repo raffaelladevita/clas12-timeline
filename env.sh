@@ -1,7 +1,7 @@
 #!/bin/bash
 
 export CLASQA=$(dirname $(realpath $0))
-export CLASQAWWW="${CLASQA}/../www"
+export CLASQAWWW="/u/group/clas/www/clas12mon/html/hipo"
 JYPATH="${JYPATH}:${CLASQA}"
 export JYPATH=$(echo $JYPATH | sed 's/^://')
 export CLASQA_JAVA_OPTS="-Djava.awt.headless=true"

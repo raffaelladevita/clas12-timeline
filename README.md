@@ -79,8 +79,9 @@ Data monitoring tools for CLAS run QA
 
 
 ## Automatic QA Procedure and Script Details
-* The procedure is outlined by [doc/automaticQA.jpeg](doc/automaticQA.jpeg); this section details
-  the action of each script, in a suggested order of execution
+* The automatic QA is executed by `exeSlurm.sh` followed by `exeTimelines.sh`;
+  these scripts execute several groovy scripts, which are described in this
+  section
 
 ### Input files
 * DST or skim files
@@ -252,7 +253,10 @@ generate QA timelines, and a `json` file which is used for the manual followup Q
 
 
 ## Manual QA procedure
-Note: see [doc/manualQA.jpeg](doc/manualQA.jpeg) for a flowchart of the procedure
+This procedure is to be performed after the automatic QA; it is called "manual
+QA" because it requires substantially more user interaction, carefully checking
+the timelines and recording features not identified by the automatic QA in
+`qaTree.json`
 * first, make sure you have an automatically generated `qaTree.json`
   * verify your epoch lines are where you want them
     * use `mkTree.sh`

@@ -111,9 +111,15 @@ println T.pPrint(L)
 println "======================================="
 
 
-// general closures
+// closure for creating lines for the front end graphs
+// - lineTitle* must be set before calling this
+def lineTitle, lineTitleX, lineTitleY
 def buildLine = { v,color ->
-  return new GraphErrors(['plotLine','horizontal',v,color].join(':'))
+  def graphLine = new GraphErrors(['plotLine','horizontal',v,color].join(':'))
+  graphLine.setTitle(lineTitle)
+  graphLine.setTitleX(lineTitleX)
+  graphLine.setTitleY(lineTitleY)
+  return graphLine
 }
 
 
@@ -144,8 +150,8 @@ T.exeLeaves(B,{
     def g = new GraphErrors()
     g.setName(gr.getName()+"__bad")
     g.setTitle(gr.getTitle())
-    gr.setTitleX(gr.getTitleX())
-    gr.setTitleY(gr.getTitleY())
+    g.setTitleX(gr.getTitleX())
+    g.setTitleY(gr.getTitleY())
     return g
   })
 
@@ -176,7 +182,12 @@ TL.each{ det, detTr -> // loop through detector directories
     // write graphs
     outTdir.mkdir("/timelines")
     outTdir.cd("/timelines")
-    graphTr.each{ graphName, graph -> outTdir.addDataSet(graph) }
+    graphTr.each{ graphName, graph -> 
+      outTdir.addDataSet(graph)
+      lineTitle = graph.getTitle()    // (note: all graphs have same title,
+      lineTitleX = graph.getTitleX()  //  but we need it for `buildLine`)
+      lineTitleY = graph.getTitleY()
+    }
 
     // copy TDirectories for each run from input hipo file
     def inHipoN = "${indir}/${det}/${hipoFile}.hipo"
@@ -216,8 +227,6 @@ TL.each{ det, detTr -> // loop through detector directories
 
     // create output hipo file
     def outHipoDir = "${outdir}/${det}"
-    "mkdir -p $outHipoDir".execute()
-    //"cp -v $inHipoN ${outHipoDir}/".execute()
     def outHipoN = "${outHipoDir}/${hipoFile}_QA.hipo"
     File outHipoFile = new File(outHipoN)
     if(outHipoFile.exists()) outHipoFile.delete()

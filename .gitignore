@@ -19,5 +19,5 @@ farmout
 dst
 monsub*/*
 .~lock*
-calib/www
 QA/qa
+calib/datasetList.txt

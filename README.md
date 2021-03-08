@@ -1,13 +1,13 @@
 # clas12-timeline
 
-## clasqa
+## calibration QA
 
 To run,
 ```
 ./bin/qa.sh path/to/timelines
 ```
 
-See [further details](https://github.com/c-dilks/clasqa/blob/master/calib/README.md) for more information.
+See [further details](https://github.com/JeffersonLab/clas12-timeline/blob/main/calib-qa/README.md) for more information.
 
 ## run_based_monitoring
 

@@ -18,8 +18,8 @@ dataset=$1
 
 
 # get timeline directory names
-indir=$(grep $dataset $datasetList | awk '{print $2}')
-outdir=$(grep $dataset $datasetList | awk '{print $3}')
+indir=$(grep $dataset $datasetList | tail -n1 | awk '{print $2}')
+outdir=$(grep $dataset $datasetList | tail -n1 | awk '{print $3}')
 if [ -z "$indir" ]; then
   echo "ERROR: dataset not foundin datasetList.txt"
   exit

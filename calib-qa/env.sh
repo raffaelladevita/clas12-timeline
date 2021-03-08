@@ -7,7 +7,7 @@ else
 fi
 
 export TIMELINEDIR="/u/group/clas/www/clas12mon/html/hipo"
-JYPATH="${JYPATH}:${CALIBQA}/src"
+JYPATH="${JYPATH}:${CALIBQA}/src/"
 export JYPATH=$(echo $JYPATH | sed 's/^://')
 export CALIBQA_JAVA_OPTS="-Djava.awt.headless=true"
 

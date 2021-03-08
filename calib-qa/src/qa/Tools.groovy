@@ -1,5 +1,5 @@
-import org.jlab.clas.physics.LorentzVector
-import org.jlab.clas.physics.Vector3
+package qa
+
 import groovy.json.JsonOutput
 
 class Tools {
@@ -34,36 +34,6 @@ class Tools {
     }
   }
 
-
-  //////////
-  // MATH //
-  //////////
-
-  // calculate scalar product of 4-vectors
-  def lorentzDot = { v1,v2 -> return v1.e()*v2.e() - v1.vect().dot(v2.vect()) }
-
-  // calculate angle between two planes (used for PhiH)
-  def crossAB,crossCD
-  def sgn
-  def numer
-  def denom
-  def planeAngle = { vA,vB,vC,vD ->
-    crossAB = vA.cross(vB) // AxB
-    crossCD = vC.cross(vD) // CxD
-
-    // calculate sign of (AxB).D
-    sgn = crossAB.dot(vD) // (AxB).D
-    if(Math.abs(sgn)<0.00001) return -10000
-    sgn /= Math.abs(sgn)
-
-    // calculate numerator and denominator 
-    numer = crossAB.dot(crossCD) // (AxB).(CxD)
-    denom = crossAB.mag() * crossCD.mag() // |AxB|*|CxD|
-    if(Math.abs(denom)<0.00001) return -10000
-
-    // return angle
-    return sgn * Math.acos(numer/denom)
-  }
 
   // convert a positive integer into a string binary number
   def printBinary = { num ->

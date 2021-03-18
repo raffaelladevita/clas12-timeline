@@ -1,5 +1,10 @@
 # clas12-timeline
 
+To download,
+```
+git clone --recurse-submodules https://github.com/JeffersonLab/clas12-timeline.git
+```
+
 ## calibration QA
 
 To run,

@@ -7,7 +7,11 @@ bounds. The bounds are specified by `cuts.txt` (see below for syntax).
 - Let `path/to/timelines` denote the path to timeline HIPO files you wish to run the QA
   on. This path must be relative to the web directory, `$TIMELINEDIR`, defined in `env.sh`;
   if you prefer a different directory, edit `env.sh`
-- Run `../bin/qa.sh path/to/timelines`. The URLs for the timelines will be printed upon success
+- Run `../bin/qa.sh path/to/timelines`. The URLs for the timelines will be
+  printed upon success
+- The new timeline files will appear in `/path/to/timelines_qa`, where any
+  timeline hipo file to which QA cuts were applied has replaced the original
+  hipo file, with the name "QA" appended to the file name
 
 ## Testing and Development
 - First, set environment variables using `source env.sh` (use `bash`)

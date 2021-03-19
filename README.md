@@ -9,7 +9,16 @@ git clone --recurse-submodules https://github.com/JeffersonLab/clas12-timeline.g
 
 To run,
 ```
-./bin/qa.sh path/to/timelines
+./bin/qa.sh TIMELINE
+```
+where `TIMELINE` is either the URL, for example,
+```
+https://clas12mon.jlab.org/rga/pass1/version3/tlsummary
+```
+or the relative path to the timeline, which for this example would be `rga/pass1/version3`. The output
+URL containing QA timelines will be printed at the end of the script output; for this example, it will be
+```
+https://clas12mon.jlab.org/rga/pass1/version3_qa/tlsummary
 ```
 
 See [further details](https://github.com/JeffersonLab/clas12-timeline/blob/main/calib-qa/README.md) for more information.

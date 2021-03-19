@@ -29,7 +29,7 @@ outdir="${TIMELINEDIR}/${outdir}"
 
 # prepare output directory
 mkdir -p $outdir; rm -r $outdir; mkdir -p $outdir
-cp -rv ${indir}/* ${outdir}/
+cp -rvL ${indir}/* ${outdir}/
 
 
 # apply QA bounds

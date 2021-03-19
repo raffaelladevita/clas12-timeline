@@ -18,7 +18,7 @@ if(args.length>=1) dataset = args[0]
 def calibqadir = System.getenv('CALIBQA')
 def wwwdir = System.getenv('TIMELINEDIR')
 if(calibqadir==null) throw new Exception("env vars not set; source env.sh")
-def datasetList = new File(calibqadir+"/datasetList.txt")
+File datasetList = new File(calibqadir+"/datasetList.txt")
 def datasetFound = false
 def indir,outdir
 if(!(datasetList.exists())) throw new Exception("datasetList.txt not found")
@@ -45,7 +45,7 @@ def B = [:]
 def L = [:]
 
 // loop through cuts list
-def cutsFile = new File(calibqadir+"/cuts/cuts.txt")
+File cutsFile = new File(calibqadir+"/cuts/cuts.txt")
 def tok
 if(!(cutsFile.exists())) throw new Exception("cuts file $cutsFile not found")
 def lastWord = { str -> str.tokenize('_')[-1] }
@@ -131,6 +131,7 @@ def buildLine = { v,color ->
 //   timeline as necessary
 // - store bad timeline in a tree "TL" with same structure as "T"
 def inTdir = new TDirectory()
+File inTdirFile
 def gr
 def TL = [:]
 T.exeLeaves(B,{
@@ -140,35 +141,39 @@ T.exeLeaves(B,{
   def fileN = indir+'/'+graphPath[0,-2].join('/') + ".hipo"
   def bounds = T.leaf
 
-  // read input timeline
+  // read input timeline; do nothing if input timeline file
+  // does not exist
   def graphN = graphPath[-1]
   T.printStatus("open file=\"$fileN\" graph=\"$graphN\"")
-  inTdir.readFile(fileN)
-  gr = inTdir.getObject("/timelines/${graphN}")
+  inTdirFile = new File(fileN)
+  if(inTdirFile.exists()) {
+    inTdir.readFile(fileN)
+    gr = inTdir.getObject("/timelines/${graphN}")
 
-  // define output bad timeline
-  T.addLeaf(TL,graphPath,{
-    def g = new GraphErrors()
-    g.setName(gr.getName()+"__bad")
-    g.setTitle(gr.getTitle())
-    g.setTitleX(gr.getTitleX())
-    g.setTitleY(gr.getTitleY())
-    return g
-  })
+    // define output bad timeline
+    T.addLeaf(TL,graphPath,{
+      def g = new GraphErrors()
+      g.setName(gr.getName()+"__bad")
+      g.setTitle(gr.getTitle())
+      g.setTitleX(gr.getTitleX())
+      g.setTitleY(gr.getTitleY())
+      return g
+    })
 
 
-  // loop over runs
-  gr.getDataSize(0).times { i ->
+    // loop over runs
+    gr.getDataSize(0).times { i ->
 
-    // check QA bounds
-    def run = gr.getDataX(i)
-    def val = gr.getDataY(i)
-    def inbound = val>=bounds[0] && val<=bounds[1]
-    if(!inbound) {
-      //T.printStatus("OB "+graphPath+" $run $val")
-      T.getLeaf(TL,graphPath).addPoint(run,val,0,0)
+      // check QA bounds
+      def run = gr.getDataX(i)
+      def val = gr.getDataY(i)
+      def inbound = val>=bounds[0] && val<=bounds[1]
+      if(!inbound) {
+        //T.printStatus("OB "+graphPath+" $run $val")
+        T.getLeaf(TL,graphPath).addPoint(run,val,0,0)
+      }
+
     }
-
   }
 })
 
@@ -176,7 +181,7 @@ T.exeLeaves(B,{
 // write output timelines
 TL.each{ det, detTr -> // loop through detector directories
   detTr.each{ hipoFile, graphTr -> // loop through timeline hipo files
-
+    
     // create output TDirectory
     def outTdir = new TDirectory()
 

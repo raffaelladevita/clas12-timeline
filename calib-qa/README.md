@@ -8,7 +8,8 @@ bounds. The bounds are specified by `cuts.txt` (see below for syntax).
   on. This path must be relative to the web directory, `$TIMELINEDIR`, defined in `env.sh`;
   if you prefer a different directory, edit `env.sh`
 - Run `../bin/qa.sh path/to/timelines`. The URLs for the timelines will be
-  printed upon success
+  printed upon success; alternatively, you can run `../bin/qa.sh URL`, and the
+  corresponding `path/to/timelines` substring will be determined from the URL
 - The new timeline files will appear in `/path/to/timelines_qa`, where any
   timeline hipo file to which QA cuts were applied has replaced the original
   hipo file, with the name "QA" appended to the file name
@@ -18,7 +19,7 @@ bounds. The bounds are specified by `cuts.txt` (see below for syntax).
 - If you would like to test the code, especially while developing, add a line to
   `datasetList.txt` (see below for description of this file); it is useful to define
   your own output directory
-  - example line for datasetList.txt: 
+  - example line for `datasetList.txt`:
     `rga_spring19  rga/pass0/v2.2.29  path/to/my/directory`
 - Then call `util/runQA.sh [dataset]`
 

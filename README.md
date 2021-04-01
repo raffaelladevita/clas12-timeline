@@ -30,6 +30,10 @@ Data monitoring tools for CLAS run QA
     not using this feature, change `CLASQAWWW` to any local directory; if you
     don't want to edit `env.sh`, then simply create the directory `../www`,
     which is the default value of `CLASQAWWW`
+3. make output directories:
+   * `mkdir outdat`
+   * `mkdir outmon`
+   * alternatively, you can make symlinks
 
 ## PASS1 Procedure for Automatic QA
 * `exeSlurm.sh $dataset`: runs `monitorRead.groovy` on DSTs using slurm

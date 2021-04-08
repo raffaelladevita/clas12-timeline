@@ -102,8 +102,7 @@ else if(RG=="RGB") {
   else if(runnum>=6409 && runnum<=6604) EBEAM = 10.1998 // spring
   else if(runnum>=11093 && runnum<=11283) EBEAM = 10.4096 // fall
   else if(runnum>=11284 && runnum<=11300) EBEAM = 4.17179 // fall BAND_FT
-  else if(runnum>=11323 && runnum<=11391) EBEAM = 10.2129 // winter 
-  else if(runnum>=11394 && runnum<=11571) EBEAM = 10.3894 // winter 
+  else if(runnum>=11323 && runnum<=11571) EBEAM = 10.3894 // winter (RCDB may still be incorrect)
   else System.err << "ERROR: unknown beam energy\n"
 }
 else if(RG=="RGK") {

@@ -50,7 +50,7 @@ if((args.contains("--list") || args.contains("-l")) && success) {
   Vector<ConditionType> cndTypes = db.getConditionTypes()
   HashMap<String, ConditionType> cndTypeByNames = db.getConditionTypeByNames()
   println("Available conditions in db at "+address+":")
-  for(ConditionType cndType : cndTypes){
+  for(ConditionType cndType in cndTypes){
     String row = String.format("   %-30s %s", cndType.getName(), cndType.getValueType().toString())
     println(row);
   }
@@ -62,7 +62,7 @@ def cnds = ['user_comment']
 if(!success) { cnds = []; args = []} // set cnds and args to empty if no db connection
 
 // Add conditions from command line
-for (arg : args) { 
+for (arg in args) { 
   if(arg.startsWith("-cnds=")) {
     try { cnds = arg.split('=')[1].split(',')}
     catch(Exception e) {
@@ -80,7 +80,7 @@ for (arg : args) {
 } 
 
 // Check if conditions given are in db
-for (cnd : cnds) {
+for (cnd in cnds) {
   if(!db.getConditionTypeByNames().keySet().contains(cnd)) {
     println("Condition: "+cnd+" not found in db at "+address+"\nOmitting...")
     cnds = cnds.minus([cnd])
@@ -95,8 +95,8 @@ qaTree.sort{a,b -> a.key.toInteger() <=> b.key.toInteger() }.each{
   run, runTree ->
   
   // Loop condition list and append db entries
-  def head = "\nRUN: $run "
-  for (cnd : cnds) { 
+  def head = "\nRUN: $run \n"
+  for (cnd in cnds) { 
     def condition = db.getCondition(Long.valueOf(run),cnd)
     entry = ""
     val = "String"
@@ -109,9 +109,8 @@ qaTree.sort{a,b -> a.key.toInteger() <=> b.key.toInteger() }.each{
       case "Boolean": entry = condition.toBoolean(); break
       default:        entry = condition.toString();  break    
     }
-    head += cnd+": "+entry+" " 
+    head += "  "+cnd+": "+entry+"\n" 
   }
-  head += "\n"
   outfileW << head
  
   runTree.sort{a,b -> a.key.toInteger() <=> b.key.toInteger() }.each{

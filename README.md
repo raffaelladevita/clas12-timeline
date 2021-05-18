@@ -25,9 +25,15 @@ See [further details](https://github.com/JeffersonLab/clas12-timeline/blob/main/
 
 ## run_based_monitoring
 
-To run, 
+To setup,
 ```
-./bin/detectors.sh /path/to/dir/containing/monitoring/files
+./bin/detectors.sh setup
 ```
+
+To run,
+```
+./bin/run.sh /path/to/monitoring/files/
+```
+Replace /path/to/monitoring/files/ with the directory containing plots, e.g.) /volatile/clas12/rg-b/offline_monitoring/pass0/v25.18/
 
 See [further details](https://github.com/Sangbaek/run_based_monitoring/blob/master/README.md) for more information.

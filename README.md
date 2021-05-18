@@ -30,10 +30,13 @@ To setup,
 ./bin/detectors.sh setup
 ```
 
-To run,
+
+To run, 
+Replace /path/to/monitoring/files/ with the directory containing plots, e.g.) /volatile/clas12/rg-b/offline_monitoring/pass0/v25.18/.
+Edit the cook version and run group at run.sh for the correct output directory name.
+
 ```
 ./bin/run.sh /path/to/monitoring/files/
 ```
-Replace /path/to/monitoring/files/ with the directory containing plots, e.g.) /volatile/clas12/rg-b/offline_monitoring/pass0/v25.18/
 
 See [further details](https://github.com/Sangbaek/run_based_monitoring/blob/master/README.md) for more information.

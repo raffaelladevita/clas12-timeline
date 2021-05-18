@@ -2,7 +2,7 @@
 
 To download,
 ```
-git clone --recurse-submodules https://github.com/JeffersonLab/clas12-timeline.git
+git clone https://github.com/JeffersonLab/clas12-timeline.git
 ```
 
 ## calibration QA

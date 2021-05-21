@@ -6,8 +6,8 @@ ltcc  ltcc_elec_nphe_sec         12      14      counts
 htcc  htcc_nphe_sec              11      13      counts
 
 ftof  ftof_edep_p1a_midangles    9.25    10.5    MeV
-ftof  ftof_edep_p1b_midangles    11.25   12.25   MeV
-ftof  ftof_edep_p2               9.2     10.2    MeV
+ftof  ftof_edep_p1b_midangles    11.0    12.3    MeV
+ftof  ftof_edep_p2               8.75    10.3    MeV
 ftof  ftof_time_p1a_mean         -0.025  0.025   ns
 ftof  ftof_time_p1a_sigma        0       0.125   ns
 ftof  ftof_time_p1b_mean         -0.015  0.015   ns

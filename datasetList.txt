@@ -7,3 +7,4 @@ rgb_winter 11323 11571 /cache/clas12/rg-b/production/recon/spring2020/torus-1/pa
 rgk_7 5674 5870 /lustre19/expphy/cache/clas12/rg-k/production/recon/fall2018/torus+1/7546MeV/pass1/v0/dst/recon
 rgk_6 5875 6000 /lustre19/expphy/cache/clas12/rg-k/production/recon/fall2018/torus+1/6535MeV/pass1/v0/dst/recon 
 rga_pass0_early 4763 5001 /cache/clas12/rg-a/production/recon/fall2018/torus-1/pass1/v0b/dst/recon
+rgf_summer20_torusM1 12447 12951 /cache/clas12/rg-f/production/recon/summer2020/torus-1_solenoid-0.745/pass1v0/dst/recon

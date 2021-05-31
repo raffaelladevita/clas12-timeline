@@ -44,9 +44,6 @@ Data monitoring tools for CLAS run QA
       * for scripts which loop over all datasets, you can restrict them by
         commenting out lines in `datasetList.txt` (using `#`); currently
         there are no such scripts in use
-  * you may need to edit `$datadir` to specify the location of DST files
-    * by default, it is `../pass1.${dataset}`, which should be a symlink
-      to the appropriate DST directory
   * wait for slurm jobs to finish
   * execute `errorPrint.sh` to inspect error logs
   * `exeSlurm.sh` also has the ability to read files from the tape silo; however, while

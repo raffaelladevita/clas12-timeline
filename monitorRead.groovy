@@ -78,7 +78,7 @@ else if(runnum>=6120 && runnum<=6604) RG="RGB" // spring 19
 else if(runnum>=6616 && runnum<=6783) RG="RGA" // spring 19
 else if(runnum>=11093 && runnum<=11300) RG="RGB" // fall 19
 else if(runnum>=11323 && runnum<=11571) RG="RGB" // winter 20
-else if(runnum>=12447 && runnum<=12951) RG="RGF" // summer 20
+else if(runnum>=12210 && runnum<=12951) RG="RGF" // spring+summer 20
 else System.err << "WARNING: unknown run group; using default run-group-dependent settings (see monitorRead.groovy)\n"
 println "rungroup = $RG"
 
@@ -91,7 +91,7 @@ else if(RG=="RGB") {
   else if(runnum>=11323 && runnum<=11571) helFlip = false // winter
 };
 else if(RG=="RGK") helFlip = false
-else if(RG=="RGF") helFlip = false
+else if(RG=="RGF") helFlip = true
 
 // beam energy
 // - hard-coded; could instead get from RCDB, but sometimes it is incorrect
@@ -114,7 +114,9 @@ else if(RG=="RGK") {
   else System.err << "ERROR: unknown beam energy\n"
 }
 else if(RG=="RGF") {
-  if     (runnum>=12447 && runnum<=12493) EBEAM = 10.1966
+  if     (runnum>=12210 && runnum<=12388) EBEAM = 10.3894
+  else if(runnum>=12389 && runnum<=12443) EBEAM =  2.1864
+  else if(runnum>=12444 && runnum<=12493) EBEAM = 10.1966
   else if(runnum>=12494 && runnum<=12616) EBEAM = 10.1967
   else if(runnum>=12617 && runnum<=12715) EBEAM = 10.3394
   else if(runnum>=12717 && runnum<=12951) EBEAM = 10.4057
@@ -139,7 +141,7 @@ else if(RG=="RGB") {
   if( runnum in [6263, 6350, 6599, 6601, 11119] ) FCmode=0 // fcupgated charge spikes
 }
 else if(RG=="RGK") FCmode = 0
-else if(RG=="RGF") FCmode = 1
+else if(RG=="RGF") FCmode = 0
 
 // FC attenuation fix
 // RGB runs <6400 had wrong attenuation, need to use

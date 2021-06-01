@@ -36,6 +36,12 @@ Data monitoring tools for CLAS run QA
    * alternatively, you can make symlinks
 
 ## PASS1 Procedure for Automatic QA
+* prepare run-group dependent settings in `monitorRead.groovy`
+  * guess `helFlip`; you can only know if your guess is correct after timelines
+    have been produced
+  * obtain the beam energies from the `RCDB`; CAUTION: sometimes the `RCDB` is 
+    wrong, and it is good to ask for the correct beam energy from the run group
+  * set `FCmode`
 * `exeSlurm.sh $dataset`: runs `monitorRead.groovy` on DSTs using slurm
   * `$dataset` is specified in `datasetList.txt`, along with a range of runs
     * the syntax of this file is `$dataset $firstRun $lastRun`

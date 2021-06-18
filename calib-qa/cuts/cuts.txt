@@ -17,12 +17,12 @@ ftof  ftof_time_p2_sigma         0       0.325   ns
 
 ft    ftc_pi0_mass_mean          134     136     MeV
 ft    ftc_pi0_mass_sigma         0       5       MeV
-ft    fth_MIPS_energy            layer1  1.2     1.35      MeV
-ft    fth_MIPS_energy            layer2  2.7     2.9       MeV
-ft    fth_MIPS_time_mean         layer1  -0.200  0.200     ns
-ft    fth_MIPS_time_mean         layer2  -0.200  0.200     ns
-ft    fth_MIPS_time_sigma        layer1  0       1.35      ns
-ft    fth_MIPS_time_sigma        layer2  0       1.1       ns
+ft    fth_MIPS_energy            layer1  0.9     1.9       MeV
+ft    fth_MIPS_energy            layer2  2.3     3.3       MeV
+ft    fth_MIPS_time_mean         layer1  -0.5    0.5       ns
+ft    fth_MIPS_time_mean         layer2  -0.5    0.5       ns
+ft    fth_MIPS_time_sigma        layer1  0       1.4       ns
+ft    fth_MIPS_time_sigma        layer2  0       1.2       ns
 
 ec    ec_Sampling                0.24    0.26    unitless
 ec    ec_gg_m_mean               0.131   0.134   GeV

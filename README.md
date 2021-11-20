@@ -23,20 +23,22 @@ https://clas12mon.jlab.org/rga/pass1/version3_qa/tlsummary
 
 See [further details](https://github.com/JeffersonLab/clas12-timeline/blob/main/calib-qa/README.md) for more information.
 
-## run_based_monitoring
+## run based monitoring
 
-To setup,
+To build,
 ```
-./bin/detectors.sh setup
+./bin/detectors.sh build
 ```
 
-
-To run, 
-Replace /path/to/monitoring/files/ with the directory containing plots, e.g.) /volatile/clas12/rg-b/offline_monitoring/pass0/v25.18/.
-Edit the cook version and run group at run.sh for the correct output directory name.
+To run, execute following command,
 
 ```
-./bin/run.sh /path/to/monitoring/files/
+./bin/detectors.sh "run group" "cooking version" "/path/to/monitoring/files/""
 ```
+with the adequte arguments, e.g.)
+```
+./bin/detectors.sh rgb pass0v25.18 /volatile/clas12/rg-b/offline_monitoring/pass0/v25.18/
+```
+.
 
 See [further details](https://github.com/Sangbaek/run_based_monitoring/blob/master/README.md) for more information.

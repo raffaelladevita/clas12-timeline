@@ -16,7 +16,7 @@ class HTCCFitter{
         int nBinsTime = 4000;
         double lowTime = -500;
         double highTime = 500;
-        def f1 = new F1D("fit:"+h1.getName() + t, "[amp]*gaus(x,[mean],[sigma])", -500, 500);
+        def f1 = new F1D("fit:"+h1.getName(), "[amp]*gaus(x,[mean],[sigma])", -500, 500);
         // f1.setParameter(0, 500);
         // f1.setParameter(1, -0.0);
         // f1.setParameter(2, 0.7);

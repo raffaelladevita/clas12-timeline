@@ -16,8 +16,8 @@ def processDirectory(dir, run) {
   def histlist =   (0..<6).collect{sec-> (0..<6).collect{sl ->
       def h1 = dir.getObject(String.format('/dc/DC_residuals_trkDoca_%d_%d',(sec+1),(sl+1))).projectionY()
       h1.setName("sec"+(sec+1)+"sl"+(sl+1))
-      h1.setTitle("DC residuals per sector per superlayer")
-      h1.setTitleX("DC residuals per sector per superlayer (cm)")
+      h1.setTitle("DC residuals per sector per superlayer (with basic DC4gui cuts)")
+      h1.setTitleX("DC residuals per sector per superlayer (with basic DC4gui cuts) (cm)")
       def f1 = DCFitter.fit(h1)
       funclist[sec].add(f1)
       meanlist[sec].add(f1.getParameter(1))
@@ -40,8 +40,8 @@ def close() {
     (0..<6).each{ sec->
       (0..<6).each{sl->
         def grtl = new GraphErrors('sec'+(sec+1)+' sl'+(sl+1))
-        grtl.setTitle("DC residuals (" + name + ") per sector per superlayer")
-        grtl.setTitleY("DC residuals (" + name + ") per sector per superlayer (cm)")
+        grtl.setTitle("DC residuals (" + name + ") per sector per superlayer (with basic DC4gui cuts)")
+        grtl.setTitleY("DC residuals (" + name + ") per sector per superlayer (with basic DC4gui cuts) (cm)")
         grtl.setTitleX("run number")
 
         data.sort{it.key}.each{run,it->

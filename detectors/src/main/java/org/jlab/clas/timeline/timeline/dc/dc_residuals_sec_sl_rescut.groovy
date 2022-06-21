@@ -18,9 +18,10 @@ def processDirectory(dir, run) {
       h1.setName("sec"+(sec+1)+"sl"+(sl+1))
       h1.setTitle("DC residuals per sector per superlayer with fitresidual cut")
       h1.setTitleX("DC residuals per sector per superlayer with fitresidual cut (cm)")
-      def f1 = DCFitter.fit(h1)
+      def f1 = DCFitter.doublegausfit(h1)
       funclist[sec].add(f1)
       meanlist[sec].add(f1.getParameter(1))
+      //sigma just from smaller gaus for now
       sigmalist[sec].add(f1.getParameter(2).abs())
       chi2list[sec].add(f1.getChiSquare())
       return h1

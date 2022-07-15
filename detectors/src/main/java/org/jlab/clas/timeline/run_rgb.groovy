@@ -105,6 +105,8 @@ def engines = [
     new ftof.ftof_tdcadc_p2_zoomed(),
     new dc.dc_residuals_sec(),
     new dc.dc_residuals_sec_sl(),
+    new dc.dc_residuals_sec_rescut(),
+    new dc.dc_residuals_sec_sl_rescut(),
     new dc.dc_t0_sec_sl(),
     new dc.dc_tmax_sec_sl()],
   out_RICH: [new rich.rich_timediff(),

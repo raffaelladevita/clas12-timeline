@@ -45,6 +45,41 @@ class DCFitter{
 
  	}
 
+
+	static F1D doublegausfit(H1F h1) {
+        def f1 = new F1D("fit:"+h1.getName(), "[amp]*gaus(x,[mean],[sigma])+[const]", -0.5, 0.5);
+
+        double hAmp  = h1.getBinContent(h1.getMaximumBin());
+        double hMean = h1.getAxis().getBinCenter(h1.getMaximumBin());
+        double hRMS  = h1.getRMS(); //ns
+        f1.setRange(hMean-1, hMean+1);
+        f1.setParameter(0, hAmp);
+        f1.setParameter(1, hMean);
+        f1.setParLimits(1, hMean-0.5, hMean+0.5);
+        f1.setParameter(2, hRMS);
+        f1.setParameter(3,0);
+ 
+	    DataFitter.fit(f1,h1,"LQ")
+
+        //refit using a double gaussian 
+        def gausFunc2 = new F1D("gausFunc2:"+h1.getName(), "[amp]*gaus(x,[mean],[sigma])+[amp2]*gaus(x,[mean],[sigma2])", -0.5, 0.5); 
+        gausFunc2.setParameter(0, f1.getParameter(0));
+        gausFunc2.setParameter(1, f1.getParameter(1));
+        gausFunc2.setParameter(2, f1.getParameter(2)*0.75);
+        gausFunc2.setParameter(3, f1.getParameter(0)*0.15);
+        gausFunc2.setParameter(4, f1.getParameter(2));
+
+       
+        
+        DataFitter.fit(gausFunc2, h1, "LQ");
+
+		return gausFunc2
+
+ 	}
+
+
+
+
  	static F1D t0fit(H1F h1, int slayer){
 
     	def f1 = new F1D("fit:"+h1.getName(),"[p0]/(1+exp(-[p1]*(x-[p2])))",-100,1000);

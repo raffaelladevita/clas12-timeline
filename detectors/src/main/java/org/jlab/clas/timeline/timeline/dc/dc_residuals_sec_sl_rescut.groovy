@@ -4,7 +4,7 @@ import org.jlab.groot.data.TDirectory
 import org.jlab.groot.data.GraphErrors
 import org.jlab.clas.timeline.fitter.DCFitter
 
-class dc_residuals_sec_sl {
+class dc_residuals_sec_sl_rescut {
 
 def data = new ConcurrentHashMap()
 
@@ -14,13 +14,14 @@ def processDirectory(dir, run) {
   def sigmalist = [[],[],[],[],[],[]]
   def chi2list = [[],[],[],[],[],[]]
   def histlist =   (0..<6).collect{sec-> (0..<6).collect{sl ->
-      def h1 = dir.getObject(String.format('/dc/DC_residuals_trkDoca_%d_%d',(sec+1),(sl+1))).projectionY()
+      def h1 = dir.getObject(String.format('/dc/DC_residuals_trkDoca_rescut_%d_%d',(sec+1),(sl+1))).projectionY()
       h1.setName("sec"+(sec+1)+"sl"+(sl+1))
-      h1.setTitle("DC residuals per sector per superlayer (with basic DC4gui cuts)")
-      h1.setTitleX("DC residuals per sector per superlayer (with basic DC4gui cuts) (cm)")
-      def f1 = DCFitter.fit(h1)
+      h1.setTitle("DC residuals per sector per superlayer with fitresidual cut")
+      h1.setTitleX("DC residuals per sector per superlayer with fitresidual cut (cm)")
+      def f1 = DCFitter.doublegausfit(h1)
       funclist[sec].add(f1)
       meanlist[sec].add(f1.getParameter(1))
+      //sigma just from smaller gaus for now
       sigmalist[sec].add(f1.getParameter(2).abs())
       chi2list[sec].add(f1.getChiSquare())
       return h1
@@ -40,8 +41,8 @@ def close() {
     (0..<6).each{ sec->
       (0..<6).each{sl->
         def grtl = new GraphErrors('sec'+(sec+1)+' sl'+(sl+1))
-        grtl.setTitle("DC residuals (" + name + ") per sector per superlayer (with basic DC4gui cuts)")
-        grtl.setTitleY("DC residuals (" + name + ") per sector per superlayer (with basic DC4gui cuts) (cm)")
+        grtl.setTitle("DC residuals (" + name + ") per sector per superlayer with fitresidual cut")
+        grtl.setTitleY("DC residuals (" + name + ") per sector per superlayer with fitresidual cut (cm)")
         grtl.setTitleX("run number")
 
         data.sort{it.key}.each{run,it->
@@ -56,7 +57,7 @@ def close() {
       }
     }
 
-    out.writeFile('dc_residuals_sec_sl_'+name+'.hipo')
+    out.writeFile('dc_residuals_sec_sl_rescut_'+name+'.hipo')
   }
 }
 }

@@ -2,6 +2,7 @@ package org.jlab.clas.timeline.timeline.htcc
 import java.util.concurrent.ConcurrentHashMap
 import org.jlab.groot.data.TDirectory
 import org.jlab.groot.data.GraphErrors
+import org.jlab.clas.timeline.fitter.HTCCFitter
 
 class htcc_vtimediff {
 

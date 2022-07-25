@@ -25,6 +25,7 @@ class htcc_vtimediff {
           meanlist.add(f1.getParameter(1))
           sigmalist.add(f1.getParameter(2).abs())
           chi2list.add(f1.getChiSquare())
+          return h1
         }
       }
       println("debug: "+run)

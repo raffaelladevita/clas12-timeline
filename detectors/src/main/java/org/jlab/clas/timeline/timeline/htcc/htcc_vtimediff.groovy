@@ -28,9 +28,9 @@ class htcc_vtimediff {
           return h1
         }
       }
-      println("debug: "+run)
-      data[run] = [run:run, hlist:histlist, flist: funclist, average: avglist, mean: meanlist, sigma:sigmalist]
     }
+    println("debug: "+run)
+    data[run] = [run:run, hlist:histlist, flist: funclist, average: avglist, mean: meanlist, sigma:sigmalist]
   }
 
 

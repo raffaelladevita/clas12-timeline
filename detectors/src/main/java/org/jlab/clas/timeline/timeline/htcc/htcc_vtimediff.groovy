@@ -61,7 +61,7 @@ class htcc_vtimediff {
           }
         }
       }
-    }
     out.writeFile('htcc_vtimediff_'+name+'.hipo')
+    }
   }
 }

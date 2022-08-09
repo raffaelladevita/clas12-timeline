@@ -2,6 +2,7 @@ package org.jlab.clas.timeline.timeline.htcc
 import java.util.concurrent.ConcurrentHashMap
 import org.jlab.groot.data.TDirectory
 import org.jlab.groot.data.GraphErrors
+import org.jlab.clas.timeline.fitter.HTCCFitter
 
 class htcc_vtimediff {
 
@@ -24,11 +25,12 @@ class htcc_vtimediff {
           meanlist.add(f1.getParameter(1))
           sigmalist.add(f1.getParameter(2).abs())
           chi2list.add(f1.getChiSquare())
+          return h1
         }
       }
-      println("debug: "+run)
-      data[run] = [run:run, hlist:histlist, flist: funclist, average: avglist, mean: meanlist, sigma:sigmalist]
     }
+    println("debug: "+run)
+    data[run] = [run:run, hlist:histlist, flist: funclist, average: avglist, mean: meanlist, sigma:sigmalist]
   }
 
 
@@ -59,7 +61,7 @@ class htcc_vtimediff {
           }
         }
       }
-    }
     out.writeFile('htcc_vtimediff_'+name+'.hipo')
+    }
   }
 }

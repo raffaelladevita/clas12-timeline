@@ -4,7 +4,7 @@ import org.jlab.groot.data.TDirectory
 import org.jlab.groot.data.GraphErrors
 import org.jlab.clas.timeline.fitter.DCFitter
 
-class dc_t0_sec_sl {
+class dc_t0_odd_sec_sl {
 
 def data = new ConcurrentHashMap()
 
@@ -14,7 +14,7 @@ def processDirectory(dir, run) {
   def t0chi2list = [[],[],[],[],[],[]]
 
   def histlist =   (0..<6).collect{sec-> (0..<6).collect{sl ->
-      def h1 = dir.getObject(String.format('/dc/DC_Time_%d_%d',(sec+1),(sl+1)))
+      def h1 = dir.getObject(String.format('/dc/DC_Time_odd_%d_%d',(sec+1),(sl+1)))
       h1.setName("sec"+(sec+1)+"sl"+(sl+1))
 
       def f1 = DCFitter.t0fit(h1, sl+1)
@@ -40,7 +40,7 @@ def close() {
   (0..<6).each{ sec->
     (0..<6).each{sl->
       def grtl = new GraphErrors('sec'+(sec+1)+' sl'+(sl+1))
-      grtl.setTitle(name+" per sector per superlayer")
+      grtl.setTitle(name+" per sector per superlayer (for odd timestamps)")
       grtl.setTitleY(name+" per sector per superlayer (ns)")
       grtl.setTitleX("run number")
 

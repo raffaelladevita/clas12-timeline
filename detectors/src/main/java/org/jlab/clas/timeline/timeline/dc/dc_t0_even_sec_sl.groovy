@@ -56,6 +56,6 @@ def close() {
     }
   }
 
-  out.writeFile('dc_' + name + '_sec_sl.hipo')
+  out.writeFile('dc_' + name + '_even_sec_sl.hipo')
 }
 }

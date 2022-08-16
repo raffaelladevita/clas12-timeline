@@ -5,7 +5,11 @@ if [ $1 = "build" ]; then
 	cd detectors
 	mvn clean package
 else
-	jarpath=`realpath $(dirname $0)/../detectors/target`/timelineMon-1.0-SNAPSHOT.jar
+	GROOVYPATH=`which groovy`
+	GROOVYBIN=`dirname $GROOVYPATH`
+	export GROOVYLIB="`dirname $GROOVYBIN`/lib"
+
+	export JARPATH=`realpath $(dirname $0)/../detectors/target`/timelineMon-1.0-SNAPSHOT.jar
 
 	#Output directory names
 	rungroup=$1 #"rgb"
@@ -13,10 +17,12 @@ else
 
 	out_dir=$rungroup"_"$cookver
 
-	main="org.jlab.clas.timeline.run"
+	MAIN="org.jlab.clas.timeline.run"
 	if [ $rungroup = "rgb" ]; then
-		main="org.jlab.clas.timeline.run_rgb"
+		MAIN="org.jlab.clas.timeline.run_rgb"
 	fi
+	export MAIN
+
 	echo "processing $rungroup $cookver timeline..."
 	shift 2
 
@@ -32,18 +38,15 @@ else
 	done
 
 	run() {
-		cp=$1
-		shift
 		echo "processing $1"
-		java -cp $cp $main  "$@" >& log/$1.log
+		java -DCLAS12DIR="${COATJAVA}/" -cp "${COATJAVA}/lib/clas/*:${COATJAVA}/lib/utils/*:$JARPATH:$GROOVYLIB/*" $MAIN "$@" >& log/$1.log
 	}
 
 	export -f run
 	#JAVA_OPTS="-Dsun.java2d.pmoffscreen=false -Xms1024m -Xmx12288m"; export JAVA_OPTS
 
-	echo $main
-	java -cp $jarpath $main --timelines | xargs -I{} -n1 --max-procs 4 bash -c 'main='$main';
-	run "$@"' -- $jarpath {} $inputdir
+	java -cp "${COATJAVA}/lib/clas/*:${COATJAVA}/lib/utils/*:$JARPATH:$GROOVYLIB/*" $MAIN --timelines |
+	xargs -I{} -n1 --max-procs 4 bash -c 'run "$@"' -- {} $inputdir
 
 
 	mv bmt_*.hipo bmtbst/
@@ -71,5 +74,4 @@ else
 	echo "Done. Please place the output directory $out_dir in the desired location inside /group/clas/www/clas12mon/html/hipo/."
 	echo "Place the json file in that directory so that clas12mon recognizes the hipo files to present them."
 	echo "The possible technical errors can be inspected through the log files in $out_dir/log."
-
 fi

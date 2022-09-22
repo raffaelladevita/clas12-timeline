@@ -70,7 +70,11 @@ else
 	mv band_* band/
 	mv rich_* rich/
 	mv epics_* epics/
-	
+
+	echo "---------------------------------------------------------------------------------------------------------------------"
+	grep "error" log/*
+	echo "---------------------------------------------------------------------------------------------------------------------"
+
 	echo "Done. Please place the output directory $out_dir in the desired location inside /group/clas/www/clas12mon/html/hipo/."
 	echo "Place the json file in that directory so that clas12mon recognizes the hipo files to present them."
 	echo "The possible technical errors can be inspected through the log files in $out_dir/log."

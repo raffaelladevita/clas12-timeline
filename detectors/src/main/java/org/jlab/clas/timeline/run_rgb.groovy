@@ -144,17 +144,24 @@ if(eng) {
   }
 
   fnames.sort().each{arg->
-    TDirectory dir = new TDirectory()
-    dir.readFile(arg)
-    def fname = arg.split('/')[-1]
-    def m = fname =~ /\d{4,7}/
-    def run = m[0].toInteger()
+    try{
+      println("debug: "+engine.getClass().getSimpleName()+" started $arg")
 
-    println("debug: "+engine.getClass().getSimpleName()+" processes $arg")
-    engine.processDirectory(dir, run)
+      TDirectory dir = new TDirectory()
+      dir.readFile(arg)
+      def fname = arg.split('/')[-1]
+      def m = fname =~ /\d{4,7}/
+      def run = m[0].toInteger()
+
+      engine.processDirectory(dir, run)
+
+      println("debug: "+engine.getClass().getSimpleName()+" finished $arg")
+    } catch(Exception ex) {
+      println("error: "+engine.getClass().getSimpleName()+" didn't process $arg")
+    }
   }
   engine.close()
   println("debug: "+engine.getClass().getSimpleName()+" ended")
 } else {
-  println("debug: "+args[0]+" not found")
+  println("error: "+args[0]+" not found")
 }

@@ -16,8 +16,8 @@ def processDirectory(dir, run) {
   def histlist =   (0..<6).collect{sec->
     def h1 = dir.getObject(String.format('/dc/DC_residuals_trkDoca_rescut_%d_%d',(sec+1),1)).projectionY()
     h1.setName("sec"+(sec+1))
-    h1.setTitle("DC residuals per sector per superlayer with fitresidual cut")
-    h1.setTitleX("DC residuals per sector per superlayer with fitresidual cut (cm)")
+    h1.setTitle("DC residuals per sector with fitresidual cut")
+    h1.setTitleX("DC residuals per sector with fitresidual cut (cm)")
     (1..<6).each{sl ->
       def h2 = dir.getObject(String.format('/dc/DC_residuals_trkDoca_rescut_%d_%d',(sec+1),(sl+1))).projectionY()
       h1.add(h2)
@@ -25,7 +25,14 @@ def processDirectory(dir, run) {
     def f1 = DCFitter.doublegausfit(h1)
     funclist.add(f1)
     meanlist.add(f1.getParameter(1))
-    sigmalist.add(f1.getParameter(2).abs())
+    
+    //ensure smaller sigma is used for plotting of timelines
+    if (f1.getParameter(2).abs() <= f1.getParameter(4).abs()) {
+    	sigmalist.add(f1.getParameter(2).abs()) 
+    }
+    else {
+    	sigmalist.add(f1.getParameter(4).abs()) 
+    }  
     chi2list.add(f1.getChiSquare())
     return h1
   }
@@ -41,8 +48,8 @@ def close() {
     out.mkdir('/timelines')
     (0..<6).each{ sec->
         def grtl = new GraphErrors('sec'+(sec+1))
-        grtl.setTitle("DC residuals (" + name + ") per sector per superlayer with fitresidual cut")
-        grtl.setTitleY("DC residuals (" + name + ") per sector per superlayer with fitresidual cut (cm)")
+        grtl.setTitle("DC residuals (" + name + ") per sector with fitresidual cut")
+        grtl.setTitleY("DC residuals (" + name + ") per sector with fitresidual cut (cm)")
         grtl.setTitleX("run number")
 
         data.sort{it.key}.each{run,it->

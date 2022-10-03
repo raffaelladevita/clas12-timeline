@@ -45,7 +45,7 @@ def processDirectory(dir, run) {
 
 def close() {
 
-  ['mean', 'sigma','max','rms'].each{ name ->
+  ['mean', 'sigma', 'max', 'rms'].each{ name ->
     TDirectory out = new TDirectory()
     out.mkdir('/timelines')
     (0..<6).each{ sec->

@@ -47,7 +47,7 @@ class DCFitter{
 
 
 	static F1D doublegausfit(H1F h1) {
-        def f2 = new F1D("fit:"+h1.getName(), "[amp]*gaus(x,[mean],[sigma])+[const]", -0.5, 0.5);
+        def f2 = new F1D("gausfit:"+h1.getName(), "[amp]*gaus(x,[mean],[sigma])+[const]", -0.5, 0.5);
 
         double hAmp  = h1.getBinContent(h1.getMaximumBin());
         double hMean = h1.getAxis().getBinCenter(h1.getMaximumBin());
@@ -62,7 +62,7 @@ class DCFitter{
 	    DataFitter.fit(f2,h1,"LQ")
 
         //refit using a double gaussian 
-        def f1 = new F1D("gausFunc2:"+h1.getName(), "[amp]*gaus(x,[mean],[sigma])+[amp2]*gaus(x,[mean],[sigma2])", -0.5, 0.5); 
+        def f1 = new F1D("fit:"+h1.getName(), "[amp]*gaus(x,[mean],[sigma])+[amp2]*gaus(x,[mean],[sigma2])", -0.4, 0.4); 
         f1.setParameter(0, f2.getParameter(0));
         f1.setParameter(1, f2.getParameter(1));
         f1.setParameter(2, f2.getParameter(2)*0.75);

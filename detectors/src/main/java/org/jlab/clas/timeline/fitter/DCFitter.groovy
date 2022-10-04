@@ -68,6 +68,7 @@ class DCFitter{
         f1.setParameter(2, f2.getParameter(2)*0.75);
         f1.setParameter(3, f2.getParameter(0)*0.15);
         f1.setParameter(4, f2.getParameter(2));
+        f1.setRange(f2.getParameter(1)-3.0*f2.getParameter(2).abs(),f2.getParameter(1)+3.0*f2.getParameter(2).abs())
 
        
         

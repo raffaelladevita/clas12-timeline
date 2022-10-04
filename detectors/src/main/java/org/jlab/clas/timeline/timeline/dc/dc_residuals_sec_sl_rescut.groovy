@@ -14,7 +14,6 @@ def processDirectory(dir, run) {
   def meanlist = [[],[],[],[],[],[]]
   def sigmalist = [[],[],[],[],[],[]]
   def maxlist = [[],[],[],[],[],[]]
-  def rmslist = [[],[],[],[],[],[]]
   def chi2list = [[],[],[],[],[],[]]
   def histlist =   (0..<6).collect{sec-> (0..<6).collect{sl ->
       def h1 = dir.getObject(String.format('/dc/DC_residuals_trkDoca_rescut_%d_%d',(sec+1),(sl+1))).projectionY()
@@ -26,26 +25,25 @@ def processDirectory(dir, run) {
       meanlist[sec].add(f1.getParameter(1))
       //smaller sigma is put into timelines
       if (f1.getParameter(2).abs() <= f1.getParameter(4).abs()) {
-    	sigmalist.add(f1.getParameter(2).abs()) 
+    	sigmalist[sec].add(f1.getParameter(2).abs()) 
       }
       else {
-    	sigmalist.add(f1.getParameter(4).abs()) 
+    	sigmalist[sec].add(f1.getParameter(4).abs()) 
       }  
    	  maxlist[sec].add(h1.getDataX(h1.getMaximumBin()))
-   	  rmslist[sec].add(h1.getRMS())
       chi2list[sec].add(f1.getChiSquare())
       return h1
     }
   }
 
-  data[run] = [run:run, hlist:histlist, flist:funclist, mean:meanlist, sigma:sigmalist, max:maxlist, rms:rmslist, clist:chi2list]
+  data[run] = [run:run, hlist:histlist, flist:funclist, mean:meanlist, sigma:sigmalist, max:maxlist, clist:chi2list]
 }
 
 
 
 def close() {
 
-  ['mean', 'sigma', 'max', 'rms'].each{ name ->
+  ['mean', 'sigma', 'max'].each{ name ->
     TDirectory out = new TDirectory()
     out.mkdir('/timelines')
     (0..<6).each{ sec->

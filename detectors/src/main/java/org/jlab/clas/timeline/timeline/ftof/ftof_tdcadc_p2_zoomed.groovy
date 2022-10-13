@@ -19,11 +19,15 @@ def processDirectory(dir, run) {
     def f1 = FTOFFitter.tdcadcdifffit_p2(h1)
     def peak = f1.getParameter(1)
     def sigma = f1.getParameter(2).abs()
-    def minH = h1.getAxis().min()
-    def maxH = h1.getAxis().max()
-    if (peak>minH && peak<maxH){
-        minH = peak - 2.5*sigma
-        maxH = peak + 2.5*sigma
+    def minX = h1.getAxis().min()
+    def maxX = h1.getAxis().max()
+    if (peak>minX && peak<maxX){
+        def minH = peak - 2.5*sigma
+        def maxH = peak + 2.5*sigma
+        if(minH<minX || maxH>maxX || maxH<minH) {
+          minH = h1.getAxis().getBinCenter(h1.getMaximumBin()) - 2.5*h1.getRMS().abs()
+          maxH = h1.getAxis().getBinCenter(h1.getMaximumBin()) + 2.5*h1.getRMS().abs()
+        }
         def minBin = h1.getAxis().getBin(minH)
         def maxBin = h1.getAxis().getBin(maxH)
         minH = h1.getAxis().getBinCenter(minBin) - h1.getAxis().getBinWidth(0)*0.5
@@ -32,6 +36,7 @@ def processDirectory(dir, run) {
         (minBin..maxBin).each{
                 h2.setBinContent(it-minBin, h1.getBinContent(it))
         }   
+        println([minBin, maxBin, minH, maxH])
         println(h1.getAxis().getBinCenter(h1.getMaximumBin()))
         println(h2.getAxis().getBinCenter(h2.getMaximumBin()))
         h1 = h2

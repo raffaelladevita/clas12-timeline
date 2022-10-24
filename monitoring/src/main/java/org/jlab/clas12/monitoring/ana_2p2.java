@@ -135,6 +135,7 @@ public class ana_2p2 {
 		//ana_band.plot();
 		ana_band.write();
 		//ana_rich.plot();
+		ana_rich.FillFWHMHistogram();
 		ana_rich.write();
 		//ana_deuteron.plot();
         }

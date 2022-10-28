@@ -1,7 +1,11 @@
 #!/usr/bin/bash
 
 #test if one jar for clas12-monitoring package exists in the directory
-[[ ! -e `ls clas12-monitoring*.jar 2>/dev/null` ]] && echo "---- [ERROR] Problem with jar file for clas12_monitoring package --------" && echo && exit
+BINDIR="`dirname $0`"
+MONDIR="`realpath $BINDIR/..`"
+JARDIR="$MONDIR/monitoring/target"
+
+[[ ! -e `ls $JARDIR/clas12-monitoring*.jar 2>/dev/null` ]] && echo "---- [ERROR] Problem with jar file for clas12_monitoring package --------" && echo && exit
 
 # test if there is a version name
 echo $1 | grep -q "/" && echo "---- [ERROR] version name must not contain / -------" && echo && exit
@@ -41,8 +45,8 @@ sbatch << END_OF_SBATCH
 #!/bin/sh
 #SBATCH --ntasks=1
 #SBATCH --job-name=$ver
-#SBATCH --output=log/%x-%j-%N.out
-#SBATCH --error=log/%x-%j-%N.err
+#SBATCH --output=log/%x-run-$run-%j-%N.out
+#SBATCH --error=log/%x-run-$run-%j-%N.err
 #SBATCH --partition=production
 #SBATCH --account=clas12
 #SBATCH --mem-per-cpu=1500
@@ -58,7 +62,7 @@ cd plots
 echo "[shell] >> MAKING DIRECTORY FOR PLOTS FOR SINGLE RUN: $irun with beam energy: $beam_energy"
 mkdir plots${irun}/
 
-java -DCLAS12DIR="\${COATJAVA}/" -Xmx1024m -cp "\${COATJAVA}/lib/clas/*:\${COATJAVA}/lib/utils/*:`realpath clas12-monitoring-*jar`" org.jlab.clas12.monitoring.ana_2p2 $irun "$irun".input $max_num_events $beam_energy
+java -DCLAS12DIR="\${COATJAVA}/" -Xmx1024m -cp "\${COATJAVA}/lib/clas/*:\${COATJAVA}/lib/utils/*:$JARDIR/*" org.jlab.clas12.monitoring.ana_2p2 $irun "$irun".input $max_num_events $beam_energy
 
 END_OF_SBATCH
 

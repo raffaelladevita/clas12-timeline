@@ -1,3 +1,5 @@
 .*.sw*
 .sw*
 calib-qa/datasetList.txt
+detectors/target
+monitoring/target

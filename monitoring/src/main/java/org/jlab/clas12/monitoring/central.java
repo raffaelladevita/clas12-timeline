@@ -2,24 +2,19 @@ package org.jlab.clas12.monitoring;
 
 import java.io.*;
 import java.util.*;
+import org.jlab.clas.pdg.PhysicsConstants;
 
-import org.jlab.groot.math.*;
 import org.jlab.groot.data.H1F;
 import org.jlab.groot.data.H2F;
-import org.jlab.groot.math.F1D;
-import org.jlab.groot.fitter.DataFitter;
 import org.jlab.io.base.DataBank;
 import org.jlab.io.base.DataEvent;
 import org.jlab.io.hipo.HipoDataSource;
-import org.jlab.groot.fitter.ParallelSliceFitter;
 import org.jlab.groot.graphics.EmbeddedCanvas;
-import org.jlab.groot.data.GraphErrors;
 import org.jlab.groot.data.TDirectory;
 import org.jlab.clas.physics.Vector3;
-import org.jlab.clas.physics.LorentzVector;
+import org.jlab.detector.base.DetectorType;
 import org.jlab.groot.base.GStyle;
 import org.jlab.utils.groups.IndexedTable;
-import org.jlab.detector.calib.utils.CalibrationConstants;
 import org.jlab.detector.calib.utils.ConstantsManager;
 
 public class central {
@@ -43,6 +38,7 @@ public class central {
 	public float CTOF_counter_thickness;
 	public int phase_offset;
 	public long timestamp;
+        public int evn;
 
 	//for timeline
 	public H1F H_CTOF_pos_mass, H_CTOF_neg_mass;
@@ -230,124 +226,96 @@ public class central {
 		
 	}
 
-	public void FillCVTCTOF(DataBank CVTbank, DataBank CTOFbank, DataBank partBank, DataBank scintillBank){
+	public void FillCVTCTOF(DataBank CVTbank, DataBank CTOFbank, DataBank partBank, DataBank trackBank){
 		for(int iCTOF=0;iCTOF<CTOFbank.rows();iCTOF++){
-			float e = CTOFbank.getFloat("energy",iCTOF);
-			float pathlthroughbar = CTOFbank.getFloat("pathLengthThruBar",iCTOF);
-			int trackid = CTOFbank.getInt("trkID",iCTOF);
-			
-			// Implemented from Calibration Suite
-			// Find the matching CVTRec::Tracks bank
-			int iCVT = -1;
-			for (int i = 0; i < CVTbank.rows(); i++) {
-				if (CVTbank.getShort("ID",i)==trackid) {
-					iCVT = i;
-					break;
-				}
+                    double energy          = CTOFbank.getFloat("energy", iCTOF);
+                    double time            = CTOFbank.getFloat("time", iCTOF);
+                    int    paddle          = CTOFbank.getShort("component", iCTOF);
+                    double pathlthroughbar = CTOFbank.getFloat("pathLengthThruBar", iCTOF);
+                    int trackid            = CTOFbank.getShort("trkID", iCTOF);
+                    if(trackid<=0) continue;
+                    
+                    // Implemented from Calibration Suite
+                    // Find the matching CVTRec::Tracks bank
+                    int iCVT = -1;
+                    for (int i = 0; i < CVTbank.rows(); i++) {
+                        if (CVTbank.getShort("ID",i) == trackid) {
+                            iCVT = i;
+                            break;
+                        }
+                    }
+	  	    // Find the pindex
+	     	    int pindex = -1;
+                    double vt  = -999;
+                    for (int i = 0; i < trackBank.rows(); i++) {
+                        int detector = trackBank.getByte("detector",i);
+                        int index    = trackBank.getShort("index",i);
+			if(detector == DetectorType.CVT.getDetectorId() && index == iCVT) {
+                            pindex = trackBank.getShort("pindex", i);
+                            vt     = partBank.getFloat("vt", pindex);
+                            break;
 			}
-			// Implemented from Calibration Suite
-			// Find the pindex
-			int pIdx = -1;
-			float timediff = -10.f;
-			float flighttime = -10.0f;
-			float mompart=-10.f; 
-			float time = -10.f;
-			float vt =-10.f;
-			float pathlength = -10.f;
-			for (int i = 0; i < scintillBank.rows(); i++) {
-				if (scintillBank.getShort("index",i)==iCTOF && scintillBank.getByte("detector",i)==4) {
-					pathlength = scintillBank.getFloat("path",i);
-					time = scintillBank.getFloat("time",i);
-					pIdx = scintillBank.getShort("pindex", i);
-					float px = partBank.getFloat("px",pIdx);
-					float py = partBank.getFloat("py",pIdx);
-                                        float pz = partBank.getFloat("pz",pIdx);
-                                        vt = partBank.getFloat("vt",pIdx);
-					mompart = (float)Math.sqrt(px*px+py*py+pz*pz);
-					flighttime = pathlength/(float)(29.98f*mompart/Math.sqrt(mompart*mompart+0.13957f*0.13957f)); 
-					timediff = (float)(time - flighttime) -vt;	
-					break;
-				}
-			}
+                    }
 
+                    if(energy>0.5){
+                        double mom  = CVTbank.getFloat("p",iCVT);
+                        double momt = CVTbank.getFloat("pt", iCVT);
+                        double cx   = CVTbank.getFloat("c_x",iCVT);
+                        double cy   = CVTbank.getFloat("c_y",iCVT);
+                        double cz   = CVTbank.getFloat("c_z",iCVT);
+                        double cphi = Math.toDegrees(Math.atan2(cy, cx));
+                        int    charge = CVTbank.getInt("q",iCVT);
+                        double chi2   = CVTbank.getFloat("chi2", iCVT)/CVTbank.getShort("ndf", iCVT);
+                        double tandip = CVTbank.getFloat("tandip", iCVT);
+                        double phi0   = Math.toDegrees(CVTbank.getFloat("phi0", iCVT));
+                        double z0     = CVTbank.getFloat("z0", iCVT);
+                        double beta   = mom/Math.sqrt(mom*mom+Math.pow(PhysicsConstants.massPionCharged(),2));
+                        double path   = CVTbank.getFloat("pathlength", iCVT);
 
-			if(!Float.isNaN(e) && trackid>-1 && e>2.){
-				boolean matched = false;
-				float mom = CVTbank.getFloat("p",iCVT);
-				float momt = CVTbank.getFloat("pt", iCVT);
-				float cx = CVTbank.getFloat("c_x",iCVT)*0.1f;
-				float cy = CVTbank.getFloat("c_y",iCVT)*0.1f;
-				float cz = CVTbank.getFloat("c_z",iCVT)*0.1f;
-				float cphi = (float)Math.toDegrees(Math.atan2(cy,cx));
-				int charge = CVTbank.getInt("q",iCVT);
-				float track_redchi2 = CVTbank.getFloat("chi2", iCVT)/CVTbank.getShort("ndf", iCVT);
-				float tandip = CVTbank.getFloat("tandip", iCVT);
-				float vz = CVTbank.getFloat("z0", iCVT)*0.1f;
-				int pad = CTOFbank.getInt("component",iCTOF);
-				float x = CTOFbank.getFloat("x",iCTOF)*0.1f;
-				float y = CTOFbank.getFloat("y",iCTOF)*0.1f;
-				float z = CTOFbank.getFloat("z",iCTOF)*0.1f;
-				float t = CTOFbank.getFloat("time",iCTOF);
-				float p = CTOFbank.getFloat("pathLength",iCTOF);
-				float phi = (float)Math.toDegrees(Math.atan2(y,x));
-				float pz = momt * tandip;
-				float theta = (float)Math.toDegrees(Math.acos(pz/Math.sqrt( pz*pz + momt*momt )));
-				int pid = partBank.getInt("pid",pIdx);
-				float beta =  mom/(float)Math.sqrt(mom*mom+0.13957061f*0.13957061f);
-				float DelPhi = phi-cphi;
+                        double CTOFbeta  = path/(PhysicsConstants.speedOfLight()*(time-vt));
+                        double CTOFmass  = mom * mom * ( 1/(CTOFbeta*CTOFbeta) - 1);
+                        double CTOFedep  = energy*CTOF_counter_thickness/pathlthroughbar;
+                        double CTOFvtime = time - path/beta/PhysicsConstants.speedOfLight();
+                        double CTOFdtime = vt - CTOFvtime;
 
-				//like FTOF in dst_mon
-				double CTOFbeta = p/(29.98f*(t-STT));
-				double CTOFmass = mom * mom * ( 1/(CTOFbeta*CTOFbeta) - 1);
-				double edep_cor = (double)e*CTOF_counter_thickness/pathlthroughbar;
+			H_CVT_CTOF_phi.fill(cphi, phi0);
+                        H_CVT_CTOF_z.fill(cz, z0);
 
-				while(DelPhi>180)DelPhi-=360;
-				while(DelPhi<-180)DelPhi+=360;
-				if( Math.abs(DelPhi)<30 && z<4.7){}
-				if( Math.abs(DelPhi)<180){
-					H_CVT_CTOF_phi.fill(cphi,phi);
-					H_CVT_CTOF_z.fill(cz,z);
-					float CTOF_vtime = t - p/(float)(29.98f*mom/Math.sqrt(mom*mom+0.13957f*0.13957f));
-					float CTOFTime;
-					//CTOFTime = CTOFTime - (float) (vz - targetPos)/29.98f; //vertex location corrected. from calibration suite
-					if (vt!=-10. && vt!=-1. && Math.abs(mom-mompart)<0.001 && Math.abs(p-pathlength)<0.001) CTOFTime = CTOF_vtime - vt;
-					else CTOFTime = -10.f;
-					if (charge < 0 && e_part_ind != -1) {
-						H_CTOF_pos.fill(phi,z);
-						H_CTOF_edep_phi.fill(phi,edep_cor);
-						H_CTOF_edep_z.fill(z,edep_cor);
-						H_CTOF_path_mom.fill(mom,p);
-						H_CTOF_edep_pad_neg.fill(pad,edep_cor);
-						//Signed off by Dan on 29 April 2020;
-						if(mom>0.4 && track_redchi2 < 30 && CTOFTime!=-10.) { 
-							H_CVT_t_pad.fill(pad,CTOFTime);
-						//This is the CTOF vertex time difference histogram to be fitted and timelined
-							H_CVT_t_neg.fill(CTOFTime);
-							H_CVT_t[pad-1].fill(CTOFTime);
-							H_CVT_t[48].fill(CTOFTime);
-							H_CVT_t_STT.fill(vt,CTOF_vtime);
-							//System.out.println(String.format("Part momentum: "+mompart+" CVT momentum: "+mom+" Scintillator time: "+time+" CTOF time: "+t+" Scntillator pathlength: "+pathlength+" CTOF pathlength: "+p+" vt from part: "+vt+" VertTDiff: "+CTOFTime+"\n"));
-						}
-						H_CTOF_neg_mass.fill(CTOFmass);
-						H_CTOF_edep_neg[pad-1].fill(edep_cor);
-						H_CTOF_edep_neg[48].fill(edep_cor);
-						//pi- fiducial cut borrowing from Pierre's CND
-						if (Math.sqrt(Math.abs(CTOFmass))<0.38 && CTOFmass>-0.35*0.35){
-							double thisTime =CTOFTime-RFT;
-							thisTime = (thisTime+(rf_large_integer+0.5)*rfPeriod) % rfPeriod;
-							thisTime = thisTime - rfPeriod/2;
-							H_CTOF_vt_pim.fill(thisTime,CTOFTime);
-							H_CTOF_edep_pim.fill(edep_cor);
-						}			
-					}
-					if (charge>0 && e_part_ind != -1) {
-						H_CTOF_edep_pad_pos.fill(pad,edep_cor);
-						if(mom>0.4 && track_redchi2 < 30 && CTOFTime!=-10.) H_CVT_t_pos.fill(CTOFTime);
-						H_CTOF_pos_mass.fill(CTOFmass);
-					}
-					matched = true;
-					// }
-				}
+                        if (charge < 0 && e_part_ind != -1) {
+                            H_CTOF_pos.fill(phi0, z0);
+                            H_CTOF_edep_phi.fill(phi0, CTOFedep);
+                            H_CTOF_edep_z.fill(z0, CTOFedep);
+                            H_CTOF_path_mom.fill(mom, path);
+                            H_CTOF_edep_pad_neg.fill(paddle, CTOFedep);
+                            //Signed off by Dan on 29 April 2020;
+                            if (mom > 0.4 && mom<3.0 && chi2 < 30) {
+                                H_CVT_t_pad.fill(paddle, CTOFdtime);
+                                //This is the CTOF vertex time difference histogram to be fitted and timelined
+                                H_CVT_t_neg.fill(CTOFdtime);
+                                H_CVT_t[paddle - 1].fill(CTOFdtime);
+                                H_CVT_t[48].fill(CTOFdtime);
+                                H_CVT_t_STT.fill(vt, CTOFvtime);
+                            }
+                            H_CTOF_neg_mass.fill(CTOFmass);
+                            H_CTOF_edep_neg[paddle - 1].fill(CTOFedep);
+                            H_CTOF_edep_neg[48].fill(CTOFedep);
+                            //pi- fiducial cut borrowing from Pierre's CND
+//						if (Math.sqrt(Math.abs(CTOFmass))<0.38 && CTOFmass>-0.35*0.35){
+                            double thisTime = CTOFdtime - RFT;
+                            thisTime = (thisTime + (rf_large_integer + 0.5) * rfPeriod) % rfPeriod;
+                            thisTime = thisTime - rfPeriod / 2;
+                            H_CTOF_vt_pim.fill(thisTime, CTOFdtime);
+                            H_CTOF_edep_pim.fill(CTOFedep);
+//						}			
+                        }
+                        if (charge > 0 && e_part_ind != -1) {
+                            H_CTOF_edep_pad_pos.fill(paddle, CTOFedep);
+                            if (mom > 0.4 && mom<3.0  && chi2 < 30) {
+                                H_CVT_t_pos.fill(CTOFdtime);
+                            }
+                            H_CTOF_pos_mass.fill(CTOFmass);
+                        }
+				
 			}
 		}
 	}
@@ -401,29 +369,32 @@ public class central {
 	public void processEvent(DataEvent event) {
 		BackToBack = false;
 		e_part_ind=-1;
-		DataBank eventBank = null, trackDetBank = null, partBank = null, scintillBank = null;
+		DataBank eventBank = null, trackDetBank = null, partBank = null, trackBank = null;
 		DataBank tofadc = null, toftdc = null;
 		if(userTimeBased){
 			if(event.hasBank("REC::Event"))eventBank = event.getBank("REC::Event");
 			if(event.hasBank("TimeBasedTrkg::TBTracks"))trackDetBank = event.getBank("TimeBasedTrkg::TBTracks");
 			if(event.hasBank("REC::Particle"))partBank = event.getBank("REC::Particle");
-			if(event.hasBank("REC::Scintillator"))scintillBank = event.getBank("REC::Scintillator");
+			if(event.hasBank("REC::Track"))trackBank = event.getBank("REC::Track");
 		}
 		if(!userTimeBased){
 			if(event.hasBank("RECHB::Event"))eventBank = event.getBank("RECHB::Event");
 			if(event.hasBank("RECHB::Particle"))partBank = event.getBank("RECHB::Particle");
 			if(event.hasBank("HitBasedTrkg::HBTracks"))trackDetBank = event.getBank("HitBasedTrkg::HBTracks");
-			if(event.hasBank("RECHB::Scintillator"))scintillBank = event.getBank("RECHB::Scintillator");
+			if(event.hasBank("RECHB::Track"))trackBank = event.getBank("RECHB::Track");
 		}
 
 		if(eventBank!=null)STT = eventBank.getFloat("startTime",0);
 		if(eventBank!=null)RFT = eventBank.getFloat("RFTime",0); else return;
-		if(event.hasBank("RUN::config"))timestamp = event.getBank("RUN::config").getLong("timestamp",0);
+		if(event.hasBank("RUN::config")){
+                    evn = event.getBank("RUN::config").getInt("event",0);
+                    timestamp = event.getBank("RUN::config").getLong("timestamp",0);
+                }
 		if(event.hasBank("CTOF::adc")) tofadc = event.getBank("CTOF::adc");
 		if(event.hasBank("CTOF::tdc")) toftdc = event.getBank("CTOF::tdc");
 		if(partBank!=null) e_part_ind = makeElectron(partBank);
-		if(trackDetBank != null && event.hasBank("CVTRec::Tracks"))FillTracks(trackDetBank,event.getBank("CVTRec::Tracks"));
-		if(BackToBack && event.hasBank("CVTRec::Tracks") && event.hasBank("CTOF::hits") && partBank!=null && scintillBank!=null) FillCVTCTOF(event.getBank("CVTRec::Tracks"),event.getBank("CTOF::hits"), partBank, scintillBank);
+//		if(trackDetBank != null && event.hasBank("CVTRec::Tracks"))FillTracks(trackDetBank,event.getBank("CVTRec::Tracks"));
+		if(event.hasBank("CVTRec::Tracks") && event.hasBank("CTOF::hits") && partBank!=null && trackBank!=null) FillCVTCTOF(event.getBank("CVTRec::Tracks"),event.getBank("CTOF::hits"), partBank, trackBank);
 		if(toftdc!=null && tofadc!=null) fillCTOFadctdcHist(tofadc,toftdc);
 	}
 
@@ -500,7 +471,7 @@ public class central {
 		System.setProperty("java.awt.headless", "true");
 		GStyle.setPalette("kRainBow");
 		int count = 0;
-		int runNum = 0;
+		int runNum = 5038;
 		boolean useTB = true;
 		boolean useVolatile = false;
 		String filelist = "list_of_files.txt";
@@ -525,6 +496,7 @@ public class central {
 		//int maxevents = 50000000;
 		int maxevents = 500000;
 		if(args.length>2)maxevents=Integer.parseInt(args[2]);
+                toProcessFileNames.add("/Users/devita/ctof_006599.mon.8.3.2.hipo");
 		int progresscount=0;int filetot = toProcessFileNames.size();
 		for (String runstrg : toProcessFileNames) if( count<maxevents ){
 			progresscount++;

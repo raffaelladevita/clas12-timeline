@@ -53,7 +53,7 @@ sbatch << END_OF_SBATCH
 
 source /group/clas12/packages/setup.sh
 module load clas12/pro
-module switch clas12/3.2
+module switch clas12/pro
 
 realpath $rdir/* > plots/"$irun".input
 

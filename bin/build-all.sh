@@ -1,8 +1,12 @@
 #!/usr/bin/bash
 
-cd monitoring
+SCRIPTPATH=`realpath $0`
+BINPATH=`dirname $SCRIPTPATH`
+DIRPATH=`dirname $BINPATH`
+
+cd $DIRPATH/monitoring
 mvn package
 cd -
-cd detectors
+cd $DIRPATH/detectors
 mvn package
 cd -

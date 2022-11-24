@@ -1,9 +1,16 @@
 #!/bin/bash
+
+SCRIPTPATH=`realpath $0`
+BINPATH=`dirname $SCRIPTPATH`
+DIRPATH=`dirname $BINPATH`
+
+
 if [ $1 = "build" ]; then
 	echo "building detector timeline"
 	
-	cd detectors
+	cd $DIRPATH/detectors
 	mvn clean package
+	cd -
 else
 	GROOVYPATH=`which groovy`
 	GROOVYBIN=`dirname $GROOVYPATH`

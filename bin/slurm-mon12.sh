@@ -23,8 +23,13 @@ do
 
 run=`basename $rdir | grep -m1 -o "[0-9][0-9][0-9][0-9][0-9][0-9]"`
 [[ -z $run ]] && continue
-echo "Submitting the job for run $run"
 irun=$((10#$run))
+
+[[ -e plots/plots${irun} ]] && echo "------ [WARNING] skipping run ${irun} because the directory plots/plots${irun} already exists" && continue
+
+echo "Submitting the job for run $run"
+
+mkdir plots/plots${irun}
 
 max_num_events=100000000
 

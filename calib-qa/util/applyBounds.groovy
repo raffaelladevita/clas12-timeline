@@ -130,7 +130,6 @@ def buildLine = { v,color ->
 // - loop through the input timeline, test constraints, add result to bad
 //   timeline as necessary
 // - store bad timeline in a tree "TL" with same structure as "T"
-def inTdir = new TDirectory()
 File inTdirFile
 def gr
 def TL = [:]
@@ -145,6 +144,7 @@ T.exeLeaves(B,{
   // does not exist
   def graphN = graphPath[-1]
   T.printStatus("open file=\"$fileN\" graph=\"$graphN\"")
+  def inTdir = new TDirectory()
   inTdirFile = new File(fileN)
   if(inTdirFile.exists()) {
     inTdir.readFile(fileN)
@@ -181,14 +181,14 @@ T.exeLeaves(B,{
 // write output timelines
 TL.each{ det, detTr -> // loop through detector directories
   detTr.each{ hipoFile, graphTr -> // loop through timeline hipo files
-    
+
     // create output TDirectory
     def outTdir = new TDirectory()
 
     // write graphs
     outTdir.mkdir("/timelines")
     outTdir.cd("/timelines")
-    graphTr.each{ graphName, graph -> 
+    graphTr.each{ graphName, graph ->
       outTdir.addDataSet(graph)
       lineTitle = graph.getTitle()    // (note: all graphs have same title,
       lineTitleX = graph.getTitleX()  //  but we need it for `buildLine`)
@@ -196,10 +196,11 @@ TL.each{ det, detTr -> // loop through detector directories
     }
 
     // copy TDirectories for each run from input hipo file
+    def inTdir = new TDirectory()
     def inHipoN = "${indir}/${det}/${hipoFile}.hipo"
     inTdir.readFile(inHipoN)
     def inList = inTdir.getCompositeObjectList(inTdir)
-    inList.each{ 
+    inList.each{
       if(!it.contains("timelines")) {
         def rundir = it.tokenize('/')[0]
         outTdir.mkdir("/$rundir")
@@ -229,7 +230,7 @@ TL.each{ det, detTr -> // loop through detector directories
       outTdir.addDataSet(buildLine(num,lineColor))
     }
 
-    
+
 
     // create output hipo file
     def outHipoDir = "${outdir}/${det}"

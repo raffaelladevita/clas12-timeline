@@ -763,9 +763,9 @@ inHipoList.each { inHipoFile ->
       }
     }
 
-    // add eventNum to the list of this segment's event numbers
+    // add eventNum to the list of this segment's event numbers; ignore empty events (eventNum==0)
     eventNum = BigInteger.valueOf(configBank.getInt('event',0))
-    eventNumList.add(eventNum)
+    if(eventNum>0) eventNumList.add(eventNum)
 
   } // end event loop
   reader.close()

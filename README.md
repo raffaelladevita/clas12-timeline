@@ -18,6 +18,7 @@ To submit clas12_monitoring for each run from specified directory one should run
 * slurm-mon12.sh: creates one job for each directory from the arguments list
 * the `plots` directory is created and contains `plots#RUN` directories for each job
 
+To see how to run it manually, read here: https://github.com/JeffersonLab/clas12-timeline/tree/main/monitoring
 
 ##  Timeline
 To build,

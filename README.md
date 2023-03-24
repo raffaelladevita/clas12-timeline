@@ -12,10 +12,22 @@ To submit clas12_monitoring for each run from specified directory one should run
 ./bin/build-all.sh
 <b>./bin/slurm-mon12.sh</b> version_name /volatile/clas12/rg-a/production/Spring19/mon/recon/[0-9][0-9][0-9][0-9][0-9][0-9]
 </pre>
-* slurm-mon12.sh: **first argument** is the name for slurm jobs
-* slurm-mon12.sh: **the following arguments** are the paths to the run directories with reconstructed hipo files
-  you can use wild card or the list of directories
-* slurm-mon12.sh: creates one job for each directory from the arguments list
+
+The `slurm-mon12.sh` usage:
+<pre>
+USAGE: ./bin/slurm-mon12.sh VERSION_NAME RUN_DIRECTORY[...]
+       submits the monitoring jobs to the farm batch system via Slurm. Each job corresponds to one RUN_DIRECTORY.
+
+<b>EXAMPLE: ./bin/slurm-mon12.sh version_name /volatile/clas12/rg-a/production/Spring19/mon/recon/[0-9][0-9][0-9][0-9][0-9][0-9]</b>
+
+OPTIONS:
+  VERSION_NAME         version name, defined by the user, used for slurm jobs identification
+  RUN_DIRECTORY[...]   One or more directories, each directory corresponds to one run and should contain reconstructed hipo files.
+                       The regexp can be used to specify the list of directories as well.
+                       For each RUN_DIRECTORY the directory <b>plots#RUN</b> is created in the working directory.
+                       Each `plots` directory contains hipo files with monitoring histograms.
+</pre>
+
 * the `plots` directory is created and contains `plots#RUN` directories for each job
 
 To run it interactively, see here: https://github.com/JeffersonLab/clas12-timeline/tree/main/monitoring

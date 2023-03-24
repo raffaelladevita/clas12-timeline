@@ -3,14 +3,6 @@ An independent set of classes for clas12 monitoring
 
 Current active branches in the repo only supports hipo4 and coatjava6.
 
-## How to compile
-
-```
-git clone https://github.com/JeffersonLab/clas12_monitoring
-cd clas12_monitoring
-mvn clean package
-```
-will create a jar file inside target.
 
 ## How to run the monitoring codes
 
@@ -40,8 +32,3 @@ Currently, each detector is related to the following class names.
 - RICH: RICH
 - DC, FTOF: tof_monitor
 
-Please consider to run above using the batch farm with Auger or swif workflow in case there is a need for the monitoring service tasks.
-
-# Hipo3 Release
-There is a [hipo3 release](https://github.com/JeffersonLab/clas12_monitoring/releases/tag/hipo3)
-that contains the latest version as of September 27th, 2019, supporting hipo3.

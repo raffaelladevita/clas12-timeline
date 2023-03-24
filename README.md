@@ -28,8 +28,6 @@ OPTIONS:
                        Each `plots` directory contains hipo files with monitoring histograms.
 </pre>
 
-* the `plots` directory is created and contains `plots#RUN` directories for each job
-
 To run it interactively, see here: https://github.com/JeffersonLab/clas12-timeline/tree/main/monitoring
 
 ##  Timeline

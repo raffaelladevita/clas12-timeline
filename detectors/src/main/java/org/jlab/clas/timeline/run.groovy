@@ -83,6 +83,8 @@ def engines = [
     new ft.fth_MIPS_time_board()],
   out_HTCC: [new htcc.htcc_nphe_ring_sector(),
     new htcc.htcc_vtimediff(),
+    new htcc.htcc_vtimediff_sector(),
+    new htcc.htcc_vtimediff_sector_ring(),
     new htcc.htcc_npheAll(),
     new htcc.htcc_vtimeAll()],
   out_LTCC: [new ltcc.ltcc_had_nphe_sector()],

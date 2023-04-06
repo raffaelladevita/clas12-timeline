@@ -45,6 +45,8 @@ public class RICH{
     
     public ArrayList<H1F> H_dt_PMT_AL;
 
+    public int eventN;
+
     public RICH(int reqR, float reqEb, boolean reqTimeBased, boolean reqwrite_volatile){
 	runNum = reqR;userTimeBased=reqTimeBased;
 	write_volatile = reqwrite_volatile;
@@ -90,50 +92,33 @@ public class RICH{
 	H_dt_PMT = new H1F[nPMTS];	    
     }
     public void getPhotons(DataBank part, DataBank hadr, DataBank phot, DataBank hits){
-	float p_min = 1.5f;
+	float p_min = 2.0f;
 	int pmt, anode, absChannel;
-	if (hadr.rows() == 1) {
-	    int richhadron_index = 0;
-	    int recparticle_pindex = hadr.getShort("particle_index",richhadron_index);
-	    int recparticle_pid = part.getInt("pid",recparticle_pindex);
-	    Vector3 P3 = new Vector3(part.getFloat("px",recparticle_pindex),part.getFloat("py",recparticle_pindex),part.getFloat("pz",recparticle_pindex));
-	    if ( (recparticle_pid == 11)   && (P3.mag() >= p_min) ) {
-		for (int j = 0; j< phot.rows(); j++) {
-		    int GoodPhoton = 1;
-		    if ( (phot.getFloat("traced_the",j) == 0) || (phot.getFloat("traced_phi",j) == 0) || (phot.getFloat("traced_EtaC",j) == 0)) GoodPhoton = 0; 
+	double DTimeCorr;
 
-		    /* Good Cherenkov photon */
-		    if ( (phot.getShort("type",j) == 0) && GoodPhoton == 1) {
+	for (int j = 0; j< phot.rows(); j++) {
+	    int part_hypo = phot.getInt("hypo", j);
+	    int pindex = phot.getInt("pindex", j);
+	    int pid = part.getInt("pid", pindex);
+	    Vector3 P3 = new Vector3(part.getFloat("px", pindex),part.getFloat("py", pindex),part.getFloat("pz", pindex));
 
-			/* pointer to the RIC Hit bank */
-			int richhit_pindex = phot.getShort("hit_index",j);
-		    
-			/* channel info */
-			pmt = hits.getShort("pmt",richhit_pindex);
-			anode = hits.getShort("anode",richhit_pindex);
-			absChannel = anode + (pmt-1)*nANODES;
+	    //System.out.println(String.format("j="+j+"  hypo="+part_hypo+"   pid="+pid));
+	    
+	    if ( ( (pid == 11) || (java.lang.Math.abs(pid) == 211) ) && (part_hypo == pid)  && (P3.mag() >= p_min) ) {
 
-			/* Photon path time from production to the MAPMT */
-			double PhotonPathTime = phot.getFloat("traced_time",j);
+		/* channel info */
+		pmt = phot.getInt("pmt", j);
+		anode = phot.getInt("anode", j);
+		absChannel = anode + (pmt-1)*nANODES;
+		DTimeCorr = phot.getFloat("dtime", j);
+		
+		H_dt.fill(DTimeCorr);
+		H_dt_channel.fill(absChannel, DTimeCorr);	
 
-			/* Photon start time, calculated at the emission point */
-			double PhotonStartTime = phot.getFloat("start_time",j);
-		    
-			/* Calculated photon time with respect to the event start time */
-			double CalcPhotonTime = PhotonStartTime + PhotonPathTime;
-
-			/* Calibrated measured time */
-			double MeasPhotonTime = hits.getFloat("time",richhit_pindex);
-
-			/* Time difference */
-			double DTimeCorr = MeasPhotonTime - CalcPhotonTime;
-
-			H_dt.fill(DTimeCorr);
-			H_dt_channel.fill(absChannel, DTimeCorr);	
-		    } 
-		}
 	    }
+
 	}
+
     }    
 
     public void FillFWHMHistogram() {
@@ -177,17 +162,22 @@ public class RICH{
 	    if(userTimeBased){
 		if(event.hasBank("REC::Event")) eventBank = event.getBank("REC::Event");
 		if(event.hasBank("REC::Particle"))partBank = event.getBank("REC::Particle");
-		if(event.hasBank("RICH::hadrons")) hadrBank = event.getBank("RICH::hadrons");
-		if(event.hasBank("RICH::photons")) photBank = event.getBank("RICH::photons");
-		if(event.hasBank("RICH::hits")) hitBank = event.getBank("RICH::hits");
 	    }
 	    if(!userTimeBased){
 		if(event.hasBank("REC::Event"))eventBank = event.getBank("REC::Event");
 		if(event.hasBank("RECHB::Particle"))partBank = event.getBank("RECHB::Particle");
-		if(event.hasBank("RICH::hadrons")) hadrBank = event.getBank("RICH::hadrons");
-		if(event.hasBank("RICH::photons")) photBank = event.getBank("RICH::photons");
-		if(event.hasBank("RICH::hits")) hitBank = event.getBank("RICH::hits");
 	    }
+
+
+	    eventN = confbank.getInt("event", 0);
+
+	    //if(event.hasBank("RICH::hadrons")) hadrBank = event.getBank("RICH::hadrons");
+	    //if(event.hasBank("RICH::photons")) photBank = event.getBank("RICH::photons");
+	    //if(event.hasBank("RICH::hits")) hitBank = event.getBank("RICH::hits");
+
+	    if(event.hasBank("RICH::Hit")) hitBank = event.getBank("RICH::Hit");
+	    if(event.hasBank("RICH::Ring")) photBank = event.getBank("RICH::Ring");
+	    if(event.hasBank("RICH::Particle")) hadrBank = event.getBank("RICH::Particle");
 
 	    //if( (trigger_bits[1] || trigger_bits[2] || trigger_bits[3] || trigger_bits[4] || trigger_bits[5] || trigger_bits[6]) && partBank!=null)e_part_ind = makeElectron(partBank);
 	    if (eventBank!=null) {

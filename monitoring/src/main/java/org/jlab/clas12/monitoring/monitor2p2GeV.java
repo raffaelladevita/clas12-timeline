@@ -2941,7 +2941,7 @@ public class monitor2p2GeV {
 			}
 		}
 	}
-	public void makeCVT(DataBank bank, DataBank ubank){
+	public void makeCVT(DataBank bank, DataBank ubank, DataBank bstclusters){
 		int tracks = bank.rows(); //checkpoint_central
 		htrks.fill(tracks);
 		int tracksPos = 0;
@@ -2959,6 +2959,7 @@ public class monitor2p2GeV {
                 	double vx = -d0 * Math.sin(phi0);
                 	double vy = d0 * Math.cos(phi0);
                         int q = bank.getInt("q", k);
+			int cvttrack = bank.getInt("ID", k);
 
                         float ptU   = ubank.getFloat("pt", k);
                         float d0U   = ubank.getFloat("d0", k);
@@ -3011,10 +3012,18 @@ public class monitor2p2GeV {
 				int crossId = bank.getShort("Cross" + i + "_ID", k);
 				if (crossId == 0) continue;
 
-				if (crossId < 1000) bstOntrackCrosses++;
-				else if (crossId >= 1000) bmtOntrackLayers++;
+				//if (crossId < 1000) bstOntrackCrosses++;
+				if (crossId >= 1000) bmtOntrackLayers++;
 			}
-			int bstOntrackLayers = 2 * bstOntrackCrosses;
+
+			int N_BST_clusters = 0;
+			for (int n = 0; n<bstclusters.rows(); n++) {
+				if (bstclusters.getInt("trkID",n)!=-1 && bstclusters.getInt("trkID",n) == cvttrack) {
+					N_BST_clusters++;
+				}	
+			}
+
+			int bstOntrackLayers = N_BST_clusters;
 			hbstOnTrkLayers.fill(bstOntrackLayers);
 			hbmtOnTrkLayers.fill(bmtOntrackLayers);
 			H_CVT_phi.fill(phi0);
@@ -3545,8 +3554,8 @@ public class monitor2p2GeV {
     		}
 
 
-		if(event.hasBank("CVTRec::Tracks") && event.hasBank("CVTRec::UTracks"))
-                    makeCVT(event.getBank("CVTRec::Tracks"), event.getBank("CVTRec::UTracks"));
+		if(event.hasBank("CVTRec::Tracks") && event.hasBank("CVTRec::UTracks") && event.hasBank("BSTRec::Clusters"))
+                    makeCVT(event.getBank("CVTRec::Tracks"), event.getBank("CVTRec::UTracks"), event.getBank("BSTRec::Clusters"));
 
 		if(partBank!=null){
 			makePhotons(partBank,event);

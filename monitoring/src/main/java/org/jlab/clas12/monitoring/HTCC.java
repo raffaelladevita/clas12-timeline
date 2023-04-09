@@ -24,8 +24,8 @@ public class HTCC {
     H1F timeAll;
     H1F npheAll;
     static int nBinsTime = 4000;
-    static double lowTime = -500;
-    static double highTime = 500;
+    static double lowTime = -15; //Apr2023 changed limits from -500, 500 ns to -15 to 15 ns per D. Carman's request
+    static double highTime = 15;
 
     public HTCC(int run, boolean reqwrite_volatile) {
         this.runNumber = run;
@@ -250,7 +250,7 @@ public class HTCC {
                             double phiHTCC = Math.toDegrees(recHTCC.getFloat("phi", recDeteHTCC.getInt("index", j)));
                             double timeCC = recDeteHTCC.getFloat("time", j);
                             double pathCC = recDeteHTCC.getFloat("path", j);
-                            npheAll.fill(nphe);
+                            //npheAll.fill(nphe); moved this command within the loop below per Dan's request, Apr 2023
                             if (returnNHits(thetaHTCC, phiHTCC) == 1) {
                                 double deltaTimeCC = timeCC - pathCC/PhysicsConstants.speedOfLight() - startTime;
                                 halfSector = returnHalfSector(phiHTCC);
@@ -259,6 +259,7 @@ public class HTCC {
                                 hiNphePMTOneHit.get(pmt - 1).fill(nphe);
                                 hiTimePMTOneHit.get(pmt - 1).fill(deltaTimeCC);
                                 timeAll.fill(deltaTimeCC);
+				npheAll.fill(nphe);
                             }
                         }
                     }

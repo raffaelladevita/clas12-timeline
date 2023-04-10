@@ -2,6 +2,7 @@ package org.jlab.clas12.monitoring;
 
 import java.io.*;
 import java.util.*;
+import org.jlab.clas.pdg.PhysicsConstants;
 
 import javax.xml.parsers.DocumentBuilder;
 
@@ -40,6 +41,7 @@ public class tof_monitor {
 	public H2F[] p1a_pad_edep, p1b_pad_edep, p2_pad_edep;
 	public H1F[][] p1a_edep, p1b_edep;
 	public H1F[] p2_edep, p1a_tdcadc_dt, p1b_tdcadc_dt, p2_tdcadc_dt;
+	public H1F[] ftof_ctof_vtdiff;
 	public H2F[] p1a_pad_dt, p1b_pad_dt, p2_pad_dt;
 	public H2F[] p1a_pad_dt_calib, p1b_pad_dt_calib, p2_pad_dt_calib, p1a_pad_dt_4nstrack, p1b_pad_dt_4nstrack;
 	public H1F[] p1a_dt_calib_all, p1b_dt_calib_all, p2_dt_calib_all, p1a_dt_4nstrack_all, p1b_dt_4nstrack_all;
@@ -155,6 +157,8 @@ public class tof_monitor {
 		DC_time_rescut = new H1F[6][6];
 		DC_time_nocut = new H1F[6][6];
 		f_time_invertedS = new F1D[6][6];
+
+		ftof_ctof_vtdiff = new H1F[6];
 
 		mean_tdiff = new float[6];
 		nev = new int[6];
@@ -280,15 +284,20 @@ public class tof_monitor {
 			p1a_tdcadc_dt[s].setTitleX("t_tdc-t_fadc (ns)");
 			p1a_tdcadc_dt[s].setTitleY("counts");
 
-			p1b_tdcadc_dt[s] =  new H1F(String.format("p1b_tdcadc_dt_S%d",s+1),"p1a_tdcadc",15750,-30.000,600.000);
+			p1b_tdcadc_dt[s] =  new H1F(String.format("p1b_tdcadc_dt_S%d",s+1),"p1b_tdcadc",15750,-30.000,600.000);
 			p1b_tdcadc_dt[s].setTitle(String.format("p1b t_tdc-t_fadc, S%d",s+1));
 			p1b_tdcadc_dt[s].setTitleX("t_tdc-t_fadc (ns)");
 			p1b_tdcadc_dt[s].setTitleY("counts");
 
-			p2_tdcadc_dt[s] =  new H1F(String.format("p2_tdcadc_dt_S%d",s+1),"p1a_tdcadc",15750,-30.000,600.000);
+			p2_tdcadc_dt[s] =  new H1F(String.format("p2_tdcadc_dt_S%d",s+1),"p2_tdcadc",15750,-30.000,600.000);
 			p2_tdcadc_dt[s].setTitle(String.format("p2 t_tdc-t_fadc, S%d",s+1));
 			p2_tdcadc_dt[s].setTitleX("t_tdc-t_fadc (ns)");
 			p2_tdcadc_dt[s].setTitleY("counts"); 
+
+			ftof_ctof_vtdiff[s] = new H1F(String.format("ftof-ctof_vtdiff_S%d",s+1),"ftof-ctof_vtdiff",300,-5.,5.);
+			ftof_ctof_vtdiff[s].setTitle(String.format("FTOFvt - CTOFvt, S%d",s+1));
+			ftof_ctof_vtdiff[s].setTitleX("FTOFvt - CTOFvt (ns)");
+			ftof_ctof_vtdiff[s].setTitleY("counts");
 
 			for(int sl=0;sl<6;sl++){
 				DC_residuals_trkDoca[s][sl] = new H2F(String.format("DC_residuals_trkDoca_%d_%d",s+1,sl+1),String.format("DC_residuals_trkDoca_%d_%d",s+1,sl+1),100,0,DCcellsizeSL[sl],400,-0.5,0.5);
@@ -557,6 +566,137 @@ public class tof_monitor {
 			}
 		}
 	}
+
+
+//To track 2-ns shifts, plot CTOF_vtime - FTOF_vtime, Apr 2023
+        public void fillCTOFFTOFTiming(DataBank part, DataBank sc, DataBank trk, DataBank ctof, DataBank cvttrk){
+		int N_electrons_FD=0;
+		int N_pim_CD=0;
+		double[] FTOF_vtime;
+		double[] CTOF_vtime;
+		FTOF_vtime = new double[10];
+		CTOF_vtime = new double[10];
+		//FTOF_vtime.fill(0);
+		//CTOF_vtime.fill(0);
+
+		int sector = 0;
+		int index_ftof = 0;
+		int index_ctof = 0;
+                for(int k=0;k<part.rows();k++) {
+                        byte charge = part.getByte("charge",k);
+                        int pid = part.getInt("pid",k);
+                        double px = part.getFloat("px",k);
+                        double py = part.getFloat("py",k);
+                        double pz = part.getFloat("pz",k);
+                        double vz = part.getFloat("vz",k);
+                        double vt = part.getFloat("vt",k);
+                        double mom = Math.sqrt(px*px+py*py+pz*pz);
+                        double theta = Math.toDegrees(Math.acos(pz/mom));
+
+                        double reducedchi2 = 10000.f;
+                        double energy = -100.f;
+
+			double track_redchi2 = 1000.f;
+
+                        int status = part.getShort("status", k);
+                        if (status<0) status = -status;
+                        boolean inDC = (status>=2000 && status<4000);
+                        boolean inCVT = (status>=4000 && status < 8000);
+
+                        for (int j=0;j<trk.rows();j++) {
+                                if (trk.getShort("pindex",j)==k) {
+                                        reducedchi2 = trk.getFloat("chi2",j)/trk.getShort("NDF",j);
+                                }
+                        }
+
+                        for (int j=0;j<sc.rows();j++) {
+                                if (sc.getShort("pindex",j)==k) {
+                                        if (sc.getByte("detector",j)==12) {
+                                                int pad = sc.getInt("component", j);
+                                                sector = sc.getInt("sector",j);
+                                                double time = sc.getFloat("time", j);
+                                                double pathlength = sc.getFloat("path",j);
+						energy = sc.getFloat("energy",j);
+                                                double flighttime = -10.0f;
+						//System.out.println(String.format(" Sector FTOF: "+sector+" inDC: "+inDC+" PID: "+pid+" Momentum "+mom+" theta: "+theta+" Reduced chi2: "+reducedchi2+"\n"));
+                                                //if (pid == 11 && inDC && mom > 0.4 && mom < 10. && energy > 0.5 && reducedchi2 < 75 && theta <= 11.) {
+						if (pid == 11 && inDC) {
+                                                        flighttime = pathlength/PhysicsConstants.speedOfLight();
+                                                        FTOF_vtime[N_electrons_FD] = (time - flighttime);
+							//System.out.println(String.format(" Sector FTOF: "+sector+"\n"));
+							N_electrons_FD++;
+
+                                                }
+                                        }
+                                        if (sc.getByte("detector",j)==4) {
+						double t = -100.0f;
+						double p = -100.0f;
+						double mom_cvt = -100.0f;
+						double energy_ctof = sc.getFloat("energy",j);
+						int pad_ctof = sc.getInt("component", j);
+						int sector_ctof = sc.getInt("sector",j);
+						int paddle_ctof = -100;
+						int sec_ctof = -100;
+						double e = -100.0f;
+						double beta, beta_ctof;
+						double ctof_vtime = -100.0;
+                                                for (int iCTOF=0;iCTOF<ctof.rows();iCTOF++){
+                                                        int trackid = ctof.getInt("trkID",iCTOF);
+                                                        int iCVT = -1;
+                                                        for (int i = 0; i < cvttrk.rows(); i++) {
+                                                                if (cvttrk.getShort("ID",i)==trackid) {
+                                                                iCVT = i;
+                                                                break;
+                                                                }
+                                                        }
+                                                        if (iCTOF == sc.getShort("index",j)) {
+                                                                if(!Float.isNaN(ctof.getFloat("energy",iCTOF)) && trackid>-1 && cvttrk.getInt("q", iCVT) < 0.){
+									e = ctof.getFloat("energy", iCTOF);
+                                                                        paddle_ctof = ctof.getInt("component",iCTOF);
+                                                                        track_redchi2 = cvttrk.getFloat("chi2", iCVT)/cvttrk.getShort("ndf", iCVT);
+									sec_ctof = ctof.getInt("sector",iCTOF);
+                                                                        t = ctof.getFloat("time",iCTOF);
+                                                                        p = ctof.getFloat("pathLength",iCTOF);
+                                                                        mom_cvt = cvttrk.getFloat("p",iCVT);
+									beta_ctof = mom_cvt/Math.sqrt(Math.pow(mom_cvt,2)+Math.pow(PhysicsConstants.massPionCharged(),2));
+                                                                        ctof_vtime = t - p/beta_ctof/PhysicsConstants.speedOfLight();
+                                                                }
+                                                        }
+                                                }
+                                                double pathlength_ctof = sc.getFloat("path",j);
+                                                double time_ctof = sc.getFloat("time",j);
+                                                double flighttime_ctof = -10.0f;
+                                                double timediff_ctof = -10.f;
+                                                //if (pid == -211 && inCVT && mom>0.4 && mom < 3.0 && track_redchi2 < 30. && e > 0.5 && paddle_ctof >= 13 && paddle_ctof <= 24) {
+						if (pid == -211 && inCVT && ctof_vtime!=-100.) {
+							beta = mom/Math.sqrt(Math.pow(mom,2)+Math.pow(PhysicsConstants.massPionCharged(),2));
+                                                        flighttime_ctof = pathlength_ctof/beta/PhysicsConstants.speedOfLight();
+                                                        timediff_ctof = (time_ctof - flighttime_ctof);
+							CTOF_vtime[N_pim_CD] = ctof_vtime;
+							N_pim_CD++;
+//System.out.println(String.format("Part momentum: "+mom+" CVT momentum: "+mom_cvt+" Scintillator time: "+time_ctof+" CTOF time: "+t+" Scntillator pathlength: "+pathlength_ctof+" CTOF pathlength: "+p+" VertTDiff_SCBank: "+timediff_ctof+" VertTDiff_CTOFBank: "+CTOF_vtime+"\n"));
+//System.out.println(String.format("CTOF pad: "+paddle_ctof+" SC pad: "+pad_ctof+" Energy CTOF: "+e+" Energy SC: "+energy_ctof+" Sector CTOF: "+sec_ctof+" Sector SC: "+sector_ctof+"\n"));
+                                                }
+
+
+                                        }
+                                }
+                        }
+                }
+		if (N_electrons_FD >= 1 && N_pim_CD >= 1 && sector != 0) {
+			for (int n=0;n<N_electrons_FD;n++) {
+				for (int nn=0;nn<N_pim_CD;nn++) {		
+			//System.out.println(String.format("Number electrons FD within cuts: "+N_electrons_FD+" Number of pi- CD within cuts: "+N_pim_CD+"\n"));
+					//System.out.println(String.format("FTOF vtime: "+FTOF_vtime[n]+" CTOF_vtime: "+CTOF_vtime[nn]+"\n"));
+					ftof_ctof_vtdiff[sector-1].fill(FTOF_vtime[n]-CTOF_vtime[nn]);
+				}
+			}
+		}
+
+        }
+
+
+
 	public void fillTOFHists(DataBank tofB, DataBank DCB){
 		for(int r=0;r<tofB.rows();r++){
 			int layer = tofB.getInt("layer", r);
@@ -685,7 +825,7 @@ public class tof_monitor {
 		hasRF = false;
 		e_part_ind = -1;
 		DataBank trackDetBank = null, hitBank = null, partBank = null, tofhits = null, scintillator = null, scintextras = null;
-		DataBank tofadc = null, toftdc = null, track = null, configbank = null;
+		DataBank ctofhits = null, cvttrack = null, tofadc = null, toftdc = null, track = null, configbank = null;
 		if(userTimeBased){
 			if(event.hasBank("TimeBasedTrkg::TBTracks"))trackDetBank = event.getBank("TimeBasedTrkg::TBTracks");
 			if(event.hasBank("TimeBasedTrkg::TBHits")){hitBank = event.getBank("TimeBasedTrkg::TBHits");}
@@ -705,6 +845,8 @@ public class tof_monitor {
 		if(event.hasBank("FTOF::hits")) tofhits = event.getBank("FTOF::hits");
 		if(event.hasBank("FTOF::adc")) tofadc = event.getBank("FTOF::adc");
 		if(event.hasBank("FTOF::tdc")) toftdc = event.getBank("FTOF::tdc");
+                if(event.hasBank("CTOF::hits")) ctofhits = event.getBank("CTOF::hits");
+                if(event.hasBank("CVTRec::Tracks")) cvttrack = event.getBank("CVTRec::Tracks");
 		
 		if(event.hasBank("RUN::rf"))fillRFTime(event.getBank("RUN::rf"));
 		if(event.hasBank("RUN::config")) {
@@ -715,6 +857,8 @@ public class tof_monitor {
 		if(partBank!=null) e_part_ind = makeElectron(partBank);
 		if(event.hasBank("FTOF::hits") && trackDetBank!=null)fillTOFHists(event.getBank("FTOF::hits") , trackDetBank);
 		if (partBank!=null && scintillator!=null && scintextras!=null && track!=null) fillTOFCalibHists(partBank,scintillator,scintextras,track);
+		if (partBank!=null && scintillator!=null && track!=null && ctofhits!=null && cvttrack!=null) fillCTOFFTOFTiming(partBank,scintillator,track,ctofhits,cvttrack);
+
 		if(userTimeBased && hitBank!=null && event.hasBank("RUN::config"))fillDC(hitBank, configbank);
 		if(toftdc!=null && tofadc!=null) fillTOFadctdcHists(tofadc,toftdc);
 	}
@@ -826,10 +970,22 @@ public class tof_monitor {
 			can_TOF_calib.cd(s+72);can_TOF_calib.draw(p2_edep[s]);
 		}
 
+		EmbeddedCanvas can_FTOF_CTOF = new EmbeddedCanvas();
+                can_FTOF_CTOF.setSize(3000,500);
+                can_FTOF_CTOF.divide(6,1);
+                can_FTOF_CTOF.setAxisTitleSize(18);
+                can_FTOF_CTOF.setAxisFontSize(18);
+                can_FTOF_CTOF.setTitleSize(18);
+                for(int s=0;s<6;s++){
+                	can_FTOF_CTOF.cd(s);can_FTOF_CTOF.draw(ftof_ctof_vtdiff[s]);
+		}
+
 		if(runNum>0){
 				if(!write_volatile)can_TOF_calib.save(String.format("plots"+runNum+"/TOF_calib.png"));
+				if(!write_volatile)can_FTOF_CTOF.save(String.format("plots"+runNum+"/FTOF_CTOF.png"));
 				if(write_volatile)can_TOF_calib.save(String.format("/volatile/clas12/rga/spring18/plots"+runNum+"/TOF_calib.png"));
 				System.out.println(String.format("saved plots"+runNum+"/TOF_calib.png"));
+				System.out.println(String.format("saved plots"+runNum+"/FTOF_CTOF.png"));
 		}
 		else{
 			can_TOF_occ.save(String.format("plots/TOF_calib.png"));
@@ -950,7 +1106,7 @@ public class tof_monitor {
 			dirout.addDataSet(p1a_pad_vt[s],p1b_pad_vt[s],p2_pad_vt[s],p1a_pad_dt[s],p1b_pad_dt[s],p2_pad_dt[s]);
 			dirout.addDataSet(p1a_pad_dt_calib[s],p1b_pad_dt_calib[s],p2_pad_dt_calib[s],p1a_dt_calib_all[s],p1b_dt_calib_all[s],p2_dt_calib_all[s],p2_edep[s]); 
 			dirout.addDataSet(p1a_pad_dt_4nstrack[s],p1b_pad_dt_4nstrack[s],p1a_dt_4nstrack_all[s],p1b_dt_4nstrack_all[s]);
-			dirout.addDataSet(p1a_tdcadc_dt[s], p1b_tdcadc_dt[s], p2_tdcadc_dt[s]);
+			dirout.addDataSet(p1a_tdcadc_dt[s], p1b_tdcadc_dt[s], p2_tdcadc_dt[s], ftof_ctof_vtdiff[s]);
 			for (int i=0;i<3;i++) {
 				dirout.addDataSet(p1a_edep[s][i],p1b_edep[s][i]);
 			}

@@ -23,7 +23,7 @@ public class HTCC {
     List<H1F> hiTimePMTOneHit = new ArrayList();
     H1F timeAll;
     H1F npheAll;
-    static int nBinsTime = 4000;
+    static int nBinsTime = 300;
     static double lowTime = -15; //Apr2023 changed limits from -500, 500 ns to -15 to 15 ns per D. Carman's request
     static double highTime = 15;
 

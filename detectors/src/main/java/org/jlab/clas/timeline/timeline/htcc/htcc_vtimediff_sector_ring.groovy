@@ -14,13 +14,8 @@ class htcc_vtimediff_sector_ring {
     [(0..<6), (0..<4)].combinations().each{sec,ring->
       def hlist = (0..<2).collect{side->dir.getObject("/HTCC/H_HTCC_vtime_s${sec+1}_r${ring+1}_side${side+1}")}
 
-      def h0 = hlist.head()
-      hlist.tail().each{h0.add(it)}
-
-      def maxbin = h0.getMaximumBin()
-
-      def h1 = new H1F(h0.getName(), h0.getTitle(), 200, h0.getDataX(maxbin)-100.5*h0.getDataEX(0), h0.getDataX(maxbin)+99.5*h0.getDataEX(0))
-      (0..<200).each{h1.setBinContent(it, h0.getBinContent(maxbin-100+it))}
+      def h1 = hlist.head()
+      hlist.tail().each{h1.add(it)}
 
       def f1 = HTCCFitter.timeIndPMT(h1)
 

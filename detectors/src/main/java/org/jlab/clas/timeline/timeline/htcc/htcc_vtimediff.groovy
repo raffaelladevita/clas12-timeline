@@ -13,12 +13,7 @@ class htcc_vtimediff {
   def processDirectory(dir, run) {
 
     [(0..<6), (0..<4), (0..<2)].combinations().each{s,r,side->
-      def h0 = dir.getObject(String.format("/HTCC/H_HTCC_vtime_s%d_r%d_side%d",s+1,r+1,side+1))
-      def maxbin = h0.getMaximumBin()
-
-      def h1 = new H1F(h0.getName(), h0.getTitle(), 200, h0.getDataX(maxbin)-100.5*h0.getDataEX(0), h0.getDataX(maxbin)+99.5*h0.getDataEX(0))
-      (0..<200).each{h1.setBinContent(it, h0.getBinContent(maxbin-100+it))}
-
+      def h1 = dir.getObject(String.format("/HTCC/H_HTCC_vtime_s%d_r%d_side%d",s+1,r+1,side+1))
       def f1 = HTCCFitter.timeIndPMT(h1)
 
       def ttl = "sector ${s+1} ring ${r+1} side ${side+1}"

@@ -104,6 +104,7 @@ def engines = [
     new ftof.ftof_tdcadc_p1a_zoomed(),
     new ftof.ftof_tdcadc_p1b_zoomed(),
     new ftof.ftof_tdcadc_p2_zoomed(),
+    new ftof.ftof_ctof_vtdiff(),
     new dc.dc_residuals_sec(),
     new dc.dc_residuals_sec_sl(),
     //new dc.dc_residuals_sec_rescut(),

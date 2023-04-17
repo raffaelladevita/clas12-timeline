@@ -1,5 +1,5 @@
-# clasqa
-Data monitoring tools for CLAS run QA
+# Physics QA Timeline Production
+Data monitoring tools for CLAS12 physics-level QA and [QADB](https://github.com/JeffersonLab/clasqaDB) production
 
 * Tracks the electron trigger count, normalized by the Faraday cup charge
 * Also implements helicity monitoring, by tracking inclusive beam spin asymmetries

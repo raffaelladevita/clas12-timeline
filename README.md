@@ -63,7 +63,7 @@ URL containing QA timelines will be printed at the end of the script output; for
 https://clas12mon.jlab.org/rga/pass1/version3_qa/tlsummary
 ```
 
-See [further details](https://github.com/JeffersonLab/clas12-timeline/blob/main/calib-qa/README.md) for more information.
+See [further details](https://github.com/JeffersonLab/clas12-timeline/blob/main/qa-detectors/README.md) for more information.
 
 
 

@@ -47,7 +47,7 @@ with the adequte arguments, e.g.)
 ```
 
 
-## calibration QA
+## Calibration QA
 
 To run,
 ```
@@ -64,6 +64,10 @@ https://clas12mon.jlab.org/rga/pass1/version3_qa/tlsummary
 ```
 
 See [further details](qa-detectors/README.md) for more information.
+
+## Physics QA and QADB
+
+See [documentation here](qa-physics).
 
 
 

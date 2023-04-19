@@ -6,7 +6,7 @@
 
 # arguments
 if [ -z "$CALIBQA" ]; then
-  source $(dirname $(realpath ${BASH_SOURCE[0]}))/../calib-qa/env.sh
+  source $(dirname $(realpath ${BASH_SOURCE[0]}))/../qa-detectors/env.sh
 fi
 if [ $# -lt 1 ]; then
   echo "USAGE: $0 [URL (or path) of timelines directory]"

@@ -30,7 +30,7 @@ def close() {
   out.mkdir('/timelines')
 
   data.each{sec,runs->
-    def grtl = new GraphErrors("sec $sec")
+    def grtl = new GraphErrors("sec$sec")
     grtl.setTitle("Average HTCC Number of Photoelectrons per sector")
     grtl.setTitleY("Average HTCC Number of Photoelectrons per sector")
     grtl.setTitleX("run number")

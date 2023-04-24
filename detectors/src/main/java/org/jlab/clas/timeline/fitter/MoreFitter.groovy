@@ -71,7 +71,7 @@ class MoreFitter {
 
     def pars = [amps, mns, sigs].combinations().collect{amp,mn,sig->
       f1.setParameters(amp,mn,sig)
-      DataFitter.fit(f1,h1,'Q')
+      fit(f1,h1,'Q')
       return [f1.getChiSquare(), *(0..2).collect{f1.getParameter(it)}]
     }.min{it[0]}
     f1.setParameters(*pars[1..-1])

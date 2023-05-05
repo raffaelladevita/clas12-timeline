@@ -1,12 +1,10 @@
-#!/usr/bin/bash
+#!/bin/bash
 
-SCRIPTPATH=`realpath $0`
-BINPATH=`dirname $SCRIPTPATH`
-DIRPATH=`dirname $BINPATH`
+d="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
 
-cd $DIRPATH/monitoring
+cd $d/../monitoring
 mvn package
 cd -
-cd $DIRPATH/detectors
+cd $d/../detectors
 mvn package
 cd -

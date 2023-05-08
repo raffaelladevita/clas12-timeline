@@ -56,10 +56,10 @@ flowchart TD
 
       buildCT[buildChargeTree.groovy]:::auto
       chargeTree{{outdat.$dataset/chargeTree.json}}:::data
-      deploy[deployTimelines.sh]:::auto
+      deploy0[deployTimelines.sh]:::auto
       outdatFiles --> buildCT
       buildCT --> chargeTree
-      timelineFiles --> deploy
+      timelineFiles --> deploy0
     end
 
     qaTree --> cd0[cd QA]:::manual
@@ -96,14 +96,14 @@ flowchart TD
     subgraph Finalize
       qa[exeQAtimelines.sh]:::manual
       qaTL{{outmon.$dataset.qa/$timeline.hipo}}:::timeline
-      deploy[deployTimelines.sh]:::manual
+      deploy1[deployTimelines.sh]:::manual
       release[releaseTimelines.sh]:::manual
       cd1 --> qa
       qaLoc --> qa
       qa --> qaTL
       qa -->|updates|qaTree
-      qaTL --> deploy
-      deploy --> release
+      qaTL --> deploy1
+      deploy1 --> release
       qaTree --> release
     end
 

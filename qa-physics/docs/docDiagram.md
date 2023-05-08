@@ -20,58 +20,90 @@ flowchart LR
 flowchart TD
 
     subgraph Automated by exeSlurm.sh
-      dst{{DSTs}}:::data --> monitorRead[monitorRead.groovy]:::auto
-      monitorRead --> monitorReadOut{{outdat/data_table_$run.dat<br>outmon/monitor_$run.hipo}}:::data
+      dst{{DSTs}}:::data
+      monitorRead[monitorRead.groovy]:::auto
+      monitorReadOut{{outdat/data_table_$run.dat<br>outmon/monitor_$run.hipo}}:::data
+      dst --> monitorRead
+      monitorRead --> monitorReadOut
     end
 
     subgraph Automated by exeTimelines.sh
-      monitorReadOut --> do[datasetOrganize.sh]:::auto
-      do --> dm{{outmon.$dataset/monitor_$run.hipo}}:::data
-      do --> dt{{outdat.$dataset/data_table.dat}}:::data
+      datasetOrganize[datasetOrganize.sh]:::auto
+      outmonFiles{{outmon.$dataset/monitor_$run.hipo}}:::data
+      outdatFiles{{outdat.$dataset/data_table.dat}}:::data
+      monitorReadOut --> datasetOrganize
+      datasetOrganize --> outmonFiles
+      datasetOrganize --> outdatFiles
       
-      dm --> monitorPlot[monitorPlot.groovy]:::auto
-      monitorPlot --> tl{{outmon.$dataset/$timeline.hipo}}:::timeline
-      
-      dt --> qaPlot[qaPlot.groovy]:::auto
-      dt --> man[create/edit<br>epochs.$dataset.txt<br>see mkTree.sh]:::manual
-      qaPlot --> monitorElec{{outmon.$dataset/monitorElec.hipo}}:::data
-      monitorElec --> qaCut[qaCut.groovy]:::auto
-      man --> qaCut
-      qaCut --> tl
-      qaCut --> qaTree{{outdat.$dataset/qaTree.json}}:::data
-      dt --> buildCT[buildChargeTree.groovy]:::auto
-      buildCT --> chargeTree{{outdat.$dataset/chargeTree.json}}:::data
-      
-      tl --> deploy[deployTimelines.sh]:::auto
+      monitorPlot[monitorPlot.groovy]:::auto
+      timelineFiles{{outmon.$dataset/$timeline.hipo}}:::timeline
+      outmonFiles --> monitorPlot
+      monitorPlot --> timelineFiles
+
+      qaPlot[qaPlot.groovy]:::auto
+      createEpochs[create/edit<br>epochs.$dataset.txt<br>see mkTree.sh]:::manual
+      monitorElec{{outmon.$dataset/monitorElec.hipo}}:::data
+      outdatFiles --> qaPlot
+      outdatFiles --> createEpochs
+      qaPlot --> monitorElec
+
+      qaCut[qaCut.groovy]:::auto
+      qaTree{{outdat.$dataset/qaTree.json}}:::data
+      monitorElec --> qaCut
+      createEpochs --> qaCut
+      qaCut --> timelineFiles
+      qaCut --> qaTree
+
+      buildCT[buildChargeTree.groovy]:::auto
+      chargeTree{{outdat.$dataset/chargeTree.json}}:::data
+      deploy[deployTimelines.sh]:::auto
+      outdatFiles --> buildCT
+      buildCT --> chargeTree
+      timelineFiles --> deploy
     end
 
     qaTree --> cd0[cd QA]:::manual
     
     subgraph Manual QA, in QA subdirectory
-      cd0 --> import[import.sh]:::manual
+
+      import[import.sh]:::manual
+      qaLoc{{qa/ -> qa.$dataset/<br>qa/qaTree.json}}:::data
+      parse[parseQAtree.groovy<br>called automatically<br>whenever needed]:::auto
+      qaTable{{qa/qaTable.dat}}:::data
+
+      cd0 --> import
       qaTree --> import
-      import --> qaLoc{{qa/ -> qa.$dataset/<br>qa/qaTree.json}}:::data
-      qaLoc --> parse[parseQAtree.groovy<br>called automatically<br>whenever needed]:::auto
-      parse --> qaTable{{qa/qaTable.dat}}:::data
+      import --> qaLoc
+      qaLoc --> parse
+      parse --> qaTable
       
-      qaLoc --> inspect[manual inspection<br>- view qaTable.dat<br>- view online monitor]:::manual
+      inspect[manual inspection<br>- view qaTable.dat<br>- view online monitor]:::manual
+      qaLoc --> inspect
       inspect --> edit{edit?}
-      
-      edit -->|yes|modify[modify.sh]:::manual
+
+
+      modify[modify.sh]:::manual
+      qaBak{{qa.$dataset/qaTree.json.*.bak}}:::data
+      undo[if needed, revert<br>modification with<br>undo.sh]:::manual
+      edit -->|yes|modify
       modify --> qaLoc
-      modify --> qaBak{{qa.$dataset/qaTree.json.*.bak}}:::data
-      qaBak --> undo[if needed, revert<br>modification with<br>undo.sh]:::manual
+      modify --> qaBak
+      qaBak --> undo
     end
 
     edit -->|no|cd1[cd ..]:::manual
 
     subgraph Finalize
-      cd1 --> qa[exeQAtimelines.sh]:::manual
+      qa[exeQAtimelines.sh]:::manual
+      qaTL{{outmon.$dataset.qa/$timeline.hipo}}:::timeline
+      deploy[deployTimelines.sh]:::manual
+      release[releaseTimelines.sh]:::manual
+      cd1 --> qa
       qaLoc --> qa
-      qa --> qaTL{{outmon.$dataset.qa/$timeline.hipo}}:::timeline
+      qa --> qaTL
       qa -->|updates|qaTree
-      qaTL --> deploy[deployTimelines.sh]:::manual
-      deploy --> release[releaseTimelines.sh]:::manual
+      qaTL --> deploy
+      deploy --> release
       qaTree --> release
     end
 

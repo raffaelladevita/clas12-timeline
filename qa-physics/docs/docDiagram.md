@@ -94,17 +94,18 @@ flowchart TD
     edit -->|no|cd1[cd ..]:::manual
 
     subgraph Finalize
-      qa[exeQAtimelines.sh]:::manual
+      exeQAtimelines[exeQAtimelines.sh]:::manual
+      qaTreeUpdated{{outdat.$dataset/qaTree.json}}:::data
       qaTL{{outmon.$dataset.qa/$timeline.hipo}}:::timeline
       deploy1[deployTimelines.sh]:::manual
       release[releaseTimelines.sh]:::manual
-      cd1 --> qa
-      qaLoc --> qa
-      qa --> qaTL
-      qa -->|updates|qaTree
+      cd1 --> exeQAtimelines
+      qaLoc --> exeQAtimelines
+      exeQAtimelines --> qaTL
+      exeQAtimelines -->|updates|qaTreeUpdated
       qaTL --> deploy1
       deploy1 --> release
-      qaTree --> release
+      qaTreeUpdated --> release
     end
 
     classDef data fill:#ff8,color:black

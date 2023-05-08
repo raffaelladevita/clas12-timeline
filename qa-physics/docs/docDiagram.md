@@ -19,12 +19,12 @@ flowchart LR
 ```mermaid
 flowchart TD
 
-    subraph Automated by exeSlurm.sh
+    subgraph Automated by exeSlurm.sh
       dst{{DSTs}}:::data --> monitorRead[monitorRead.groovy]:::auto
       monitorRead --> monitorReadOut{{outdat/data_table_$run.dat<br>outmon/monitor_$run.hipo}}:::data
     end
 
-    subraph Automated by exeTimelines.sh
+    subgraph Automated by exeTimelines.sh
       monitorReadOut --> do[datasetOrganize.sh]:::auto
       do --> dm{{outmon.$dataset/monitor_$run.hipo}}:::data
       do --> dt{{outdat.$dataset/data_table.dat}}:::data
@@ -47,7 +47,7 @@ flowchart TD
 
     qaTree --> cd0[cd QA]:::manual
     
-    subraph Manual QA, in QA subdirectory
+    subgraph Manual QA, in QA subdirectory
       cd0 --> import[import.sh]:::manual
       qaTree --> import
       import --> qaLoc{{qa/ -> qa.$dataset/<br>qa/qaTree.json}}:::data

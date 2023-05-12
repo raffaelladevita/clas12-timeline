@@ -17,7 +17,7 @@ flowchart LR
 ## Flowchart
 
 ```mermaid
-flowchart TD
+flowchart TB
 
     subgraph Automated by exeSlurm.sh
       dst{{DSTs}}:::data
@@ -41,7 +41,7 @@ flowchart TD
       monitorPlot --> timelineFiles
 
       qaPlot[qaPlot.groovy]:::auto
-      createEpochs[create/edit<br>epochs.$dataset.txt<br>see mkTree.sh]:::manual
+      createEpochs[create or edit<br>epochs/epochs.$dataset.txt<br>see mkTree.sh]:::manual
       monitorElec{{outmon.$dataset/monitorElec.hipo}}:::data
       outdatFiles --> qaPlot
       outdatFiles --> createEpochs
@@ -61,26 +61,21 @@ flowchart TD
       buildCT --> chargeTree
       timelineFiles --> deploy0
     end
-
-    qaTree --> cd0[cd QA]:::manual
     
     subgraph Manual QA, in QA subdirectory
-
       import[import.sh]:::manual
       qaLoc{{qa/ -> qa.$dataset/<br>qa/qaTree.json}}:::data
       parse[parseQAtree.groovy<br>called automatically<br>whenever needed]:::auto
       qaTable{{qa/qaTable.dat}}:::data
 
-      cd0 --> import
       qaTree --> import
       import --> qaLoc
       qaLoc --> parse
       parse --> qaTable
       
       inspect[manual inspection<br>- view qaTable.dat<br>- view online monitor]:::manual
-      qaLoc --> inspect
+      qaTable --> inspect
       inspect --> edit{edit?}
-
 
       modify[modify.sh]:::manual
       qaBak{{qa.$dataset/qaTree.json.*.bak}}:::data
@@ -91,15 +86,12 @@ flowchart TD
       qaBak --> undo
     end
 
-    edit -->|no|cd1[cd ..]:::manual
-
     subgraph Finalize
       exeQAtimelines[exeQAtimelines.sh]:::manual
       qaTreeUpdated{{outdat.$dataset/qaTree.json}}:::data
       qaTL{{outmon.$dataset.qa/$timeline.hipo}}:::timeline
       deploy1[deployTimelines.sh]:::manual
       release[releaseTimelines.sh]:::manual
-      cd1 --> exeQAtimelines
       qaLoc --> exeQAtimelines
       exeQAtimelines --> qaTL
       exeQAtimelines -->|updates|qaTreeUpdated
@@ -107,6 +99,11 @@ flowchart TD
       deploy1 --> release
       qaTreeUpdated --> release
     end
+
+    qaTree --> cd0[cd QA]:::manual
+    cd0 --> import
+    edit -->|no|cd1[cd ..]:::manual
+    cd1 --> exeQAtimelines
 
     classDef data fill:#ff8,color:black
     classDef auto fill:#8f8,color:black

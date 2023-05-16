@@ -188,6 +188,7 @@ sectors.each { s ->
 def grA,grA_good,grA_bad
 def grN,grN_good,grN_bad
 def grF,grF_good,grF_bad
+def grU,grU_good,grU_bad
 def grT,grT_good,grT_bad
 def histA_good, histA_bad
 def nGood,nBad
@@ -236,7 +237,9 @@ sectors.each { s ->
     insertEpochPlot(epochPlotTree[sectorIt][epochIt],
       "grN",defineEpochPlot("grN_epoch","Number ${electronT}s N",sectorIt,epochIt))
     insertEpochPlot(epochPlotTree[sectorIt][epochIt],
-      "grF",defineEpochPlot("grF_epoch","Faraday cup charge F [nC]",sectorIt,epochIt))
+      "grF",defineEpochPlot("grF_epoch","Gated Faraday Cup charge F [nC]",sectorIt,epochIt))
+    insertEpochPlot(epochPlotTree[sectorIt][epochIt],
+      "grU",defineEpochPlot("grU_epoch","Ungated Faraday Cup charge F [nC]",sectorIt,epochIt))
     insertEpochPlot(epochPlotTree[sectorIt][epochIt],
       "grT",defineEpochPlot("grT_epoch","Live Time",sectorIt,epochIt))
   }
@@ -251,7 +254,8 @@ def outHipoN = new TDirectory()
 def outHipoU = new TDirectory()
 def outHipoF = new TDirectory()
 def outHipoFA = new TDirectory()
-def outHipoT = new TDirectory()
+def outHipoLTT = new TDirectory()
+def outHipoLTA = new TDirectory()
 def outHipoSigmaN = new TDirectory()
 def outHipoSigmaF = new TDirectory()
 def outHipoRhoNF = new TDirectory()
@@ -304,7 +308,8 @@ def TLN = defineTimeline("Number of ${electronT}s N","N","N")
 def TLU = defineTimeline("Ungated Faraday Cup Charge [mC]","Charge","F")
 def TLF = defineTimeline("Faraday Cup Charge [mC]","Charge","F")
 def TLFA = defineTimeline("Accumulated Faraday Cup Charge [mC]","Charge","F")
-def TLT = defineTimeline("Live Time","Live Time","LT")
+def TLTT = defineTimeline("Live Time, from Total Gated FC Charge / Total Ungated FC Charge","Live Time","LT")
+def TLTA = defineTimeline("Live Time, from Average RUN::scaler::livetime","Live Time","LT")
 def TLsigmaN = defineTimeline("${electronT} Yield sigmaN / aveN","sigmaN/aveN","sigmaN")
 def TLsigmaF = defineTimeline("Faraday Cup Charge sigmaF / aveF","sigmaF/aveF","sigmaF")
 def TLrhoNF = defineTimeline("Correlation Coefficient rho_{NF}","rho_{NF}","rhoNF")
@@ -344,6 +349,7 @@ def addGraphsToHipo = { hipoFile ->
       grA_good,grA_bad,
       grN_good,grN_bad,
       grF_good,grF_bad,
+      grU_good,grU_bad,
       grT_good,grT_bad,
       histA_good,histA_bad,
       lineMedian, lineCutLo, lineCutHi
@@ -401,7 +407,7 @@ def listVar = { valList, wgtList, mu ->
 
   
 // subroutine to convert a graph into a list of values
-def listA, listN, listF, listT, listOne, listWgt
+def listA, listN, listF, listU, listT, listOne, listWgt
 def graph2list = { graph ->
   def lst = []
   graph.getDataSize(0).times { i -> lst.add(graph.getDataY(i)) }
@@ -411,11 +417,11 @@ def graph2list = { graph ->
 // loop over runs, apply the QA cuts, and fill 'good' and 'bad' graphs
 def muN, muF
 def varN, varF 
-def totN, totF, totA, totU, totT
+def totN, totF, totA, totU, totLT, aveLT
 def totFacc = sectors.collect{0}
 def reluncN, reluncF
 def NF,NFerrH,NFerrL,LT
-def valN,valF,valA
+def valN,valF,valU,valA
 def defectList = []
 def badfile
 inList.each { obj ->
@@ -433,10 +439,12 @@ inList.each { obj ->
       grA = inTdir.getObject(obj)
       grN = inTdir.getObject(obj.replaceAll("grA","grN"))
       grF = inTdir.getObject(obj.replaceAll("grA","grF"))
+      grU = inTdir.getObject(obj.replaceAll("grA","grU"))
       grT = inTdir.getObject(obj.replaceAll("grA","grT"))
       listA = graph2list(grA)
       listN = graph2list(grN)
       listF = graph2list(grF)
+      listU = graph2list(grU)
       listT = graph2list(grT)
       listOne = []
       listA.size().times{listOne<<1}
@@ -448,10 +456,12 @@ inList.each { obj ->
       // get totals
       totN = listN.sum()
       totF = listF.sum()
-      totA = totN/totF
-      totU = 0
-      listF.size().times{ totU += listF[it] / listT[it] }
-      totT = totF / totU
+      totU = listU.sum()
+      totA = totN / totF
+
+      // compute livetime
+      totLT = totF / totU // from total FC charge
+      aveLT = listT.size()>0 ? listT.sum() / listT.size() : 0 // average livetime for the run
 
       // accumulated charge (units converted nC -> mC)
       // - should be same for all sectors
@@ -477,8 +487,10 @@ inList.each { obj ->
       grA.getDataSize(0).times { i ->
         valN = grN.getDataY(i)
         valF = grF.getDataY(i)
+        valU = grU.getDataY(i)
         grN.setError(i,0,Math.sqrt(valN))
         grF.setError(i,0,Math.sqrt(valF))
+        grU.setError(i,0,Math.sqrt(valU))
         grA.setError(i,0,
           (valN/valF) * Math.sqrt(
             1/valN + 1/valF - 2 * corrNF * Math.sqrt(valN*valF) / (valN*valF)
@@ -491,6 +503,7 @@ inList.each { obj ->
       (grA_good,grA_bad) = splitGraph(grA)
       (grN_good,grN_bad) = splitGraph(grN)
       (grF_good,grF_bad) = splitGraph(grF)
+      (grU_good,grU_bad) = splitGraph(grU)
       (grT_good,grT_bad) = splitGraph(grT)
 
       // loop through points in grA and fill good and bad graphs
@@ -553,19 +566,23 @@ inList.each { obj ->
           copyPoint(grA,grA_bad,i)
           copyPoint(grN,grN_bad,i)
           copyPoint(grF,grF_bad,i)
+          copyPoint(grU,grU_bad,i)
           copyPoint(grT,grT_bad,i)
           addEpochPlotPoint(epochPlotTree[sector][epoch]['grA_bad'],grA,i,runnum)
           addEpochPlotPoint(epochPlotTree[sector][epoch]['grN_bad'],grN,i,runnum)
           addEpochPlotPoint(epochPlotTree[sector][epoch]['grF_bad'],grF,i,runnum)
+          addEpochPlotPoint(epochPlotTree[sector][epoch]['grU_bad'],grU,i,runnum)
           addEpochPlotPoint(epochPlotTree[sector][epoch]['grT_bad'],grT,i,runnum)
         } else {
           copyPoint(grA,grA_good,i)
           copyPoint(grN,grN_good,i)
           copyPoint(grF,grF_good,i)
+          copyPoint(grU,grU_good,i)
           copyPoint(grT,grT_good,i)
           addEpochPlotPoint(epochPlotTree[sector][epoch]['grA_good'],grA,i,runnum)
           addEpochPlotPoint(epochPlotTree[sector][epoch]['grN_good'],grN,i,runnum)
           addEpochPlotPoint(epochPlotTree[sector][epoch]['grF_good'],grF,i,runnum)
+          addEpochPlotPoint(epochPlotTree[sector][epoch]['grU_good'],grU,i,runnum)
           addEpochPlotPoint(epochPlotTree[sector][epoch]['grT_good'],grT,i,runnum)
         }
       }
@@ -591,7 +608,8 @@ inList.each { obj ->
       addGraphsToHipo(outHipoU)
       addGraphsToHipo(outHipoF)
       addGraphsToHipo(outHipoFA)
-      addGraphsToHipo(outHipoT)
+      addGraphsToHipo(outHipoLTT)
+      addGraphsToHipo(outHipoLTA)
       addGraphsToHipo(outHipoSigmaN)
       addGraphsToHipo(outHipoSigmaF)
       addGraphsToHipo(outHipoRhoNF)
@@ -611,7 +629,8 @@ inList.each { obj ->
       TLU[sector-1].addPoint(runnum,totU/1e6,0,0) // (converted nC->mC)
       TLF[sector-1].addPoint(runnum,totF/1e6,0,0) // (converted nC->mC)
       TLFA[sector-1].addPoint(runnum,totFacc[sector-1],0,0)
-      TLT[sector-1].addPoint(runnum,totT,0,0)
+      TLTT[sector-1].addPoint(runnum,totLT,0,0)
+      TLTA[sector-1].addPoint(runnum,aveLT,0,0)
       TLsigmaN[sector-1].addPoint(runnum,reluncN,0,0)
       TLsigmaF[sector-1].addPoint(runnum,reluncF,0,0)
       TLrhoNF[sector-1].addPoint(runnum,corrNF,0,0)
@@ -688,10 +707,11 @@ writeTimeline(outHipoA,TLA,"${electronN}_yield_normalized_values")
 writeTimeline(outHipoN,TLN,"${electronN}_yield_values")
 writeTimeline(outHipoSigmaN,TLsigmaN,"${electronN}_yield_stddev")
 if(!useFT) {
-  writeTimeline(outHipoU,TLU,"ungated_faraday_cup_charge",true)
-  writeTimeline(outHipoF,TLF,"faraday_cup_charge",true)
-  writeTimeline(outHipoFA,TLFA,"accumulated_faraday_cup_charge",true)
-  writeTimeline(outHipoT,TLT,"live_time",true)
+  writeTimeline(outHipoU,TLU,"faraday_cup_charge_ungated",true)
+  writeTimeline(outHipoF,TLF,"faraday_cup_charge_gated",true)
+  writeTimeline(outHipoFA,TLFA,"faraday_cup_charge_gated_accumulated",true)
+  writeTimeline(outHipoLTT,TLTT,"live_time_from_fc_charge_totals",true)
+  writeTimeline(outHipoLTA,TLTA,"live_time_average",true)
   writeTimeline(outHipoSigmaF,TLsigmaF,"faraday_cup_stddev",true)
 }
 //writeTimeline(outHipoRhoNF,TLrhoNF,"faraday_cup_vs_${electronN}_yield_correlation",true)

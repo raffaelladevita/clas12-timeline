@@ -98,8 +98,8 @@ cutsFile.eachLine { line ->
         else addCut('sec'+sec)
       }
       else if(det=='ec') {
-        if(timeline=='ec_Sampling') addCut('sec'+sec)
-        else if(sec==1) addCut(lastWord(timeline)) // sector independent
+        if(timeline.contains("ec_gg_m")) addCut(lastWord(timeline))
+        else addCut('sec'+sec)
       }
       else if(det=='dc') {
         (1..6).each{ sl ->

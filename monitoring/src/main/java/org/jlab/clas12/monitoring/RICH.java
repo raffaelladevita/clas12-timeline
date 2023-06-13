@@ -947,16 +947,18 @@ public class RICH{
 	    }   
 	System.out.println("Total : " + count + " events");
 
-	ana.FillFWHMHistogram();
-	ana.FillFWHMHistogram();
-	ana.CalcCounters();
-
-	ana.plot_DeltaT();
-	ana.plot_Alignment();
-	ana.plot_Counters();
-
+	ana.postProcess()
 	ana.write();
     }   
+
+    public void postProcess(){
+		this.FillFWHMHistogram();
+		this.CalcCounters();
+
+		this.plot_DeltaT();
+		this.plot_Alignment();
+		this.plot_Counters();
+    }
 
     public void write() {
 	TDirectory dirout = new TDirectory();

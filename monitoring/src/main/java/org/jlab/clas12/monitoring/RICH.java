@@ -978,6 +978,7 @@ public class RICH{
 	}
 
 	dirout.addDataSet(H_trk_match);
+	dirout.addDataSet(H_ntrigele);
 
 
 	if(!write_volatile){

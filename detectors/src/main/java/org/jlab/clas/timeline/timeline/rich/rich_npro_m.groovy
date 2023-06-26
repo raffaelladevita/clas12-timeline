@@ -4,7 +4,7 @@ import org.jlab.groot.data.TDirectory
 import org.jlab.groot.data.GraphErrors
 import org.jlab.clas.timeline.fitter.RICHFitter;
 
-class rich_dt_m {
+class rich_npro_m {
 
 
 def data = new ConcurrentHashMap()
@@ -17,30 +17,33 @@ def data = new ConcurrentHashMap()
 
       def ttl = "sector${sec}"
 
-      def h1 = dir.getObject("/RICH/H_RICH_dt_m${module}")
+      def he = dir.getObject("/RICH/H_RICH_ntrigele")
+      //float nele = he.getBinContent(sec-1)
+      float nele = he.getEntries()
 
-      def f1 = RICHFitter.timefit(h1)
-      def meandt = 0
-      def sigmadt = 0
-      if (h1.getEntries() > 100) {
-	meandt = f1.getParameter(1)
-	sigmadt = f1.getParameter(2)
+      def h1 = dir.getObject("/RICH/H_RICH_npro_tile_m${module}")
+      float np = h1.getEntries()
+      float rp = 0;
+      if (nele > 0) {
+	rp = np / nele
       }
-      data.computeIfAbsent(ttl, {[]}).add([run:run, h1:h1, f1:f1, mean:meandt, sigma:sigmadt.abs()])
+
+      data.computeIfAbsent(ttl, {[]}).add([run:run, h1:h1, rat:rp])
+
     }
   }
 
 
   def close() {
-    ['mean', 'sigma'].each{ name ->
+    ['rat'].each{ name ->
       TDirectory out = new TDirectory()
       out.mkdir('/timelines')
 
       data.sort{it.key}.each{ttl, runs->
 
         def grtl = new GraphErrors(ttl)
-        grtl.setTitle("#Delta T ${name} for e-, ${ttl}")
-        grtl.setTitleY("#Delta T ${name} (ns)")
+        grtl.setTitle("RICH protons per trigger e-, ${ttl}")
+        grtl.setTitleY("N(p)/N(e), ${ttl}")
         grtl.setTitleX("run number")
 
         runs.sort{it.run}.each{
@@ -48,7 +51,6 @@ def data = new ConcurrentHashMap()
           out.cd("/${it.run}")
 
           out.addDataSet(it.h1)
-          out.addDataSet(it.f1)
 
           grtl.addPoint(it.run, it[name], 0, 0)
         }
@@ -56,7 +58,9 @@ def data = new ConcurrentHashMap()
         out.cd('/timelines')
         out.addDataSet(grtl)
        }
-       out.writeFile("rich_dt_m_${name}.hipo")
+       out.writeFile("rich_npro_m_${name}.hipo")
     }
+
   }
+
 }

@@ -4,7 +4,10 @@ import org.jlab.groot.data.TDirectory
 import org.jlab.groot.data.GraphErrors
 import org.jlab.clas.timeline.fitter.RICHFitter;
 
-class rich_dt_m {
+import org.jlab.groot.data.H1F;
+import org.jlab.groot.data.H2F;
+
+class rich_npho_sphe_m {
 
 
 def data = new ConcurrentHashMap()
@@ -17,30 +20,35 @@ def data = new ConcurrentHashMap()
 
       def ttl = "sector${sec}"
 
-      def h1 = dir.getObject("/RICH/H_RICH_dt_m${module}")
+      def h1 = dir.getObject("/RICH/H_RICH_npho_m${module}_top3")
+      int nb = h1.getDataSize(0)
+      H2F h2 = h1.rebinX(nb);
 
-      def f1 = RICHFitter.timefit(h1)
-      def meandt = 0
-      def sigmadt = 0
+      ArrayList<H1F> h2_sl = h2.getSlicesX();
+      H1F h2_prox = h2_sl.get(0);
+      h2_prox.setTitle("RICH Module ${module} sector ${sec}, Number of spherical photons per e-")
+	
+      float meand = 0
       if (h1.getEntries() > 100) {
-	meandt = f1.getParameter(1)
-	sigmadt = f1.getParameter(2)
+	meand = h2_prox.getMean()
       }
-      data.computeIfAbsent(ttl, {[]}).add([run:run, h1:h1, f1:f1, mean:meandt, sigma:sigmadt.abs()])
+
+      data.computeIfAbsent(ttl, {[]}).add([run:run, h1:h2_prox, mean:meand])
+
     }
   }
 
 
   def close() {
-    ['mean', 'sigma'].each{ name ->
+    ['mean'].each{ name ->
       TDirectory out = new TDirectory()
       out.mkdir('/timelines')
 
       data.sort{it.key}.each{ttl, runs->
 
         def grtl = new GraphErrors(ttl)
-        grtl.setTitle("#Delta T ${name} for e-, ${ttl}")
-        grtl.setTitleY("#Delta T ${name} (ns)")
+        grtl.setTitle("Number of spherical photons per e-, ${ttl}")
+        grtl.setTitleY("N_#gamma, ${ttl}")
         grtl.setTitleX("run number")
 
         runs.sort{it.run}.each{
@@ -48,7 +56,6 @@ def data = new ConcurrentHashMap()
           out.cd("/${it.run}")
 
           out.addDataSet(it.h1)
-          out.addDataSet(it.f1)
 
           grtl.addPoint(it.run, it[name], 0, 0)
         }
@@ -56,7 +63,9 @@ def data = new ConcurrentHashMap()
         out.cd('/timelines')
         out.addDataSet(grtl)
        }
-       out.writeFile("rich_dt_m_${name}.hipo")
+       out.writeFile("rich_npho_sphe_m_${name}.hipo")
     }
+
   }
+
 }

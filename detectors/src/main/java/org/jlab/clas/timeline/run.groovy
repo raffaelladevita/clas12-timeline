@@ -117,9 +117,20 @@ def engines = [
     new dc.dc_t0_even_sec_sl(),
     new dc.dc_t0_odd_sec_sl(),
     new dc.dc_tmax_sec_sl()],
-  // out_RICH: [new rich.rich_timediff(),
-  //   new rich.rich_fwhm_pmt()]
-  out_RICH: [new rich.rich_dt_m()]
+  out_RICH: [new rich.rich_dt_m(), 
+       new rich.rich_trk_m(), 
+       new rich.rich_etac_dir_m(), 
+       new rich.rich_etac_plan_m(), 
+       new rich.rich_etac_sphe_m(), 
+       new rich.rich_npho_dir_m(), 
+       new rich.rich_npho_plan_m(), 
+       new rich.rich_npho_sphe_m(), 
+       new rich.rich_npim_m(), 
+       new rich.rich_npip_m(), 
+       new rich.rich_nkm_m(), 
+       new rich.rich_nkp_m(), 
+       new rich.rich_npro_m(), 
+       new rich.rich_npbar_m()]
 ]
 
 

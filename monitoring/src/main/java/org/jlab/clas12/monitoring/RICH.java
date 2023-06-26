@@ -56,13 +56,14 @@ public class RICH{
     public static int RICHUSEDFLAG = 111;
     //public static int RICHUSEDFLAG = 11;
 
+    public static float pixelsize = 0.6f;
+
     public int BINWINDOW;
     public PaveText statBox = null;
     public PadAttributes attr1;
 
     public H2F[] H_dt_channel = new H2F[nMODULES];
     public H1F[] H_dt = new H1F[nMODULES];
-    public H1F[] H_dt_FWHM = new H1F[nMODULES];
     public H1F[] H_dt_RMS = new H1F[nMODULES];
     public H1F[] H_dt_MEAN = new H1F[nMODULES];
     public H1F[][] H_dt_PMT = new H1F[nPMTS][nMODULES];
@@ -82,6 +83,7 @@ public class RICH{
 
     public H1F H_ntrigele;
 
+    public H1F H_setup;
 
     public int eventN;
 
@@ -92,6 +94,8 @@ public class RICH{
     public ConstantsManager ccdb;
     public IndexedTable setupTable;
     public IndexedTable aerogelTable;
+
+    public static boolean verbose = false;
 
 
     public RICH(int reqR, float reqEb, boolean reqTimeBased, boolean reqwrite_volatile){
@@ -119,6 +123,7 @@ public class RICH{
 	for (int m=1; m<=nMODULES; m++) {
 	    aerogelTable = ccdb.getConstants(runNum, rich_aerogel[m-1]);
 	    int sector = GetSector(m);
+
 	    for (int l=0; l<nLAYERS; l++) {
 		int layer = l + 201;
 		for (int t=1; t<=nMAXTILES-1; t++) {
@@ -158,14 +163,6 @@ public class RICH{
 	    H_dt_channel[m-1].setTitleX("channel");
 	    H_dt_channel[m-1].setTitleY("T_meas - T_calc (ns)");
 
-	    histitle = String.format("RICH Module %d, Full-Width at Half Maximum", m);
-	    histname = String.format("H_RICH_dt_FWHM_m%d", m);
-	    H_dt_FWHM[m-1] = new H1F(histname, histitle, nPMTS, 0.5, 0.5+nPMTS);
-	    H_dt_FWHM[m-1].setTitle(histitle);
-	    H_dt_FWHM[m-1].setTitleX("PMT number");
-	    H_dt_FWHM[m-1].setTitleY("FWHM of DeltaT (ns)");
-	    H_dt_FWHM[m-1].setOptStat("1111111");
-	    
 	    histitle = String.format("RICH Module %d, MEAN of DeltaT within BINWINDOW bins around the Max", m);
 	    histname = String.format("H_RICH_dt_MEAN_m%d", m);
 	    H_dt_MEAN[m-1] = new H1F(histname, histitle, nPMTS, 0.5, 0.5+nPMTS);
@@ -207,34 +204,34 @@ public class RICH{
 	    histname = String.format("H_RICH_trk_match_m%d", m);
 	    H_trk_match[m-1] = new H1F(histname, histitle, 100, 0, 10);
 	    H_trk_match[m-1].setTitle(histitle);
-	    H_trk_match[m-1].setTitleX("Distance (mm)");
+	    H_trk_match[m-1].setTitleX("Distance (cm)");
 	    H_trk_match[m-1].setOptStat("1111111");
 
 
-	    histitle = String.format("RICH Module %d, Number of pi+ per trigger vs tile", m);
+	    histitle = String.format("RICH Module %d, Number of pi+ vs tile", m);
 	    histname = String.format("H_RICH_npip_tile_m%d", m);
 	    H_npip_tile[m-1] = new H1F(histname, histitle, nLAYERS*nMAXTILES, -0.5, nLAYERS*nMAXTILES-0.5);
 	    H_npip_tile[m-1].setTitle(histitle);
 	    H_npip_tile[m-1].setTitleX("Aerogel tile number");
-	    H_npip_tile[m-1].setTitleY("N(pi+) / N(trig)");
+	    H_npip_tile[m-1].setTitleY("N(pi+)");
 	    H_npip_tile[m-1].setOptStat("1111111");
 
 
-	    histitle = String.format("RICH Module %d, Number of pi- per trigger vs tile", m);
+	    histitle = String.format("RICH Module %d, Number of pi- vs tile", m);
 	    histname = String.format("H_RICH_npim_tile_m%d", m);
 	    H_npim_tile[m-1] = new H1F(histname, histitle, nLAYERS*nMAXTILES, -0.5, nLAYERS*nMAXTILES-0.5);
 	    H_npim_tile[m-1].setTitle(histitle);
 	    H_npim_tile[m-1].setTitleX("Aerogel tile number");
-	    H_npim_tile[m-1].setTitleY("N(pi+) / N(trig)");
+	    H_npim_tile[m-1].setTitleY("N(pi+)");
 	    H_npim_tile[m-1].setOptStat("1111111");
 
 
-	    histitle = String.format("RICH Module %d, Number of K+ per trigger vs tile", m);
+	    histitle = String.format("RICH Module %d, Number of K+ vs tile", m);
 	    histname = String.format("H_RICH_nkp_tile_m%d", m);
 	    H_nkp_tile[m-1] = new H1F(histname, histitle, nLAYERS*nMAXTILES, -0.5, nLAYERS*nMAXTILES-0.5);
 	    H_nkp_tile[m-1].setTitle(histitle);
 	    H_nkp_tile[m-1].setTitleX("Aerogel tile number");
-	    H_nkp_tile[m-1].setTitleY("N(K+) / N(trig)");
+	    H_nkp_tile[m-1].setTitleY("N(K+)");
 	    H_nkp_tile[m-1].setOptStat("1111111");
 
 
@@ -243,25 +240,25 @@ public class RICH{
 	    H_nkm_tile[m-1] = new H1F(histname, histitle, nLAYERS*nMAXTILES, -0.5, nLAYERS*nMAXTILES-0.5);
 	    H_nkm_tile[m-1].setTitle(histitle);
 	    H_nkm_tile[m-1].setTitleX("Aerogel tile number");
-	    H_nkm_tile[m-1].setTitleY("N(K+) / N(trig)");
+	    H_nkm_tile[m-1].setTitleY("N(K+)");
 	    H_nkm_tile[m-1].setOptStat("1111111");
 
 
-	    histitle = String.format("RICH Module %d, Number of protons per trigger vs tile", m);
+	    histitle = String.format("RICH Module %d, Number of protons vs tile", m);
 	    histname = String.format("H_RICH_npro_tile_m%d", m);
 	    H_npro_tile[m-1] = new H1F(histname, histitle, nLAYERS*nMAXTILES, -0.5, nLAYERS*nMAXTILES-0.5);
 	    H_npro_tile[m-1].setTitle(histitle);
 	    H_npro_tile[m-1].setTitleX("Aerogel tile number");
-	    H_npro_tile[m-1].setTitleY("N(p) / N(trig)");
+	    H_npro_tile[m-1].setTitleY("N(p)");
 	    H_npro_tile[m-1].setOptStat("1111111");
 
 
-	    histitle = String.format("RICH Module %d, Number of pbar per trigger vs tile", m);
+	    histitle = String.format("RICH Module %d, Number of pbar vs tile", m);
 	    histname = String.format("H_RICH_npbar_tile_m%d", m);
 	    H_npbar_tile[m-1] = new H1F(histname, histitle, nLAYERS*nMAXTILES, -0.5, nLAYERS*nMAXTILES-0.5);
 	    H_npbar_tile[m-1].setTitle(histitle);
 	    H_npbar_tile[m-1].setTitleX("Aerogel tile number");
-	    H_npbar_tile[m-1].setTitleY("N(pbar) / N(trig)");
+	    H_npbar_tile[m-1].setTitleY("N(pbar)");
 	    H_npbar_tile[m-1].setOptStat("1111111");
 
 	}
@@ -276,6 +273,16 @@ public class RICH{
 	H_ntrigele.setOptStat("1111111");
 
 
+
+	histitle = String.format("RICH setup");
+	histname = String.format("H_RICH_setup");
+	H_setup = new H1F(histname, histitle, nMODULES, 0.5, nMODULES+0.5);
+	H_setup.setTitle(histitle);
+	H_setup.setTitleX("Module");
+	H_setup.setTitleY("Sector");
+	H_setup.setOptStat("1111111");
+	for (int m=1; m<=nMODULES; m++) H_setup.fill(m, GetSector(m));
+
     }
 
 
@@ -285,31 +292,38 @@ public class RICH{
 	    int pindex = hadr.getInt("pindex", k);
 
 	    int pid = part.getInt("pid", pindex);
-	    if (Math.abs(pid) != LundElectron) {
-		int rich_pid = hadr.getInt("best_PID", k);
-		float rich_rq = hadr.getFloat("RQ", k);
-		float rich_chi2 = hadr.getFloat("best_c2", k);
-		float rich_ntot = hadr.getFloat("best_ntot", k);
-		float rich_mchi2 = hadr.getFloat("mchi2", k);
-		int rich_layer = hadr.getInt("emilay", k);
-		int rich_tile = 1 + hadr.getInt("emico", k);
+	    float chi2pid = part.getFloat("chi2pid", pindex);
 
-		int sector = 0;
-		int module = 0;
-		for (int j = 0; j< phot.rows(); j++) {
-		    int phot_pindex = phot.getInt("pindex", j);
-		    if (phot_pindex == pindex) {
-			sector = phot.getInt("sector", j);
-			module = ModuleInSector[sector-1];
-			break;
-		    }
+	    int rich_pid = hadr.getInt("best_PID", k);
+	    float rich_rq = hadr.getFloat("RQ", k);
+	    float rich_chi2 = hadr.getFloat("best_c2", k);
+	    float rich_ntot = hadr.getFloat("best_ntot", k);
+	    float rich_mchi2 = pixelsize * hadr.getFloat("mchi2", k);
+	    int rich_layer = hadr.getInt("emilay", k);
+	    int rich_tile = 1 + hadr.getInt("emico", k);
+	    
+	    int sector = 0;
+	    int module = 0;
+	    for (int j = 0; j< phot.rows(); j++) {
+		int phot_pindex = phot.getInt("pindex", j);
+		if (phot_pindex == pindex) {
+		    sector = phot.getInt("sector", j);
+		    module = ModuleInSector[sector-1];
+		    break;
 		}
+	    }
+	    
+	    if (module == 0) continue;
 
-		if (module == 0) continue;
-
+	    /* Filling the track matching for electrons */
+	    float chi2pid_max = 3;
+	    if ( (Math.abs(pid) == LundElectron) && (Math.abs(chi2pid) < chi2pid_max) )  {
 		if (rich_mchi2 > 0) H_trk_match[module-1].fill(rich_mchi2);
+	    }
 
 
+	    /* Filling hadron counters */
+	    if (Math.abs(pid) != LundElectron)  {
 		if (AcceptRichID(rich_pid, rich_rq, rich_chi2, rich_ntot) == 1) {
 		    int bin = rich_layer*nMAXTILES + rich_tile;
 
@@ -435,12 +449,11 @@ public class RICH{
 
     }    
 
-    public void FillFWHMHistogram() {
+    public void FillTimeHistogram() {
 	int npeakMin = 20;
 
 	for (int m=1; m<=nMODULES; m++) {
 
-	    H_dt_FWHM[m-1].reset();
 	    H_dt_RMS[m-1].reset();
 	    H_dt_MEAN[m-1].reset();
 	    H2F H_dt_channel_rb = H_dt_channel[m-1].rebinX(nANODES);
@@ -456,18 +469,15 @@ public class RICH{
 		int binL = binM - BINWINDOW/2;
 		int binH = binM + BINWINDOW/2;
 		float rms = 0;
-		float fwhm = 0;
 		float mean = 0;
 
 		int nentries = getHistoEntries(H_dt_PMT[p][m-1]);
-		//System.out.println(String.format("Module " + m + " PMT " + (p+1) + " ne=" + nentries));
 
 		if (nentries >= npeakMin) {
 		    mean =  getMEAN(H_dt_PMT[p][m-1], binL, binH);
 		    rms =  getRMS(H_dt_PMT[p][m-1], binL, binH);
-		    fwhm = getFWHM(H_dt_PMT[p][m-1]);
 		}
-		H_dt_FWHM[m-1].fill(p+1,fwhm);
+
 		H_dt_RMS[m-1].fill(p+1,rms);
 		H_dt_MEAN[m-1].fill(p+1,mean);
 
@@ -546,7 +556,7 @@ public class RICH{
 
 	EmbeddedCanvas can_RICH  = new EmbeddedCanvas();
 	can_RICH.setSize(3000,5000);
-	can_RICH.divide(nMODULES,5);
+	can_RICH.divide(nMODULES, 4);
 	can_RICH.setAxisTitleSize(18);
 	can_RICH.setAxisFontSize(18);
 	can_RICH.setTitleSize(18);
@@ -561,12 +571,9 @@ public class RICH{
 	    can_RICH.cd(ipad);can_RICH.draw(H_dt_channel[m-1]);
 
 	    ipad = 4 + (m-1);
-	    can_RICH.cd(ipad);can_RICH.draw(H_dt_FWHM[m-1]);
-
-	    ipad = 6 + (m-1);
 	    can_RICH.cd(ipad);can_RICH.draw(H_dt_RMS[m-1]);
 
-	    ipad = 8 + (m-1);
+	    ipad = 6 + (m-1);
 	    can_RICH.cd(ipad);can_RICH.draw(H_dt_MEAN[m-1]);
 
 	}
@@ -753,10 +760,12 @@ public class RICH{
 
 	}
 
-	//for (int m=1; m<=nMODULES; m++) {
-	//  System.out.println(String.format("RUN EtaC module " + m));
-	//  System.out.println(String.format("RUN  "+runNum+"  "+m1[0][m-1]+" "+s1[0][m-1]+"  "+m1[1][m-1]+" "+s1[1][m-1]+"  "+m1[2][m-1]+" "+s1[2][m-1]));
-	//}
+	if (verbose) {
+	    for (int m=1; m<=nMODULES; m++) {
+	      System.out.println(String.format("RUN EtaC module " + m));
+	      System.out.println(String.format("RUN  "+runNum+"  "+m1[0][m-1]+" "+s1[0][m-1]+"  "+m1[1][m-1]+" "+s1[1][m-1]+"  "+m1[2][m-1]+" "+s1[2][m-1]));
+	    }
+	}
 
 	if(runNum>0){
 	    if(!write_volatile)can_RICH_detac.save(String.format("plots"+runNum+"/RICH_EtaC.png"));
@@ -805,11 +814,12 @@ public class RICH{
 
 	}
 
-	//for (int m=1; m<=nMODULES; m++) {
-	//  System.out.println(String.format("RUN Npho module " + m));
-	//  System.out.println(String.format("RUN  "+runNum+"  "+m1[0][m-1]+" "+s1[0][m-1]+"  "+m1[1][m-1]+" "+s1[1][m-1]+"  "+m1[2][m-1]+" "+s1[2][m-1]));
-	//}
-
+	if (verbose) {
+	    for (int m=1; m<=nMODULES; m++) {
+		System.out.println(String.format("RUN Npho module " + m));
+		System.out.println(String.format("RUN  "+runNum+"  "+m1[0][m-1]+" "+s1[0][m-1]+"  "+m1[1][m-1]+" "+s1[1][m-1]+"  "+m1[2][m-1]+" "+s1[2][m-1]));
+	    }
+	}
 
 	if(runNum>0){
 	    if(!write_volatile)can_RICH_npho.save(String.format("plots"+runNum+"/RICH_Npho.png"));
@@ -838,8 +848,11 @@ public class RICH{
 	    m1[0][m-1] = (float)H_trk_match[m-1].getMean();
 	    s1[0][m-1] = (float)H_trk_match[m-1].getRMS();
 
-	    //System.out.println(String.format("RUN TrkMatch module " + m));
-	    //System.out.println(String.format("RUN  "+runNum+"  "+m1[0][m-1]+" "+s1[0][m-1]));
+	    if (verbose) {
+		System.out.println(String.format("RUN TrkMatch module " + m));
+		System.out.println(String.format("RUN  "+runNum+"  "+m1[0][m-1]+" "+s1[0][m-1]));
+	    }	
+
 	}	
 
 
@@ -852,8 +865,6 @@ public class RICH{
 	    can_RICH_trk.save(String.format("plots/RICH_TrkMatch.png"));
 	    System.out.println(String.format("saved plots/RICH_TrkMatch.png"));
 	}
-
-
 
 
 
@@ -947,17 +958,20 @@ public class RICH{
 	    }   
 	System.out.println("Total : " + count + " events");
 
-	ana.postProcess()
+	ana.postProcess();
+	ana.plot();
 	ana.write();
     }   
 
     public void postProcess(){
-		this.FillFWHMHistogram();
-		this.CalcCounters();
+	this.FillTimeHistogram();
+	this.CalcCounters();
+    }
 
-		this.plot_DeltaT();
-		this.plot_Alignment();
-		this.plot_Counters();
+    public void plot(){
+	this.plot_DeltaT();
+	this.plot_Alignment();
+	this.plot_Counters();
     }
 
     public void write() {
@@ -967,7 +981,6 @@ public class RICH{
 
 	dirout.addDataSet(H_dt);
 	dirout.addDataSet(H_dt_channel);
-	dirout.addDataSet(H_dt_FWHM);
 	dirout.addDataSet(H_dt_RMS);
 	dirout.addDataSet(H_dt_MEAN);
 
@@ -976,15 +989,18 @@ public class RICH{
 		dirout.addDataSet(H_detac_tile[m-1][top-1]);
 	    }
 
+	    dirout.addDataSet(H_npho_tile[m-1]);
+
 	    dirout.addDataSet(H_npip_tile[m-1], H_npim_tile[m-1], H_nkp_tile[m-1], H_nkm_tile[m-1], H_npro_tile[m-1], H_npbar_tile[m-1]);
 	}
 
 	dirout.addDataSet(H_trk_match);
 	dirout.addDataSet(H_ntrigele);
+	dirout.addDataSet(H_setup);
 
 
 	if(!write_volatile){
-	    if(runNum>0)dirout.writeFile("plots"+runNum+"/out_RICH"+runNum+".hipo");
+	    if(runNum>0)dirout.writeFile("plots"+runNum+"/out_RICH_"+runNum+".hipo");
 	    else dirout.writeFile("plots/out_RICH.hipo");
 	}
     }
@@ -1078,8 +1094,10 @@ public class RICH{
 		npro = (float)H_npro_tile[m-1].getEntries() / Ntrig;
 		npbar = (float)H_npbar_tile[m-1].getEntries() / Ntrig;
 	    }
-	    //System.out.println(String.format("RUN Counters module " + m));
-	    //System.out.println(String.format("RUN  "+runNum+"  "+npip+" "+npim+" "+nkp+" "+nkm+" "+npro+" "+npbar));
+	    if (verbose) {
+		System.out.println(String.format("RUN Counters module " + m));
+		System.out.println(String.format("RUN  "+runNum+"  "+npip+" "+npim+" "+nkp+" "+nkm+" "+npro+" "+npbar));
+	    }
 	    
 	}
 

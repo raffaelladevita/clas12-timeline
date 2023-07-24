@@ -172,10 +172,16 @@ if(eng) {
       println("debug: "+engine.getClass().getSimpleName()+" finished $arg")
     } catch(Exception ex) {
       println("error: "+engine.getClass().getSimpleName()+" didn't process $arg")
+      //
+      //
+      // Id.
+      //
+      //
     }
   }
   engine.close()
   println("debug: "+engine.getClass().getSimpleName()+" ended")
 } else {
   println("error: "+args[0]+" not found")
+  System.exit(1)
 }

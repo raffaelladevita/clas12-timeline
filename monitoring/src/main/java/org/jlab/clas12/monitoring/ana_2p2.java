@@ -68,6 +68,7 @@ public class ana_2p2 {
                         read.close();
                 }catch(IOException e){
                         e.printStackTrace();
+                        System.exit(1);
                 }
 		int progresscount=0;int filetot = toProcessFileNames.size();
 		long startTime = System.currentTimeMillis();

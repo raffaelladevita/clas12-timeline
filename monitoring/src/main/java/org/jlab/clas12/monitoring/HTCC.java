@@ -311,6 +311,7 @@ public class HTCC {
             read.close();
         } catch (IOException e) {
             e.printStackTrace();
+            System.exit(1);
         }
         int progresscount = 0;
         int filetot = toProcessFileNames.size();

@@ -541,6 +541,7 @@ public class LTCC{
                         read.close();
                 }catch(IOException e){ 
                         e.printStackTrace();
+                        System.exit(1);
                 }   
                 int progresscount=0;int filetot = toProcessFileNames.size();
                 for (String runstrg : toProcessFileNames) if( count<maxevents ){

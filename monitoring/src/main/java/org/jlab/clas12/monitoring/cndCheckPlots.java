@@ -979,6 +979,7 @@ public class cndCheckPlots {
 										read.close();
 								}catch(IOException e){
 										e.printStackTrace();
+                                                                                System.exit(1);
 								}
 								int maxevents = 50000000;
 								if(args.length>2)maxevents=Integer.parseInt(args[2]);

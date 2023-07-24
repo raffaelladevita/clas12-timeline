@@ -5,7 +5,7 @@ if(args.size()==0) {
   - if it is a nested map (tree), specify additional arguments
     to restrict printout to a specific sub-tree
   """)
-  System.exit(2)
+  System.exit(101)
 }
 
 import groovy.json.JsonSlurper

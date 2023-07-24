@@ -265,7 +265,7 @@ public class BAND{
                         read.close();
                 }catch(IOException e){
                         e.printStackTrace();
-                        System.exit(1);
+                        System.exit(100);
                 }
                 int progresscount=0;int filetot = toProcessFileNames.size();
                 for (String runstrg : toProcessFileNames) if( count<maxevents ){

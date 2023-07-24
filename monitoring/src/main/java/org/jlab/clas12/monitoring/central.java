@@ -492,7 +492,7 @@ public class central {
 				read.close();
 		}catch(IOException e){
 				e.printStackTrace();
-                                System.exit(1);
+                                System.exit(100);
 		}
 		//int maxevents = 50000000;
 		int maxevents = 500000;

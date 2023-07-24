@@ -460,7 +460,7 @@ public class occupancies {
                         read.close();
                 }catch(IOException e){ 
                         e.printStackTrace();
-                        System.exit(1);
+                        System.exit(100);
                 }
                 int filetot = toProcessFileNames.size();
                 int progresscount=0;

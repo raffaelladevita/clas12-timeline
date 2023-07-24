@@ -28,7 +28,7 @@ List of Commands:
   """)
   usage.each{ println("- "+it.value) }
   println("\ntype any command without arguments for usage for that command\n")
-  System.exit(2)
+  System.exit(101)
 }
 
 
@@ -125,7 +125,7 @@ if( cmd=="setBit" || cmd=="addBit" || cmd=="delBit") {
     T.bitDefinitions.size().times {
       println("$it\t" + T.bitNames[it] + "\t" + T.bitDescripts[it] + "\n")
     }
-    System.exit(2)
+    System.exit(101)
   }
 }
 
@@ -176,7 +176,7 @@ else if(cmd=="sectorLoss") {
         it will unset any other relevant bits
       - you will be prompted to enter a comment
     """)
-    System.exit(2)
+    System.exit(101)
   }
 }
 
@@ -220,7 +220,7 @@ else if( cmd=="addComment" || cmd=="setComment") {
       - set [lastFile] to 1 to denote last file of run
       - you will be prompted to enter the comment
     """)
-    System.exit(2)
+    System.exit(101)
   }
 }
 
@@ -235,12 +235,12 @@ else if( cmd=="custom") {
   if(args.length==3) {
     rnum = args[1].toInteger()
     fnum = args[2].toInteger()
-  } else System.exit(2)
+  } else System.exit(101)
   */
   ///* // [runnum]; operate on full run
   if(args.length==2) {
     rnum = args[1].toInteger()
-  } else System.exit(2)
+  } else System.exit(101)
   //*/
 
   qaTree["$rnum"].each { k,v -> fnum = k.toInteger() // loop over files
@@ -278,7 +278,7 @@ else if( cmd=="custom") {
 }
 
 
-else { println("ERROR: unknown command!"); System.exit(1) }
+else { println("ERROR: unknown command!"); System.exit(100) }
 
 
 // update qaTree.json

@@ -183,5 +183,5 @@ if(eng) {
   println("debug: "+engine.getClass().getSimpleName()+" ended")
 } else {
   println("error: "+args[0]+" not found")
-  System.exit(1)
+  System.exit(100)
 }

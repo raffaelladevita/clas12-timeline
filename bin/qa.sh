@@ -18,7 +18,7 @@ if [ $# -lt 1 ]; then
    - optional output directory must also be relative to TIMELINEDIR = $TIMELINEDIR
      (otherwise the default is based on the input timeline directory name)
   """
-  exit 2
+  exit 101
 fi
 
 # define dataset, and input/output timelines directories

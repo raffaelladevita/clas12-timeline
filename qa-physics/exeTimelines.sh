@@ -2,7 +2,7 @@
 
 if [ -z "$CLASQA" ]; then source env.sh; fi
 
-if [ $# -ne 1 ];then echo "USAGE: $0 [dataset]"; exit 2; fi
+if [ $# -ne 1 ];then echo "USAGE: $0 [dataset]"; exit 101; fi
 dataset=$1
 
 # setup error filtered execution function

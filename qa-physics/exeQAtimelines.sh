@@ -6,7 +6,7 @@ if [ -z "$CLASQA" ]; then source env.sh; fi
 
 if [ $# -ne 1 ]; then
   echo "USAGE: $0 [dataset]"
-  exit 2
+  exit 101
 fi
 dataset=$1
 

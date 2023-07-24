@@ -41,13 +41,13 @@ if(inHipoType=="dst") {
   inHipoList.sort()
   if(inHipoList.size()==0) {
     System.err << "ERROR: no hipo files found in this directory\n"
-    return
+    System.exit(1)
   }
 }
 else if(inHipoType=="skim") { inHipoList << inHipo }
 else {
   System.err << "ERROR: unknown inHipoType setting\n"
-  return
+  System.exit(1)
 }
 
 

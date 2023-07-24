@@ -3,11 +3,11 @@
 
 if [ $# -ne 1 ]; then 
   echo "USAGE: $0 [dataset]"
-  exit
+  exit 2
 fi
 if [ -z "$CLASQA" ]; then
   echo "ERROR: please source env.sh first"
-  exit
+  exit 1
 fi
 
 dataset=$1

@@ -31,7 +31,7 @@ def data = new ConcurrentHashMap()
       data.sort{it.key}.each{ttl, runs->
 
         def grtl = new GraphErrors(ttl)
-        grtl.setTitle("e- time - start time, ${name}, ${ttl}")
+        grtl.setTitle("e- time - start time, ${name}")
         grtl.setTitleY("e- time - start time, ${name} (ns)")
         grtl.setTitleX("run number")
 

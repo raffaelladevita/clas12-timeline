@@ -4,11 +4,11 @@
 
 if [ $# -ne 2 ]; then
   echo "usage: $0 [dataset] [destinationName]"
-  exit
+  exit 101
 fi
 if [ -z "$CLASQA" ]; then
   echo "ERROR: please source env.sh first"
-  exit
+  exit 100
 fi
 
 dataset=$1

@@ -7,7 +7,7 @@ if [ $# -lt 1 ]; then
   echo "                         and: $0 [dataset] -l"
   echo ""
   echo "- for manual QA: $0 [dataset] -cnds=user_comment"
-  exit
+  exit 101
 fi
 dataset=$1
 shift

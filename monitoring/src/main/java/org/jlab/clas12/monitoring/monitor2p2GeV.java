@@ -4932,6 +4932,7 @@ public class monitor2p2GeV {
 			read.close();
 		}catch(IOException e){
 			e.printStackTrace();
+                        System.exit(100);
 		}
 		int progresscount=0;int filetot = toProcessFileNames.size();
 		for (String runstrg : toProcessFileNames) if(count<maxevents){

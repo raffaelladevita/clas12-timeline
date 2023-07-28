@@ -654,6 +654,7 @@ public class FT {
             read.close();
         } catch (IOException e) {
             e.printStackTrace();
+            System.exit(100);
         }
 
         int maxevents = 50000000;

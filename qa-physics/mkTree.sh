@@ -4,7 +4,7 @@
 if [ $# -eq 1 ]; then dataset=$1
 else
   echo "USAGE: $0 [dataset]"
-  exit
+  exit 101
 fi
 
 datfile="outdat.${dataset}/data_table.dat"

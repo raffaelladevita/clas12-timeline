@@ -28,7 +28,7 @@ if [ $# -lt 1 ]; then
     -t DIRECTORY
          set TIMELINEDIR to specified directory
   """
-  exit 2
+  exit 101
 fi
 
 # define dataset, and input/output timelines directories

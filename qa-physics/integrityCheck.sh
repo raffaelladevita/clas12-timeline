@@ -7,22 +7,22 @@
 
 if [ -z "$CLASQA" ]; then
   echo "ERROR: please source env.sh first"
-  exit
+  exit 100
 fi
 
-if [ $# -ne 1 ];then echo "USAGE: $0 [dataset]"; exit; fi
+if [ $# -ne 1 ];then echo "USAGE: $0 [dataset]"; exit 101; fi
 dataset=$1
 
 if [ ! -f dstlist.${dataset}.dat ]; then
   echo "ERROR: dstlist.${dataset}.dat does not exist"
   echo "execute getListOfDSTs.sh first"
-  exit
+  exit 100
 fi
 
 if [ ! -f outdat.${dataset}/data_table.dat ]; then
   echo "ERROR: outdat.${dataset}/data_table.dat does not exist"
   echo "execute exeTimelines.sh first"
-  exit
+  exit 100
 fi
 
 cat outdat.${dataset}/data_table.dat | awk '{print $1" "$2}' > qalist.tmp

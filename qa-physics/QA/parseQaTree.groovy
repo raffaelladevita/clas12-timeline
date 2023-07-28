@@ -24,7 +24,7 @@ if(args.contains("-h") || args.contains("--help")) {
   println(" -cnds=cnd1,cnd2,...     : Set commands to output table (default: 'user_comment')")
   println(" -addCnds=cnd1,cnd2,...  : Add commands to output table")
   println(" -h/--help               : Print this message")
-  return
+  System.exit(101)
 }
 
 /* CCDB/RCDB Addresses for CLAS12 see https://indico.jlab.org/event/222/contributions/2343/attachments/1959/2468/clas12-dbases.pdf
@@ -54,7 +54,7 @@ if((args.contains("--list") || args.contains("-l")) && success) {
     String row = String.format("   %-30s %s", cndType.getName(), cndType.getValueType().toString())
     println(row);
   }
-  return
+  System.exit(0)
 }
 
 // List of rcdb condition entries to add
@@ -67,14 +67,14 @@ for (arg in args) {
     try { cnds = arg.split('=')[1].split(',')}
     catch(Exception e) {
       e.printStackTrace()
-      return
+      System.exit(100)
     }    	
   }
   if(arg.startsWith("-addCnds=")) {
     try { cnds.addAll(arg.split('=')[1].split(',')) }
     catch(Exception e) {
       e.printStackTrace()
-      return
+      System.exit(100)
     }
   }
 } 

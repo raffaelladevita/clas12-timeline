@@ -16,6 +16,10 @@ for key in list build focus-timelines focus-qa; do
   modes[$key]=false
 done
 
+# input finding command
+inputCmd="$TIMELINESRC/bin/set-input-dir.sh -s timeline_detectors"
+inputCmdOpts=""
+
 # usage
 sep="================================================================"
 if [ $# -eq 0 ]; then
@@ -25,22 +29,13 @@ if [ $# -eq 0 ]; then
   $sep
   Creates web-ready detector timelines locally
 
-  REQUIRED OPTIONS: specify at least one of the following:
-
-    -i [INPUT_DIR]      directory containing run subdirectories of timeline histograms
-
-    -d [DATASET_NAME]   unique dataset name, defined by the user, used for organization;
-                        output files will be written to ./outfiles/[DATASET_NAME]
-
-      NOTE:
-        - use [DATASET_NAME], not [INPUT_DIR], if your input directory is ./outfiles/[DATASET_NAME],
-          since if only [DATASET_NAME] is specified, then [INPUT_DIR] will be ./outfiles/[DATASET_NAME]
-        - if only [INPUT_DIR] is specified, then [DATASET_NAME] will be based on [INPUT_DIR]
-
+  REQUIRED OPTIONS: specify at least one of the following:""" >&2
+  $inputCmd -h
+  echo """
   OPTIONAL OPTIONS:
 
     -o [OUTPUT_DIR]     output directory
-                        default = '$TIMELINESRC/outfiles/[DATASET_NAME]'
+                        default = ./outfiles/[DATASET_NAME]
 
     -r [RUN_GROUP]      run group, for run-group specific configurations;
                         default = '$rungroup', which specifies Run Group $(echo $rungroup | tr '[:lower:]' '[:upper:]')
@@ -64,33 +59,15 @@ if [ $# -eq 0 ]; then
 fi
 
 # parse options
-while getopts "i:d:o:r:n:t:-:" opt; do
+while getopts "d:i:Uo:r:n:t:-:" opt; do
   case $opt in
-    i) 
-      if [ -d $OPTARG ]; then
-        inputDir=$(realpath $OPTARG)
-      else
-        printError "input directory $OPTARG does not exist"
-        exit 100
-      fi
-      ;;
-    d) 
-      echo $OPTARG | grep -q "/" && printError "dataset name must not contain '/' " && exit 100
-      [ -z "$OPTARG" ] && printError "dataset name may not be empty" && exit 100
-      dataset=$OPTARG
-      ;;
-    o)
-      outputDir=$OPTARG
-      ;;
-    r) 
-      rungroup=$(echo $OPTARG | tr '[:upper:]' '[:lower:]')
-      ;;
-    n)
-      numThreads=$OPTARG
-      ;;
-    t)
-      singleTimeline=$OPTARG
-      ;;
+    d) inputCmdOpts+=" -d $OPTARG" ;;
+    i) inputCmdOpts+=" -i $OPTARG" ;;
+    U) inputCmdOpts+=" -U" ;;
+    o) outputDir=$OPTARG ;;
+    r) rungroup=$(echo $OPTARG | tr '[:upper:]' '[:lower:]') ;;
+    n) numThreads=$OPTARG ;;
+    t) singleTimeline=$OPTARG ;;
     -)
       for key in "${!modes[@]}"; do
         [ "$key" == "$OPTARG" ] && modes[$OPTARG]=true && break
@@ -122,28 +99,15 @@ if ${modes['list']}; then
   exit $?
 fi
 
-# set directories and dataset name
-# FIXME: copied implementation from `run-physics-timelines.sh`
-if [ -z "$inputDir" -a -n "$dataset" ]; then
-  inputDir=$TIMELINESRC/outfiles/$dataset/timeline_detectors # default input directory is in ./outfiles/
-elif [ -n "$inputDir" -a -z "$dataset" ]; then
-  dataset=$(ruby -e "puts '$inputDir'.split('/')[-4..].join('_')") # set dataset using last few subdirectories in inputDir dirname
-elif [ -z "$inputDir" -a -z "$dataset" ]; then
-  printError "required options, either [INPUT_DIR] or [DATASET_NAME], have not been set"
-  exit 100
-fi
-[ -z "$outputDir" ] && outputDir=$TIMELINESRC/outfiles/$dataset
+# set input/output directories and dataset name
+dataset=$($inputCmd $inputCmdOpts -D)
+inputDir=$($inputCmd $inputCmdOpts -I)
+[ -z "$outputDir" ] && outputDir=$(pwd -P)/outfiles/$dataset
 
 # set subdirectories
 finalDirPreQA=$outputDir/timeline_web_preQA
 finalDir=$outputDir/timeline_web
 logDir=$outputDir/log
-
-# check input directory
-if [ ! -d $inputDir ]; then
-  printError "input directory $inputDir does not exist"
-  exit 100
-fi
 
 # check focus options
 modes['focus-all']=true
@@ -201,7 +165,7 @@ detDirs=(
 # cleanup output directories
 if ${modes['focus-all']} || ${modes['focus-timelines']}; then
   if [ -d $finalDirPreQA ]; then
-    backupDir=$TIMELINESRC/tmp/backup.$dataset.$(date +%s) # use unixtime for uniqueness
+    backupDir=$(pwd -P)/tmp/backup.$dataset.$(date +%s) # use unixtime for uniqueness
     echo ">>> backing up any previous files to $backupDir ..."
     mkdir -p $backupDir/
     mv -v $finalDirPreQA $backupDir/

@@ -30,6 +30,9 @@ class Tools {
     TSAUnknown:        "Target Spin Asymmetry is unknown, likely because of low statistics",
     DSAWrong:          "Double Spin Asymmetry is the wrong sign",
     DSAUnknown:        "Double Spin Asymmetry is unknown, likely because of low statistics",
+    ChargeHigh:        "FC Charge is abnormally high",
+    ChargeNegative:    "FC Charge is negative",
+    ChargeUnknown:     "FC Charge is unknown; the first and last time bins always have this defect",
   ]
 
   // list of bit names and descriptions

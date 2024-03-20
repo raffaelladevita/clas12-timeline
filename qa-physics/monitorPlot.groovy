@@ -1,6 +1,7 @@
 // reads outmon/monitor* files and generates timeline hipo files
 // - to be executed after monitorRead.groovy
 
+import org.jlab.groot.data.IDataSet
 import org.jlab.groot.data.TDirectory
 import org.jlab.groot.data.GraphErrors
 import org.jlab.groot.data.H1F
@@ -36,7 +37,6 @@ def qaTreeFile  = new File(qaTreeFileN)
 def qaTree      = slurper.parse(qaTreeFile)
 
 // subroutine to recompute defect bitmask
-// FIXME: shamefully copied from QA/modifyQaTree.groovy
 def recomputeDefMask = { rnum, bnum ->
   def defList = []
   def defMask = 0
@@ -184,6 +184,16 @@ def buildAsymGraph = { tObj ->
   return gr
 }
 
+// calculate beam charge asymmetry
+def calculateBeamChargeAsym = { qP, qM ->
+  if(qP+qM > 0) {
+    return [
+      (qP - qM) / (qP + qM),   // asymmetry
+      1 / Math.sqrt( qP + qM ) // error, assuming |beamChargeAsym| << 1
+    ]
+  }
+  return ["unknown","unknown"]
+}
 
 //-----------------------------------------
 // fill the monitors
@@ -205,7 +215,7 @@ def aveX
 def aveXerr
 def stddevX
 def ent
-def helP,helM,helDef,helUndef,helFrac,helFracErr,rellum,rellumErr
+def helDef,helUndef,helFrac,helFracErr,rellum,rellumErr
 
 // loop over input hipo files
 inList.each { inFile ->
@@ -303,10 +313,6 @@ inList.each { inFile ->
         monTree[runnum]['helic']['dist']['heldef']['heldefDenom'] += denom
       }
 
-    // cut for rellum from events with FD trigger electrons only
-    //}
-    //if(objN.contains("/helic_distGoodOnly_")) {
-
       // relative luminosity
       T.addLeaf(monTree,[runnum,'helic','dist','rellum','rellumNumer'],{0})
       T.addLeaf(monTree,[runnum,'helic','dist','rellum','rellumDenom'],{0})
@@ -326,8 +332,8 @@ inList.each { inFile ->
       })
       if(obj.integral()>0) {
         // use values from helic_dist
-        helM = obj.getBinContent(0) // helicity = -1
-        helP = obj.getBinContent(2) // helicity = +1
+        def helM = obj.getBinContent(0) // helicity = -1
+        def helP = obj.getBinContent(2) // helicity = +1
         // use charge from FC (disabled)
         //helP = fcTree[runnum][timeBinNum.toInteger()]['fcP']
         //helM = fcTree[runnum][timeBinNum.toInteger()]['fcM']
@@ -339,9 +345,32 @@ inList.each { inFile ->
         monTree[runnum]['helic']['dist']['rellum']['rellumNumer'] += helP
         monTree[runnum]['helic']['dist']['rellum']['rellumDenom'] += helM
       }
-
     }
 
+    // beam charge asymmetry
+    //----------------------------
+    if(objN.contains("/helic_scaler_chargeWeighted_")) {
+      ['numHelP','numHelM'].each{
+        T.addLeaf(monTree,[runnum,'helic','beamChargeAsym',it],{0.0})
+      }
+      T.addLeaf(monTree,[runnum,'helic','beamChargeAsym','asymGraph'],{
+        def g = buildMonAveGr(obj)
+        def gN = g.getName().replaceAll(/_aveGr$/,'_chargeAsymGr')
+        g.setName(gN)
+        g.setTitle('beam charge asymmetry vs. time bin number')
+        return g
+      })
+      if(obj.integral()>0) {
+        def numHelP = obj.getBinContent(2) // helicity = +1
+        def numHelM = obj.getBinContent(0) // helicity = -1
+        monTree[runnum]['helic']['beamChargeAsym']['numHelP'] += numHelP
+        monTree[runnum]['helic']['beamChargeAsym']['numHelM'] += numHelM
+        def asym = calculateBeamChargeAsym(numHelP, numHelM)
+        if(!asym.contains("unknown")) {
+          monTree[runnum]['helic']['beamChargeAsym']['asymGraph'].addPoint(timeBinNum, asym[0], 0, asym[1])
+        }
+      }
+    }
 
     // DIS kinematics monitor
     //---------------------------------
@@ -406,7 +435,7 @@ inList.each { inFile ->
   } // eo loop over objects in the file (run)
 
 
-  // fit asymmetry
+  // fit beam spin asymmetry
   T.exeLeaves(monTree[runnum]['helic']['asym'],{
     def particle = T.leafPath[0]
     def grP = T.getLeaf(monTree,[runnum,'helic','sinPhi',particle,'hp','asymGrid'])
@@ -457,6 +486,7 @@ T.exeLeaves(monTree,{
         if(tlPath.contains('sinPhi')) tlT = "sinPhiH"
         else if(T.key=='heldefDist') tlT = "defined helicity fraction"
         else if(T.key=='rellumDist') tlT = "n+/n-"
+        else if(tlPath.contains('beamChargeAsym')) tlT = "beam charge asymmetry"
         else if(T.key=='asymGraph') tlT = "beam spin asymmetry: pion sin(phiH) amplitude"
         else tlT = "unknown"
       }
@@ -478,7 +508,7 @@ T.exeLeaves(monTree,{
 
     // we also want a few timelines to monitor standard deviations
     T.addLeaf(timelineTree,tlPath+'timelineDev',{
-      if(tlPath.contains('DIS') || tlPath.contains('inclusive') || tlPath.contains('nonMonotonicity')) {
+      if(tlPath.contains('DIS') || tlPath.contains('inclusive') || T.key=='valGraph') {
         def tlN = (tlPath+'timelineDev').join('_')
         def tlT
         if(tlPath.contains('DIS')) tlT = "DIS kinematics"
@@ -517,9 +547,7 @@ T.exeLeaves(monTree,{
       def devs   = vals.collect{ (it-ave)**2 }
       def stddev = tot>0 ? Math.sqrt( devs.sum() / tot ) : tot
       T.getLeaf(timelineTree,tlPath+'timeline').addPoint(tlRun,ave,0.0,0.0)
-      if(tlPath.contains('DIS') || tlPath.contains('inclusive') || tlPath.contains('nonMonotonicity')) {
-        T.getLeaf(timelineTree,tlPath+'timelineDev').addPoint(tlRun,stddev,0.0,0.0)
-      }
+      T.getLeaf(timelineTree,tlPath+'timelineDev').addPoint(tlRun,stddev,0.0,0.0)
     }
     // or if it's a helicity distribution monitor, add the run's overall fractions
     if(T.key=='heldefDist' ||  T.key=='rellumDist') {
@@ -529,20 +557,34 @@ T.exeLeaves(monTree,{
       def frac = denom>0 ? numer/denom : 0
       T.getLeaf(timelineTree,tlPath+'timeline').addPoint(tlRun,frac,0.0,0.0)
     }
-    // or if it's an asymmetry graph, add fit results to the timeline
+    // or if it's an asymmetry graph, add its results to the timeline
     if(T.key=='asymGraph') {
-      def valPath = T.leafPath[0..-2] + 'asymValue'
-      def errPath = T.leafPath[0..-2] + 'asymError'
-      def asymVal = T.getLeaf(monTree,valPath)
-      def asymErr = T.getLeaf(monTree,errPath)
-      T.getLeaf(timelineTree,tlPath+'timeline').addPoint(tlRun, asymVal, 0.0, asymErr)
-      // and assign a defect bit for pi+ BSA
-      if(tlPath.contains('pip')) {
-        def asymMargin = asymVal.abs() - asymErr
-        if(asymMargin <= 0) {
-          addDefectBit(T.bit("BSAUnknown"), tlRun, allBins, allSectors)
-        } else if(asymVal < 0) {
-          addDefectBit(T.bit("BSAWrong"), tlRun, allBins, allSectors)
+      // beam charge asymmetry --------
+      if(T.leafPath.contains("beamChargeAsym")) {
+        def numHel = ['numHelP','numHelM'].collect{T.getLeaf(monTree, T.leafPath[0..-2] + it)}
+        def asym = calculateBeamChargeAsym(*numHel)
+        if(!asym.contains("unknown")) {
+          T.getLeaf(timelineTree,tlPath+'timeline').addPoint(tlRun, asym[0], 0.0, asym[1])
+        }
+        else {
+          System.err.println "WARNING: unknown beam charge asymmetry for run $tlRun"
+        }
+      }
+      // beam spin asymmetry --------
+      else {
+        def valPath = T.leafPath[0..-2] + 'asymValue'
+        def errPath = T.leafPath[0..-2] + 'asymError'
+        def asymVal = T.getLeaf(monTree,valPath)
+        def asymErr = T.getLeaf(monTree,errPath)
+        T.getLeaf(timelineTree,tlPath+'timeline').addPoint(tlRun, asymVal, 0.0, asymErr)
+        // and assign a defect bit for pi+ BSA
+        if(tlPath.contains('pip')) {
+          def asymMargin = asymVal.abs() - asymErr
+          if(asymMargin <= 0) {
+            addDefectBit(T.bit("BSAUnknown"), tlRun, allBins, allSectors)
+          } else if(asymVal < 0) {
+            addDefectBit(T.bit("BSAWrong"), tlRun, allBins, allSectors)
+          }
         }
       }
     }
@@ -565,15 +607,16 @@ def hipoWrite = { hipoName, filterList, TLkeys ->
     // will be renamed such that the front end plots them together
     T.exeLeaves(tree,{
       if(checkFilter(T.leafPath,filterList,T.key)) {
-        if(T.key=='asymValue' || T.key=='asymError' || T.key=='asymGrid') return
-        def name = T.leaf.getName()
-        if(name.contains('_hp_')) name = name.replaceAll('_hp_','_')
-        else if(name.contains('_hm_')) {
-          name = name.replaceAll('_hm_','_')
-          name += ":hm"
+        if(T.leaf instanceof IDataSet) {
+          def name = T.leaf.getName()
+          if(name.contains('_hp_')) name = name.replaceAll('_hp_','_')
+          else if(name.contains('_hm_')) {
+            name = name.replaceAll('_hm_','_')
+            name += ":hm"
+          }
+          T.leaf.setName(name)
+          outHipo.addDataSet(T.leaf)
         }
-        T.leaf.setName(name)
-        outHipo.addDataSet(T.leaf)
       }
     })
   }
@@ -595,6 +638,7 @@ def hipoWrite = { hipoName, filterList, TLkeys ->
 hipoWrite("helicity_sinPhi",['helic','sinPhi'],["timeline"])
 hipoWrite("beam_spin_asymmetry",['helic','asym'],["timeline"])
 hipoWrite("defined_helicity_fraction",['helic','dist','heldef'],["timeline"])
+hipoWrite("beam_charge_asymmetry",['helic','beamChargeAsym'],["timeline"])
 hipoWrite("relative_yield",['helic','dist','rellum'],["timeline"])
 hipoWrite("q2_W_x_y_means",['DIS'],["timeline"])
 hipoWrite("pip_kinematics_means",['inclusive','pip'],["timeline"])

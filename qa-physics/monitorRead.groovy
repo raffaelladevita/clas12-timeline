@@ -21,7 +21,7 @@ def NBINS           = 50     // number of bins in some histograms
 def SECTORS         = 0..<6  // sector range
 def ECAL_ID         = DetectorType.ECAL.getDetectorId() // ECAL detector ID
 // debugging settings
-def VERBOSE = true   // enable extra log messages, for debugging
+def VERBOSE = false  // enable extra log messages, for debugging
 def LIMITER = 0      // if nonzero, only analyze this many DST files (for quick testing and debugging)
 def AUXFILE = false  // enable auxfile production, an event-by-event table (a large text file)
 
@@ -77,7 +77,7 @@ else {
 
 // limiter: use this to only analyse a few DST files, for quicker testing
 if(LIMITER>0) {
-  inHipoList = inHipoList[0..LIMITER]
+  inHipoList = inHipoList[0..(LIMITER-1)]
   System.err.println("WARNING WARNING WARNING: LIMITER ENABLED, we will only be analyzing ${LIMITER} DST files, and not all of them; this is for testing only!")
 }
 
@@ -561,19 +561,15 @@ def overallMaxTimestamp   = "init"
 printDebug "Initialize histograms for each time bin"
 timeBins.each{ binNum, timeBin ->
   def partList = [ 'pip', 'pim' ]
-  def helList  = [ 'hp',  'hm'  ]
-  def heluList = [ 'hp',  'hm', 'hu' ]
-
-  T.buildTree(timeBin.histTree, 'helic',     [['sinPhi'],partList,helList],            { new H1F() })
+  T.buildTree(timeBin.histTree, 'helic',     [['sinPhi'],partList,['hp','hm']],        { new H1F() })
   T.buildTree(timeBin.histTree, 'helic',     [['dist']],                               { new H1F() })
-  T.buildTree(timeBin.histTree, 'helic',     [['distGoodOnly']],                       { new H1F() })
+  T.buildTree(timeBin.histTree, 'helic',     [['scaler'],['chargeWeighted']],          { new H1F() })
   T.buildTree(timeBin.histTree, 'DIS',       [['Q2','W','x','y']],                     { new H1F() })
   T.buildTree(timeBin.histTree, "DIS",       [['Q2VsW']],                              { new H2F() })
   T.buildTree(timeBin.histTree, "inclusive", [partList,['p','pT','z','theta','phiH']], { new H1F() })
   // if(binNum==0) T.printTree(timeBin.histTree,{T.leaf.getClass()});
 
   timeBin.histTree.helic.dist         = buildHist('helic_dist','helicity',[],runnum,3,-1,2)
-  timeBin.histTree.helic.distGoodOnly = buildHist('helic_distGoodOnly','helicity (with electron cuts)',[],runnum,3,-1,2)
   timeBin.histTree.DIS.Q2             = buildHist('DIS_Q2','Q^2',[],runnum,2*NBINS,0,12)
   timeBin.histTree.DIS.W              = buildHist('DIS_W','W',[],runnum,2*NBINS,0,6)
   timeBin.histTree.DIS.x              = buildHist('DIS_x','x',[],runnum,2*NBINS,0,1)
@@ -582,6 +578,7 @@ timeBins.each{ binNum, timeBin ->
   T.exeLeaves( timeBin.histTree.helic.sinPhi, {
     T.leaf = buildHist('helic_sinPhi','sinPhiH',T.leafPath,runnum,NBINS,-1,1)
   })
+  timeBin.histTree.helic.scaler.chargeWeighted = buildHist('helic_scaler_chargeWeighted','FC-charge-weighted helicity',[],runnum,3,-1,2)
   T.exeLeaves( timeBin.histTree.inclusive, {
     def lbound=0
     def ubound=0
@@ -635,6 +632,7 @@ inHipoList.each { inHipoFile ->
     FTparticleBank = hipoEvent.getBank("RECFT::Particle")
     calBank        = hipoEvent.getBank("REC::Calorimeter")
     scalerBank     = hipoEvent.getBank("RUN::scaler")
+    helScalerBank  = hipoEvent.getBank("HEL::scaler")
 
     // get event number
     def eventNum
@@ -739,7 +737,10 @@ inHipoList.each { inHipoFile ->
     }
 
     // get helicity and fill helicity distribution
-    def helicity = hipoEvent.hasBank("REC::Event") ? eventBank.getByte('helicity',0) : 0  // (using "0" for undefined)
+    def helicity = 0 // if undefined, default to 0
+    if(hipoEvent.hasBank("REC::Event") && eventBank.rows()>0) {
+      helicity = eventBank.getByte('helicity',0)
+    }
     def helStr
     def helDefined
     switch(helicity) {
@@ -748,6 +749,14 @@ inHipoList.each { inHipoFile ->
       default: helDefined = false; helicity = 0; break
     }
     thisTimeBin.histTree.helic.dist.fill(helicity)
+    // get scaler helicity from `HEL::scaler`, and fill its charge-weighted distribution
+    if(hipoEvent.hasBank("HEL::scaler")) {
+      helScalerBank.rows().times{ row -> // HEL::scaler readouts "pile up", so there are multiple bank rows in an event
+        def sc_helicity = helScalerBank.getByte("helicity", row)
+        def sc_fc       = helScalerBank.getFloat("fcupgated", row) // helicity-latched FC charge
+        thisTimeBin.histTree.helic.scaler.chargeWeighted.fill(sc_helicity, sc_fc)
+      }
+    }
 
     // get electron list, and increment the number of trigger electrons
     // - also finds the DIS electron, and calculates x,Q2,W,y,nu
@@ -755,9 +764,6 @@ inHipoList.each { inHipoFile ->
 
     // CUT: if a DIS electron was found by `findParticles`
     if(disEleFound) {
-
-      if(disElectronInTrigger)
-        thisTimeBin.histTree.helic.distGoodOnly.fill(helicity)
 
       // CUT for pions: Q2 and W and y and helicity
       if( Q2>1 && W>2 && y<0.8 && helDefined) {

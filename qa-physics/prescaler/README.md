@@ -8,11 +8,16 @@ First, generate a workflow `json` file:
 ./cook-train.rb --help   # use --help for usage
 ```
 
-Then submit it; _e.g._, if the `json` file is `my_workflow.json`:
+Then submit it using
 ```bash
-swif2 import -file my_workflow.json    # import the workflow
-swif2 run -workflow my_workflow        # start it
-swif2 list                             # list your workflows
-swif2 status my_workflow               # check the status
-swif-gui                               # monitor it with a GUI
+start-workflow.sh [JSON_FILES]...
+```
+or manually; _e.g._, if the `json` file is `my_workflow.json`:
+```bash
+swif2 import -file my_workflow.json         # import the workflow
+swif2 run -workflow my_workflow             # start it
+swif2 cancel -delete -workflow my_workflow  # delete it (if you need to try again)
+swif2 list                                  # list your workflows
+swif2 status my_workflow                    # check the status
+swif-gui                                    # monitor it with a GUI
 ```

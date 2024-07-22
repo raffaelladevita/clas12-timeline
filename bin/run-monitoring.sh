@@ -85,10 +85,10 @@ usageVerbose() {
                       **this is the DEFAULT option**
 
        --eachdir      assume each specified [RUN_DIRECTORY] is a single
-                      run's directory full of HIPO files
+                      run's directory full of HIPO files (e.g., DST files)
 
-       --flatdir      assume all files are in one flat directory; use
-                      this option for SKIM files
+       --flatdir      assume each specified [RUN_DIRECTORY] contains HIPO
+                      files, with one run per file; use this option for SKIM files
 
        --check-cache  cross check /cache directories with tape stub directories
                       (/mss) and exit without creating or running any jobs; this is
@@ -165,7 +165,7 @@ if ${modes['help']}; then
   exit 101
 fi
 
-# set the DEFAULT input-finding method
+# set the input-finding method; use the DEFAULT one, if not set by user
 numTrueInputOpts=0
 for key in findhipo rundir eachdir flatdir; do
   if ${modes[$key]}; then
@@ -264,8 +264,13 @@ fi
 
 # if `flatdir` mode, populate `rdirs` with the list of files, since our job loop will be over `rdirs` elements
 if ${modes['flatdir']}; then
-  mainRdir=${rdirs[0]}
-  rdirs=($(ls $mainRdir/*.hipo))
+  rdirsIn=("${rdirs[@]}") # make a copy, since it will be overwritten
+  rdirs=()
+  for rdir in ${rdirsIn[@]}; do
+    for hipofile in $(ls $(realpath $rdir)/*.hipo); do
+      rdirs+=($hipofile)
+    done
+  done
 fi
 
 # initial checks and preparations

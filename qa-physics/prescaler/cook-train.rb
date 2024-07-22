@@ -9,14 +9,16 @@ def make_rgc_path(energy, target)
   "/cache/clas12/rg-c/production/summer22/pass1/#{energy}gev/#{target}/dst/recon"
 end
 DATA_HASH = {
+  # RGA
   'rga_sp19'               => '/cache/clas12/rg-a/production/recon/spring2019/torus-1/pass2/dst/recon',
+  # RGC
   'rgc_su22_10.5GeV_Align' => make_rgc_path(10.5, 'Align'),
   'rgc_su22_10.5GeV_C'     => make_rgc_path(10.5, 'C'),
   'rgc_su22_10.5GeV_CH2'   => make_rgc_path(10.5, 'CH2'),
   'rgc_su22_10.5GeV_ET'    => make_rgc_path(10.5, 'ET'),
   'rgc_su22_10.5GeV_ND3'   => make_rgc_path(10.5, 'ND3'),
   'rgc_su22_10.5GeV_NH3'   => make_rgc_path(10.5, 'NH3'),
-  'rgc_su22_2.2GeV_Align'  => make_rgc_path(2.2, 'Align'),
+  # 'rgc_su22_2.2GeV_Align'  => make_rgc_path(2.2, 'Align'), # no DSTs here
   'rgc_su22_2.2GeV_C'      => make_rgc_path(2.2, 'C'),
   'rgc_su22_2.2GeV_ET'     => make_rgc_path(2.2, 'ET'),
   'rgc_su22_2.2GeV_NH3'    => make_rgc_path(2.2, 'NH3'),
@@ -40,10 +42,11 @@ def print_info
 end
 
 # parse options
-options         = OpenStruct.new
-options.dataset = ''
-options.outDir  = "/volatile/clas12/users/#{ENV['LOGNAME']}"
-options.coatjava = ''
+options              = OpenStruct.new
+options.dataset      = ''
+options.outDir       = "/volatile/clas12/users/#{ENV['LOGNAME']}"
+options.coatjava     = ''
+options.printDataDir = false
 OptionParser.new do |o|
   o.banner = "USAGE: #{$0} [OPTIONS]..."
   o.separator ''
@@ -87,11 +90,33 @@ OptionParser.new do |o|
     "Default: #{options.outDir}"
   ) { |a| options.outDir = a }
   o.separator ''
+  o.on('--listDatasets', 'List the datasets and exit') do
+    puts DATA_HASH.keys
+    exit
+  end
+  o.separator ''
+  o.on('--printDataDir', 'Just print the source data directory, and exit;', 'requires --dataset') do
+    options.printDataDir = true
+  end
+  o.separator ''
   o.on_tail('-h', '--help', 'Show this message') do
     puts o
-    exit 2
+    exit
   end
 end.parse!(ARGV.length>0 ? ARGV : ['--help'])
+
+# handle --printDataDir
+if options.printDataDir
+  unless options.dataset == ''
+    puts DATA_HASH[options.dataset]
+  else
+    $stderr.puts "ERROR: need --dataset set when using --printDataDir"
+    exit 1
+  end
+  exit
+end
+
+# check required args
 print_info { puts "OPTIONS: #{options}" }
 [ ['--dataset',options.dataset], ['--coatajava',options.coatjava] ].each do |n,o|
   if o.empty?

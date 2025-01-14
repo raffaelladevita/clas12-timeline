@@ -13,6 +13,10 @@ import org.jlab.clas.physics.LorentzVector
 import org.jlab.detector.base.DetectorType
 import java.lang.Math.*
 import org.jlab.clas.timeline.util.Tools
+@Grab('org.apache.commons:commons-csv:1.2')
+import org.apache.commons.csv.CSVParser
+import static org.apache.commons.csv.CSVFormat.*
+import java.nio.file.Paths
 Tools T = new Tools()
 
 // CONSTANTS
@@ -138,8 +142,8 @@ else if(RG=="RGC") {
   else System.err.println "ERROR: unknown beam energy"
 }
 else if(RG=="RGD") {
-  if(runnum>=18305 && runnum<=18439) EBEAM = 10.5473 // from RCDB
-  else if(runnum>=18440 && runnum<=19131) EBEAM = 10.5322 // from RCDB
+  if(runnum>=18305 && runnum<=18439) EBEAM = 10.5473
+  else if(runnum>=18440 && runnum<=19131) EBEAM = 10.5322
   else System.err.println "ERROR: unknown beam energy"
 }
 else if(RG=="RGK") {
@@ -175,6 +179,9 @@ else if(RG=="RGM") {
  * - 2: special case
  *   - calculate DAQ-gated FC charge from `REC::Event:beamCharge`
  *   - useful if `RUN::scaler` is unavailable
+ * - 3: DAQ-gated FC charge and ungated FC charge are both incorrect
+ *   - Read DAQ-gated charge from a CSV file in `clas12-timeline/data/fccharge/<RG>.csv`
+ *   - useful if `RUN::scaler` is unavailable
  */
 def FCmode = 1 // default assumes DAQ-gated FC charge can be trusted
 if(RG=="RGM") {
@@ -202,6 +209,65 @@ else if(RG=="RGM") {
   }
 }
 */
+if(RG=="RGD") {
+  if(runnum>=18305 && runnum<=19131) {
+    FCmode = 3
+  }
+}
+
+// Set CSV variables for `FCmode==3`
+def csvfilepath   = ""
+def FORMAT        = DEFAULT // Set org.apache.commons.csv.CSVFormat Format
+def csv_header    = ""
+def runnum_colidx = -1
+if (FCmode==3) {
+
+  // Check if CSV file exists
+  def TIMELINESRC = System.getenv("TIMELINESRC")
+  csvfilepath = Paths.get(TIMELINESRC, '/data/fccharge/'+RG+'.csv').toAbsolutePath().toString()
+  def csvfile = new File(csvfilepath)
+  if (csvfile.exists()) {
+    System.out.println "INFO: Found CSV file $csvfilepath"
+  } else {
+    System.err.println "ERROR: With FCmode="+FCmode+". CSV file `$csvfilepath` does not exist!"
+    System.exit(100)
+  }
+
+  // Read CSV file column names
+  Paths.get(csvfilepath).withReader { reader ->
+    CSVParser csv = new CSVParser(reader, DEFAULT.withHeader())
+    csv_header = csv.getHeaderMap()
+  }
+
+  // Set run number column index assuming it is the first column with "run" in the column header
+  csv_header.each{colname, colidx ->
+    if (colname.contains("run") && runnum_colidx<0) runnum_colidx = colidx
+  }
+}
+
+// Function to read in all data from CSV for a given column and return a map of run numbers to column values
+def setDataFromCSV = { _key ->
+    def _dataFromCSV = [:]
+    Paths.get(csvfilepath).withReader { reader ->
+       CSVParser csv = new CSVParser(reader, FORMAT.withHeader())
+       for (record in csv.iterator()) {
+            runnum_from_record = record.get(runnum_colidx).toInteger()
+            if (record.isSet(_key)) {
+              _dataFromCSV[runnum_from_record] = record.get(_key).toFloat()
+           }
+       }
+    }
+    return _dataFromCSV
+}
+
+// Set data from CSV and define a function to get key values for a given run number
+def dataFromCSV = [:]
+if (FCmode==3) {
+  dataFromCSV["fc"] = setDataFromCSV("charge_ave")
+}
+def getDataFromCSV = { _runnum, _key ->
+    return dataFromCSV[_key][_runnum]
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -489,12 +555,12 @@ defineTimeBins = { // in its own closure, so giant data structures are garbage c
   inHipoList.each { inHipoFile ->
     printDebug "Open HIPO file $inHipoFile"
     def reader = new HipoDataSource()
-    reader.getReader().setTags(1)
+    if (FCmode!=3) reader.getReader().setTags(1) //NOTE: RUN::scaler bank is not used if `FCmode==3`.
     reader.open(inHipoFile)
     while(reader.hasEvent()) {
       hipoEvent = reader.getNextEvent()
       // printDebug "tag1 event bank list: ${hipoEvent.getBankList()}"
-      if(hipoEvent.hasBank("RUN::scaler") && hipoEvent.getBank("RUN::scaler").rows()>0 &&
+      if(((hipoEvent.hasBank("RUN::scaler") && hipoEvent.getBank("RUN::scaler").rows()>0) || FCmode==3) && //NOTE: Do not require tag 1 events to contain RUN::scaler for `FCmode==3`
          hipoEvent.hasBank("RUN::config") && hipoEvent.getBank("RUN::config").rows()>0)
       {
         tag1events << [
@@ -530,6 +596,13 @@ defineTimeBins = { // in its own closure, so giant data structures are garbage c
   timeBinBounds = timeBinBounds + [10**(Math.log10(timeBinBounds[-1]).toInteger()+2)] // two orders of magnitude above largest known event number
   // pair the elements to define the bin boundaries
   timeBinBounds = timeBinBounds.collate(2)
+  // redefine time bins to merge all bins except the first and last if `FCmode==3`
+  if (FCmode==3 && timeBinBounds.size()>3) {
+    newTimeBinBounds = [timeBinBounds[0]]
+    newTimeBinBounds += [[timeBinBounds[0][1],timeBinBounds[-1][0]]]
+    newTimeBinBounds += [timeBinBounds[-1]]
+    timeBinBounds = newTimeBinBounds
+  }
   // define the time bin objects, initializing additional fields
   timeBinBounds.eachWithIndex{ bounds, binNum ->
     timeBins[binNum] = [
@@ -708,13 +781,21 @@ inHipoList.each { inHipoFile ->
       fc = eventBank.getFloat("beamCharge",0)
       setMinMaxInTimeBin(thisTimeBinNum, "fcMinMax", fc)
     }
+    if(FCmode==3) {
+      // gated charge only from file
+      fc = getDataFromCSV(runnum,"fc")
+      setMinMaxInTimeBin(thisTimeBinNum, "fcMinMax", fc)
+      // Set ungated charge = gated charge
+      ufc = fc
+      setMinMaxInTimeBin(thisTimeBinNum, "ufcMinMax", ufc)
+    }
 
     // if this event is on a bin boundary, and it has `scalerBank`, update `fcRange` and `ufcRange`
     // FIXME: this will only work for FCmode==1; need to figure out how to handle the others
     def onBinBoundary = false
     if(eventNum == thisTimeBin.eventNumMax) {
       onBinBoundary = true
-      if(scalerBank.rows()>0) { // must have scalerBank, so `fc` and `ufc` are set (we'll check if any `(u)fcRange` values are still "init" later)
+      if(scalerBank.rows()>0 || FCmode==3) { // must have scalerBank, so `fc` and `ufc` are set (we'll check if any `(u)fcRange` values are still "init" later) UNLESS `FCmode==3` in which case thse values are set from a CSV file so the scaler bank is not required.
         // events on the boundary are assigned to earlier bin; this FC charge is that bin's max charge
         thisTimeBin.fcRange[1]   = fc
         thisTimeBin.ufcRange[1]  = ufc
@@ -893,7 +974,7 @@ timeBins.each{ itBinNum, itBin ->
     if(FCmode==0) {
       fcStart = ufcStart * aveLivetime // workaround method
       fcStop  = ufcStop  * aveLivetime // workaround method
-    } else if(FCmode==1 || FCmode==2) {
+    } else if(FCmode==1 || FCmode==2 || FCmode==3) {
       if(!itBin.fcRange.contains("init")) {
         fcStart = itBin.fcRange[0]
         fcStop  = itBin.fcRange[1]

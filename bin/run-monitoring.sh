@@ -8,7 +8,7 @@ source $(dirname $0)/environ.sh
 # max number of events for detector monitoring timelines
 MAX_NUM_EVENTS=100000000
 # slurm settings
-SLURM_MEMORY=1500
+SLURM_MEMORY=1600 # must be more than max heap size in $TIMELINE_JAVA_OPTS
 SLURM_TIME=10:00:00
 SLURM_LOG=/farm_out/%u/%x-%A_%a
 ########################################################################
@@ -307,13 +307,13 @@ for rdir in ${rdirs[@]}; do
   if [ -z "$runnum" ] || ${modes['swifjob']}; then # otherwise, use RUN::config from a HIPO file (NOTE: assumes all HIPO files have the same run number)
     if ${modes['flatdir']}; then
       $TIMELINESRC/bin/hipo-check.sh $rdir
-      runnum=$(run-groovy $TIMELINE_GROOVY_OPTS $TIMELINESRC/bin/get-run-number.groovy $rdir | tail -n1 | grep -m1 -o -E "[0-9]+" || echo '')
+      runnum=$($TIMELINESRC/bin/run-groovy-timeline.sh $TIMELINESRC/bin/get-run-number.groovy $rdir | tail -n1 | grep -m1 -o -E "[0-9]+" || echo '')
     else
       firstHipo=$(find $rdir -name "*.hipo" | head -n1)
       [ -z "$firstHipo" ] && printError "no HIPO files in run directory '$rdir'; cannot get run number or create job" && continue
       echo "using HIPO file $firstHipo to get run number for run directory '$rdir'"
       $TIMELINESRC/bin/hipo-check.sh $firstHipo
-      runnum=$(run-groovy $TIMELINE_GROOVY_OPTS $TIMELINESRC/bin/get-run-number.groovy $firstHipo | tail -n1 | grep -m1 -o -E "[0-9]+" || echo '')
+      runnum=$($TIMELINESRC/bin/run-groovy-timeline.sh $TIMELINESRC/bin/get-run-number.groovy $firstHipo | tail -n1 | grep -m1 -o -E "[0-9]+" || echo '')
     fi
   fi
   [ -z "$runnum" -o $runnum -eq 0 ] && printError "unknown run number for '$rdir'; ignoring it!" && continue
@@ -385,13 +385,12 @@ set -u
 set -o pipefail
 echo "RUN $runnum"
 
-# set classpath
-export CLASSPATH=$CLASSPATH
+# set env vars
+source $TIMELINESRC/bin/environ.sh
 
 # produce histograms
-java \\
-  $TIMELINE_JAVA_OPTS \\
-  org.jlab.clas12.monitoring.ana_2p2 \\
+java $TIMELINE_JAVA_OPTS \\
+  org.jlab.clas.timeline.histograms.run_histograms \\
     $runnum \\
     $outputSubDir \\
     $inputListFile \\
@@ -416,15 +415,11 @@ set -u
 set -o pipefail
 echo "RUN $runnum"
 
-# set classpath
-export JYPATH=$JYPATH
-
-# additional env vars
-export TIMELINESRC=$TIMELINESRC
+# set env vars
+source $TIMELINESRC/bin/environ.sh
 
 # produce histograms
-run-groovy \\
-  $TIMELINE_GROOVY_OPTS \\
+$TIMELINESRC/bin/run-groovy-timeline.sh \\
   $TIMELINESRC/qa-physics/monitorRead.groovy \\
     $(realpath $rdir) \\
     $outputSubDir \\

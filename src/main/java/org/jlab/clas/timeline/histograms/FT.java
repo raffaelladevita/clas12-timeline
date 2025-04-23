@@ -318,18 +318,16 @@ public class FT {
             double cx = ftPart.getFloat("cx", loop);
             double cy = ftPart.getFloat("cy", loop);
             double cz = ftPart.getFloat("cz", loop);
-//            double vx = ftPart.getFloat("vx", loop);
-//            double vy = ftPart.getFloat("vy", loop);
-//            double vz = ftPart.getFloat("vz", loop);
-            double vx = 0;
-            double vy = 0;
-            double vz = triggerVZ;
+            double vx = ftPart.getFloat("vx", loop);
+            double vy = ftPart.getFloat("vy", loop);
+            double vz = ftPart.getFloat("vz", loop);
             int calID = ftPart.getShort("calID", loop);
             double theta = Math.toDegrees(Math.acos(cz));
 
             double energyR = 0;
             int size = 0;
             double path = 0;
+            vz = triggerVZ;
             for (int i = 0; i < CalClusters.rows(); i++) {
                 if (calID == CalClusters.getShort("id", i)) {
                     energyR = CalClusters.getFloat("recEnergy", i);
@@ -341,8 +339,8 @@ public class FT {
                     cx = x/path;
                     cy = y/path;
                     cz = z/path;
-                    theta = Math.toDegrees(Math.acos(cz));
                     time = CalClusters.getFloat("time", i) - path / PhysicsConstants.speedOfLight();
+                    break;
                 }
             }
             boolean good = energy > 0.5 && energyR > 0.3 && size > 3 && theta > 2.5 && theta < 4.5;
@@ -391,7 +389,7 @@ public class FT {
                     double invmass = Math.sqrt(partPi0.mass2());
                     // double x = (partGamma1.p() - partGamma2.p()) / (partGamma1.p() + partGamma2.p());
                     double angle = Math.toDegrees(Math.acos(partGamma1.cosTheta(partGamma2)));
-                    if (angle > 2.0) {
+                    if (angle > 2.5) {
                         hpi0sum.fill(invmass * 1000);
                     }
                     hmassangle.fill(invmass * 1000, angle);

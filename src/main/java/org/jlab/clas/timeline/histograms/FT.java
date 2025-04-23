@@ -25,6 +25,8 @@ public class FT {
     public boolean hasRF;
     public int triggerPID;
     public double triggerVZ;
+    public double Z0;
+    public double  ZCUT=35;
     public double startTime, rfTime;
 
     public double rfPeriod;
@@ -327,6 +329,7 @@ public class FT {
             double energyR = 0;
             int size = 0;
             double path = 0;
+	    Z0 = vz;
             vz = triggerVZ;
             for (int i = 0; i < CalClusters.rows(); i++) {
                 if (calID == CalClusters.getShort("id", i)) {
@@ -343,7 +346,7 @@ public class FT {
                     break;
                 }
             }
-            boolean good = energy > 0.5 && energyR > 0.3 && size > 3 && theta > 2.5 && theta < 4.5;
+            boolean good = energy > 0.5 && size > 3 && theta > 2.5 && theta < 5.0;
             hi_cal_clsize.fill(size);
             hi_cal_e_all.fill(energy);
             hi_cal_clsize_en.fill(size, energy);
@@ -363,7 +366,8 @@ public class FT {
                 }
             } else {
                 Particle recParticle = new Particle(22, energy * cx, energy * cy, energy * cz, vx, vy, vz);
-                if (energy > 0.5 && size > 3) {
+		recParticle.setProperty("time", time);
+                if (good) {
                     gammas.add(recParticle);
                 }
                 hi_cal_e_neu.fill(energy);
@@ -389,7 +393,8 @@ public class FT {
                     double invmass = Math.sqrt(partPi0.mass2());
                     // double x = (partGamma1.p() - partGamma2.p()) / (partGamma1.p() + partGamma2.p());
                     double angle = Math.toDegrees(Math.acos(partGamma1.cosTheta(partGamma2)));
-                    if (angle > 2.5) {
+		    double dtime = Math.abs(partGamma1.getProperty("time")-partGamma2.getProperty("time"));
+                    if (angle > 2.5 && dtime<10) {
                         hpi0sum.fill(invmass * 1000);
                     }
                     hmassangle.fill(invmass * 1000, angle);
@@ -439,7 +444,7 @@ public class FT {
         }
 
         //Main Processing
-        if (ftParticles != null && triggerPID!=0) {
+        if (ftParticles != null && triggerPID!=0 && Math.abs(triggerVZ-Z0)<ZCUT) {
             if (ftHodoHits != null && ftHodoClusters != null) {
                 fillFTHodo(ftHodoHits, ftHodoClusters, ftParticles);
             }

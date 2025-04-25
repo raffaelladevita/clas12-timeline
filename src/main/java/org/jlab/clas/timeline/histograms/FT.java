@@ -14,6 +14,9 @@ import org.jlab.clas.physics.Particle;
 import org.jlab.utils.groups.IndexedTable;
 import org.jlab.detector.calib.utils.CalibrationConstants;
 import org.jlab.detector.calib.utils.ConstantsManager;
+import org.jlab.groot.base.GStyle;
+import org.jlab.groot.ui.TCanvas;
+import org.jlab.io.hipo.HipoDataSource;
 
 public class FT {
 
@@ -59,10 +62,6 @@ public class FT {
         runNum = reqrunNum;
         outputDir = reqOutputDir;
         userTimeBased = reqTimeBased;
-
-        startTime = -1000;
-        rfTime = -1000;
-        triggerPID = 0;
 
         rfPeriod = 4.008;
         ccdb = new ConstantsManager();
@@ -158,16 +157,16 @@ public class FT {
         hi_cal_time_ch.setFillColor(33);
         hi_cal_time_cut_ch = new H1F("hi_cal_time_cut_ch", "T-T_RF(ns)", "Counts", 200, -rfPeriod / 2, rfPeriod / 2);
         hi_cal_time_cut_ch.setFillColor(3);
-        ftime_ch = new F1D("ftime_ch", "[amp]*gaus(x,[mean],[sigma])", -1., 1.);
+        ftime_ch = new F1D("ftime_ch", "[amp]*gaus(x,[mean],[sigma])", -1.0, 1.0);
         ftime_ch.setParameter(0, 0.0);
         ftime_ch.setParameter(1, 0.0);
         ftime_ch.setParameter(2, 2.0);
         ftime_ch.setLineWidth(2);
         ftime_ch.setOptStat("1111");
-        hi_cal_time_e_ch = new H2F("hi_cal_time_e_ch", "hi_cal_time_e_ch", 100, 0., 12., 100, -rfPeriod / 2, rfPeriod / 2);
+        hi_cal_time_e_ch = new H2F("hi_cal_time_e_ch", "hi_cal_time_e_ch", 100, 0.0, 12.0, 100, -rfPeriod / 2, rfPeriod / 2);
         hi_cal_time_e_ch.setTitleX("E (GeV)");
         hi_cal_time_e_ch.setTitleY("T-T_RF (ns)");
-        hi_cal_time_theta_ch = new H2F("hi_cal_time_theta_ch", "hi_cal_time_theta_ch", 100, 2., 6., 100, -rfPeriod / 2, rfPeriod / 2);
+        hi_cal_time_theta_ch = new H2F("hi_cal_time_theta_ch", "hi_cal_time_theta_ch", 100, 2.0, 6.0, 100, -rfPeriod / 2, rfPeriod / 2);
         hi_cal_time_theta_ch.setTitleX("#theta (deg)");
         hi_cal_time_theta_ch.setTitleY("T-T_RF (ns)");
         hi_cal_time_neu = new H1F("hi_cal_time_neu", "T-T_start(ns)", "Counts", 100, -2, 2);
@@ -180,20 +179,20 @@ public class FT {
         ftime_neu.setParameter(2, 2.0);
         ftime_neu.setLineWidth(2);
         ftime_neu.setOptStat("1111");
-        hi_cal_time_e_neu = new H2F("hi_cal_time_e_neu", "hi_cal_time_e_neu", 100, 0., 12., 100, -2, 2);
+        hi_cal_time_e_neu = new H2F("hi_cal_time_e_neu", "hi_cal_time_e_neu", 100, 0.0, 12.0, 100, -2, 2);
         hi_cal_time_e_neu.setTitleX("E (GeV)");
         hi_cal_time_e_neu.setTitleY("T-T_start (ns)");
-        hi_cal_time_theta_neu = new H2F("hi_cal_time_theta_neu", "hi_cal_time_theta_neu", 100, 2., 6., 100, -2, 2);
+        hi_cal_time_theta_neu = new H2F("hi_cal_time_theta_neu", "hi_cal_time_theta_neu", 100, 2.0, 6.0, 100, -2, 2);
         hi_cal_time_theta_neu.setTitleX("#theta (deg)");
         hi_cal_time_theta_neu.setTitleY("T-T_start (ns)");
 
         //Pi0 Histograms
-        hpi0sum = new H1F("hpi0sum", 200, 50., 250.);
+        hpi0sum = new H1F("hpi0sum", 200, 50.0, 250.0);
         hpi0sum.setTitleX("M (MeV)");
         hpi0sum.setTitleY("Counts");
         hpi0sum.setTitle("2#gamma invariant mass");
         hpi0sum.setFillColor(3);
-        fpi0 = new F1D("fpi0", "[amp]*gaus(x,[mean],[sigma])+[p0]+[p1]*x", 80., 200.);
+        fpi0 = new F1D("fpi0", "[amp]*gaus(x,[mean],[sigma])+[p0]+[p1]*x", 80.0, 200.0);
         fpi0.setParameter(0, 0.0);
         fpi0.setParameter(1, 140.0);
         fpi0.setParameter(2, 2.0);
@@ -201,7 +200,7 @@ public class FT {
         fpi0.setParameter(4, 0.0);
         fpi0.setLineWidth(2);
         fpi0.setOptStat("1111111");
-        hmassangle = new H2F("hmassangle", 100, 0., 300., 100, 0., 6.);
+        hmassangle = new H2F("hmassangle", 100, 0.0, 300.0, 100, 0.0, 6.0);
         hmassangle.setTitleX("M (MeV)");
         hmassangle.setTitleY("Angle (deg)");
         hmassangle.setTitle("Angle vs. Mass");
@@ -343,7 +342,7 @@ public class FT {
                     break;
                 }
             }
-            boolean good = energy > 0.5 && energyR > 0.3 && size > 3 && theta > 2.5 && theta < 4.5;
+            boolean good = energy > 0.5 && size > 3 && theta > 2.5 && theta < 4.5;
             hi_cal_clsize.fill(size);
             hi_cal_e_all.fill(energy);
             hi_cal_clsize_en.fill(size, energy);
@@ -401,6 +400,9 @@ public class FT {
 
     public void processEvent(DataEvent event) {
 
+        startTime = -1000;
+        rfTime = -1000;
+        triggerPID = 0;
         DataBank recBankEB = null;
         DataBank recEvenEB = null;
         DataBank ftParticles = null;
@@ -545,6 +547,33 @@ public class FT {
         } else {
             dirout.writeFile(outputDir + "/out_FT.hipo");
         }
+    }
+    
+    public static void main(String[] args) {
+        GStyle.getH1FAttributes().setOptStat("1111");
+        FT ft = new FT(21525, ".", true);
+        
+        HipoDataSource reader = new HipoDataSource();
+        reader.open("/Users/devita/NetBeansProjects/clas12calibration-ft/bit27.hipo");
+        
+        while(reader.hasEvent()) {
+            ft.processEvent(reader.getNextEvent());
+        }
+        
+        TCanvas canvas = new TCanvas("FT", 1200, 800);
+        canvas.divide(3, 2);
+        canvas.cd(0);
+        canvas.draw(ft.hpi0sum);
+        canvas.cd(1);
+        canvas.draw(ft.hi_hodo_ematch[0]);
+        canvas.cd(2);
+        canvas.draw(ft.hi_hodo_ematch[1]);
+        canvas.cd(3);
+        canvas.draw(ft.hi_cal_time_neu);
+        canvas.cd(4);
+        canvas.draw(ft.hi_hodo_tmatch[0]);
+        canvas.cd(5);
+        canvas.draw(ft.hi_hodo_tmatch[1]);
     }
 
 }

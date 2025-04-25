@@ -548,32 +548,4 @@ public class FT {
             dirout.writeFile(outputDir + "/out_FT.hipo");
         }
     }
-    
-    public static void main(String[] args) {
-        GStyle.getH1FAttributes().setOptStat("1111");
-        FT ft = new FT(21525, ".", true);
-        
-        HipoDataSource reader = new HipoDataSource();
-        reader.open("/Users/devita/NetBeansProjects/clas12calibration-ft/bit27.hipo");
-        
-        while(reader.hasEvent()) {
-            ft.processEvent(reader.getNextEvent());
-        }
-        
-        TCanvas canvas = new TCanvas("FT", 1200, 800);
-        canvas.divide(3, 2);
-        canvas.cd(0);
-        canvas.draw(ft.hpi0sum);
-        canvas.cd(1);
-        canvas.draw(ft.hi_hodo_ematch[0]);
-        canvas.cd(2);
-        canvas.draw(ft.hi_hodo_ematch[1]);
-        canvas.cd(3);
-        canvas.draw(ft.hi_cal_time_neu);
-        canvas.cd(4);
-        canvas.draw(ft.hi_hodo_tmatch[0]);
-        canvas.cd(5);
-        canvas.draw(ft.hi_hodo_tmatch[1]);
-    }
-
 }
